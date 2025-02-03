@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userSignin = exports.userSignup = void 0;
+exports.updateProfile = exports.createProfile = exports.userSignin = exports.userSignup = void 0;
 const client_1 = require("@prisma/client");
 const asyncHandler_1 = require("../middleware/asyncHandler");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -77,5 +77,64 @@ exports.userSignin = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
     return res.status(200).json({
         message: "Sign in successfull",
         token
+    });
+}));
+exports.createProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { success } = types_1.profileCreation.safeParse(req.body);
+    if (!success) {
+        throw new customError_1.default("Invalid input data", 400);
+    }
+    const userId = req.id;
+    const existingProfile = yield prisma.profile.findUnique({
+        where: {
+            userId
+        }
+    });
+    if (existingProfile) {
+        throw new customError_1.default("Profile already created. Only updates are available after creation", 400);
+    }
+    const { bio, profilePic, department, graduationYear, minor, linkedin, github } = req.body;
+    const profile = yield prisma.profile.create({
+        data: {
+            bio,
+            profilePic,
+            department,
+            graduationYear,
+            minor,
+            linkedin,
+            github,
+            user: {
+                connect: {
+                    id: userId
+                }
+            }
+        }
+    });
+    return res.status(200).json({
+        message: "Profile created successfully",
+        profile
+    });
+}));
+exports.updateProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { success } = types_1.profileUpdation.safeParse(req.body);
+    if (!success) {
+        throw new customError_1.default("Invalid input data", 400);
+    }
+    const userId = req.id;
+    const { bio, profilePic, linkedin, github } = req.body;
+    const profile = yield prisma.profile.update({
+        where: {
+            userId
+        },
+        data: {
+            bio,
+            profilePic,
+            linkedin,
+            github
+        }
+    });
+    return res.status(200).json({
+        message: "Profile successfully updated",
+        profile
     });
 }));

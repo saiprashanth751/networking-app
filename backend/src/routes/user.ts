@@ -1,12 +1,13 @@
 import  express  from "express";
-import { userProfile, userSignin, userSignup } from "../controllers/user";
+import { createProfile, updateProfile, userSignin, userSignup } from "../controllers/user";
 import { authMiddleware } from "../middleware/authMiddleware";
 
 const app = express.Router();
 
 app.post("/signup", userSignup)
 app.post("/signin", userSignin)
-app.post("/profile", authMiddleware, userProfile)
+app.post("/profile", authMiddleware, createProfile)
+app.put("/profile", authMiddleware, updateProfile)
 
 export default app
 

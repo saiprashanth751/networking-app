@@ -25,3 +25,44 @@ export declare const signinBody: zod.ZodObject<{
     email: string;
     password: string;
 }>;
+export declare const profileCreation: zod.ZodObject<{
+    bio: zod.ZodOptional<zod.ZodString>;
+    profilePic: zod.ZodOptional<zod.ZodString>;
+    graduationYear: zod.ZodOptional<zod.ZodNumber>;
+    department: zod.ZodString;
+    minor: zod.ZodString;
+    linkedin: zod.ZodOptional<zod.ZodString>;
+    github: zod.ZodOptional<zod.ZodString>;
+}, "strip", zod.ZodTypeAny, {
+    department: string;
+    minor: string;
+    bio?: string | undefined;
+    profilePic?: string | undefined;
+    graduationYear?: number | undefined;
+    linkedin?: string | undefined;
+    github?: string | undefined;
+}, {
+    department: string;
+    minor: string;
+    bio?: string | undefined;
+    profilePic?: string | undefined;
+    graduationYear?: number | undefined;
+    linkedin?: string | undefined;
+    github?: string | undefined;
+}>;
+export declare const profileUpdation: zod.ZodObject<{
+    bio: zod.ZodOptional<zod.ZodString>;
+    profilePic: zod.ZodOptional<zod.ZodString>;
+    linkedin: zod.ZodOptional<zod.ZodString>;
+    github: zod.ZodOptional<zod.ZodString>;
+}, "strip", zod.ZodTypeAny, {
+    bio?: string | undefined;
+    profilePic?: string | undefined;
+    linkedin?: string | undefined;
+    github?: string | undefined;
+}, {
+    bio?: string | undefined;
+    profilePic?: string | undefined;
+    linkedin?: string | undefined;
+    github?: string | undefined;
+}>;

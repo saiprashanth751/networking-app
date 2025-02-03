@@ -29,4 +29,8 @@ export const profileUpdation = zod.object({
     github: zod.string().optional()
 })
 
+export const ProjectBody = zod.object({
+    title: zod.string(),
+    description: zod.string()
+})
 
