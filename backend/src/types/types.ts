@@ -12,5 +12,14 @@ export const signinBody = zod.object({
     password: zod.string().min(8).max(20)
 })
 
+export const profileCreation = zod.object({
+    bio: zod.string().optional(),
+    profilePic: zod.string().optional(),
+    graduationYear: zod.number().optional(),
+    department: zod.string(),
+    minor: zod.string(),
+    linkedin: zod.string().optional(),
+    github: zod.string().optional()
+})
 
 
