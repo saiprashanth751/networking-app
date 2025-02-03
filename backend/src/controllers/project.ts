@@ -64,10 +64,6 @@ export const updateProject = asyncHandler(async (req:AuthRequest, res: Response)
 })
 
 export const getProjects = asyncHandler(async (req:AuthRequest, res: Response) => {
-    const {success} = ProjectBody.safeParse(req.body)
-    if(!success){
-        throw new CustomError("Invalid data input", 400)
-    }
 
     const userId= req.id
     const projects = await prisma.project.findMany({
@@ -84,10 +80,6 @@ export const getProjects = asyncHandler(async (req:AuthRequest, res: Response) =
 
 
 export const deleteProject = asyncHandler(async (req:AuthRequest, res: Response) => {
-    const {success} = ProjectBody.safeParse(req.body)
-    if(!success){
-        throw new CustomError("Invalid data input", 400)
-    }
     const id = req.id
     const userId= req.id
     await prisma.project.delete({

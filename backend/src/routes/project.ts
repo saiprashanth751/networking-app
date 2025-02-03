@@ -8,4 +8,5 @@ app.post("/new",authMiddleware ,createProject)
 app.put("/update",authMiddleware ,updateProject)
 app.get("/all",authMiddleware ,getProjects)
 app.delete("/project", authMiddleware, deleteProject)
+
 export default app
