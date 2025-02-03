@@ -22,4 +22,11 @@ export const profileCreation = zod.object({
     github: zod.string().optional()
 })
 
+export const profileUpdation = zod.object({
+    bio: zod.string().optional(),
+    profilePic: zod.string().optional(),
+    linkedin: zod.string().optional(),
+    github: zod.string().optional()
+})
+
 

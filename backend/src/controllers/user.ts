@@ -4,7 +4,7 @@ import { asyncHandler } from "../middleware/asyncHandler"
 import jwt from "jsonwebtoken"
 import CustomError from "../utils/customError"
 import bcrypt from "bcrypt"
-import { profileCreation, signinBody, signupBody } from "../types/types"
+import { profileCreation, profileUpdation, signinBody, signupBody } from "../types/types"
 
 
 const prisma = new PrismaClient()
@@ -83,7 +83,7 @@ interface AuthRequest extends Request{
     id?: string
 }
 
-export const userProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
+export const createProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
     const {success} = profileCreation.safeParse(req.body)
     if(!success){
         throw new CustomError("Invalid input data", 400)
@@ -102,7 +102,7 @@ export const userProfile = asyncHandler(async (req:AuthRequest, res:Response) =>
 
     const {bio, profilePic, department, graduationYear, minor, linkedin, github} = req.body
     
-    const profile = prisma.profile.create({
+    const profile = await prisma.profile.create({
         data: {
             bio,
             profilePic,
@@ -118,5 +118,37 @@ export const userProfile = asyncHandler(async (req:AuthRequest, res:Response) =>
             }
         }
     })
+
+    return res.status(200).json({
+        message: "Profile created successfully",
+        profile
+    })
      
+})
+
+export const updateProfile = asyncHandler( async (req: AuthRequest, res:Response) => {
+    const {success} = profileUpdation.safeParse(req.body)
+    if(!success){
+        throw new CustomError("Invalid input data", 400)
+    }
+    const userId = req.id
+    const {bio , profilePic, linkedin, github} = req.body
+
+    const profile = await prisma.profile.update({
+        where: {
+            userId
+        },
+        data:{
+            bio,
+            profilePic,
+            linkedin,
+            github
+        }
+    })
+
+    return res.status(200).json({
+        message: "Profile successfully updated",
+        profile
+    })
+
 })
