@@ -12,6 +12,4 @@ app.use("/api/v1/project",projectRouter)
 
 app.use(errorMiddleware);
 
-
-
 app.listen(3000)
