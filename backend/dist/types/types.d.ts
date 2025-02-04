@@ -66,3 +66,13 @@ export declare const profileUpdation: zod.ZodObject<{
     linkedin?: string | undefined;
     github?: string | undefined;
 }>;
+export declare const ProjectBody: zod.ZodObject<{
+    title: zod.ZodString;
+    description: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    title: string;
+    description: string;
+}, {
+    title: string;
+    description: string;
+}>;
