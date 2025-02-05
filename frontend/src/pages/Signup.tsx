@@ -47,7 +47,7 @@ export default function Signup() {
                                 })
                                 localStorage.setItem("token", response.data.token)
                                 console.log(response.data.token)
-                                navigate("/profile")
+                                navigate("/createprofile")
                             }}
                                 label={"Sign up"} />
 
