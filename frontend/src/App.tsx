@@ -5,8 +5,8 @@ import Dashboard from "./pages/Dashboard"
 import CreateProfile from "./pages/CreateProfile"
 import UpdateProfile from "./pages/UpdateProfile"
 import Profile from "./pages/Profile"
+
 function App() {
- 
 
   return (
     <>
