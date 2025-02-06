@@ -19,7 +19,7 @@ export default function UpdateProfile() {
     const navigate = useNavigate()
 
     //Bio update problem...
-    
+
     // useEffect(() => {
     //     const token = localStorage.getItem("token")
     //     if (!token) {
@@ -71,7 +71,7 @@ export default function UpdateProfile() {
                             }, {
                                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                             });
-                            navigate("/profile")
+                            navigate("/userprofile")
                         }}
                         label="Update Profile"
                     />
