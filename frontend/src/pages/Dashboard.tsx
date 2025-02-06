@@ -2,6 +2,7 @@ import { User } from "../components/User"
 import { AppBar } from "../components/AppBar"
 import { useEffect, useState } from "react"
 import axios from "axios"
+import { useNavigate } from "react-router-dom"
 
 interface profileBody {
     bio?: string,
@@ -15,16 +16,22 @@ interface profileBody {
 export default function Dashboard() {
     const [profile, setProfile] = useState<profileBody | null>(null)
     const [users, setUsers] = useState([])
-
+    const navigate = useNavigate()
     useEffect(() => {
+
+        const token = localStorage.getItem("token")
+        if(!token){
+            navigate("/signin")
+        }
+     
         axios.get("http://localhost:3000/api/v1/user/profile",{
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             setProfile(response.data.profile)
         })
 
         axios.get(`http://localhost:3000/api/v1/user/bulk/?minor=${profile?.minor}`,{
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             setUsers(response.data.users)
         })

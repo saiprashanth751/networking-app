@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { InputBox } from "../components/InputBox";
 import { Select } from "../components/DepartSelect";
 import { MinorSelect } from "../components/MinorSelect";
@@ -15,6 +15,13 @@ export default function CreateProfile() {
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
     const navigate = useNavigate()
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+        if(!token){
+            navigate("/signin")
+        }
+    })
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4">

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { FaUserPlus, FaCommentDots } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate,Link } from "react-router-dom";
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { InputBox } from "../components/InputBox";
 import { Heading } from "../components/Heading";
 import { Button } from "../components/Button";
@@ -18,6 +18,8 @@ export default function UpdateProfile() {
     const [github, setGithub] = useState("");
     const navigate = useNavigate()
 
+    //Bio update problem...
+    
     // useEffect(() => {
     //     const token = localStorage.getItem("token")
     //     if (!token) {
@@ -31,6 +33,13 @@ export default function UpdateProfile() {
     //         setProfile(response.data.profile)
     //     })
     // }, [])
+
+    useEffect(() => {
+            const token = localStorage.getItem("token")
+            if(!token){
+                navigate("/signin")
+            }
+        })
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4">
