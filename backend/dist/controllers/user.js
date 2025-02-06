@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProfile = exports.createProfile = exports.userSignin = exports.userSignup = void 0;
+exports.updateProfile = exports.getProfile = exports.createProfile = exports.getUsers = exports.getUser = exports.userSignin = exports.userSignup = void 0;
 const client_1 = require("@prisma/client");
 const asyncHandler_1 = require("../middleware/asyncHandler");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -79,6 +79,44 @@ exports.userSignin = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
         token
     });
 }));
+exports.getUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.id;
+    const user = yield prisma.user.findUnique({
+        where: {
+            id: userId
+        }
+    });
+    return res.status(200).json({
+        user
+    });
+}));
+exports.getUsers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.id;
+    const minor = req.query.minor;
+    const users = yield prisma.user.findMany({
+        where: {
+            id: { not: userId },
+            profile: {
+                minor,
+            },
+        },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profile: {
+                select: {
+                    bio: true,
+                    graduationYear: true,
+                    department: true,
+                }
+            }
+        }
+    });
+    return res.status(200).json({
+        users
+    });
+}));
 exports.createProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { success } = types_1.profileCreation.safeParse(req.body);
     if (!success) {
@@ -112,6 +150,17 @@ exports.createProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter
     });
     return res.status(200).json({
         message: "Profile created successfully",
+        profile
+    });
+}));
+exports.getProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.id;
+    const profile = yield prisma.profile.findUnique({
+        where: {
+            userId
+        }
+    });
+    return res.status(200).json({
         profile
     });
 }));

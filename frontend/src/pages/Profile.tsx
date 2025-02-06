@@ -12,9 +12,23 @@ interface profileBody {
     github?: string
 }
 
+interface userBody {
+    firstName?: string,
+    lastName?: string 
+}
+
+interface followingBody {
+    following?: string[],
+    followers?: string[],
+    count?: number
+}
+
+
 export default function Profile() {
     const [profile, setProfile] = useState<profileBody | null>(null)
-    
+    const [user, setUser] = useState<userBody | null>(null)
+    const [following, setFollowing] = useState<followingBody | null>(null)
+    const [followers, setFollowers] = useState<followingBody | null>(null)
     const navigate = useNavigate()
     useEffect(() => {
         const token = localStorage.getItem("token")
@@ -29,14 +43,31 @@ export default function Profile() {
             setProfile(response.data.profile)
         })
 
-        
+        axios.get("http://localhost:3000/api/v1/user/",
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            }
+        ).then((response) => {
+            setUser(response.data.user)
+        })
 
+        axios.get("http://localhost:3000/api/v1/follow/following",
+            {
+                headers: {Authorization: `Bearer ${token}`}
+            }
+        ).then((response) => {setFollowing(response.data)})
+
+        axios.get("http://localhost:3000/api/v1/follow/followers",
+            {
+            headers: {Authorization: `Bearer ${token}`}
+        }).then((response) => {setFollowers(response.data)})
     }, [])
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-slate-300 to-white">
             <div className="relative bg-white shadow-lg rounded-2xl p-32 text-center">
             <div className="text-blue-500 hover:text-blue-700 absolute right-5 top-5"><Link to={"/updateprofile"}>Edit Profile</Link></div>
+            <div className="text-blue-500 hover:text-blue-700 absolute left-7 top-5"><Link to={"/dashboard"}>Back</Link></div>
                 {/* Profile Image */}
                 <div className="absolute -top-10 left-1/2 transform -translate-x-1/2">
                     <img
@@ -47,7 +78,7 @@ export default function Profile() {
                 </div>
 
                 {/* Connect & Message Buttons */}
-                <div className="flex justify-between text-blue-500 text-sm font-semibold mt-8">
+                {/* <div className="flex justify-between text-blue-500 text-sm font-semibold mt-8">
                     <div className="flex items-center gap-2 cursor-pointer hover:text-blue-700">
                         <FaUserPlus />
                         <span>Connect</span>
@@ -56,10 +87,10 @@ export default function Profile() {
                         <FaCommentDots />
                         <span>Message</span>
                     </div>
-                </div>
+                </div> */}
 
                 {/* User Info */}
-                    <h2 className="text-xl font-bold text-gray-800 mt-4 text-center">Karthik</h2>
+                    <h2 className="text-xl font-bold text-gray-800 mt-4 text-center">{user?.firstName} {user?.lastName}</h2>
                 <div className="flex flex-col gap-2 items-start">
                     <p className="text-gray-600 text-sm mt-2">{profile?.bio}</p>
                     <p className="text-gray-500 text-sm">Graduation Year : {profile?.graduationYear}</p>
@@ -69,18 +100,14 @@ export default function Profile() {
                     <p className="text-gray-500 text-sm">GitHub : {profile?.github}</p>
                 </div>
                 {/* Stats Section */}
-                <div className="flex justify-between mt-6 text-gray-700">
+                <div className="flex justify-between mt-6 text-gray-700 mx-9">
                     <div>
-                        <p className="text-lg font-bold">65</p>
-                        <p className="text-xs text-gray-500">Friends</p>
+                        <p className="text-lg font-bold">{followers?.count}</p>
+                        <p className="text-xs text-gray-500">Followers</p>
                     </div>
                     <div>
-                        <p className="text-lg font-bold">43</p>
-                        <p className="text-xs text-gray-500">Photos</p>
-                    </div>
-                    <div>
-                        <p className="text-lg font-bold">21</p>
-                        <p className="text-xs text-gray-500">Comments</p>
+                        <p className="text-lg font-bold">{following?.count}</p>
+                        <p className="text-xs text-gray-500">Following</p>
                     </div>
                 </div>
 

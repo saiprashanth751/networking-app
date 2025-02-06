@@ -5,17 +5,37 @@ import { Button } from "../components/Button";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+// interface profileBody {
+//     bio?: string,
+//     linkedin?: string,
+//     github?: string
+// }
+
 export default function UpdateProfile() {
+    // const [profile, setProfile] = useState<profileBody | null>(null)
     const [bio, setBio] = useState("");
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
     const navigate = useNavigate()
 
+    // useEffect(() => {
+    //     const token = localStorage.getItem("token")
+    //     if (!token) {
+    //         navigate("/signin")
+    //     }
+    //     axios.get("http://localhost:3000/api/v1/user/profile",
+    //         {
+    //             headers: { Authorization: `Bearer ${token}` },
+    //         }
+    //     ).then((response) => {
+    //         setProfile(response.data.profile)
+    //     })
+    // }, [])
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4">
             <div className="max-w-lg w-full bg-white shadow-lg rounded-lg p-7">
-                <Heading label="Create Your Profile" />
-                
+                <Heading label="Update Your Profile" />
                 <div className="space-y-4">
                     <InputBox 
                         onChange={(e) => setBio(e.target.value)} 

@@ -19,7 +19,7 @@ const customError_1 = __importDefault(require("../utils/customError"));
 const prisma = new client_1.PrismaClient();
 exports.followUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.id;
-    const tofollow = req.params.id;
+    const tofollow = req.query.id;
     const follow = yield prisma.follow.create({
         data: {
             followerId: userId,
@@ -35,7 +35,7 @@ exports.followUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
 }));
 exports.unfollowUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.id;
-    const tounfollow = req.params.id;
+    const tounfollow = req.query.id;
     yield prisma.follow.delete({
         where: {
             followerId_followingId: {
@@ -59,7 +59,8 @@ exports.getFollowers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(
         throw new customError_1.default("No followers", 400);
     }
     return res.status(200).json({
-        followers
+        followers,
+        count: followers.length
     });
 }));
 exports.getFollowing = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -73,6 +74,7 @@ exports.getFollowing = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(
         throw new customError_1.default("User is not following anyone", 400);
     }
     return res.status(200).json({
-        followingUsers
+        followingUsers,
+        count: followingUsers.length
     });
 }));

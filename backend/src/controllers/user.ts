@@ -83,6 +83,54 @@ interface AuthRequest extends Request{
     id?: string
 }
 
+export const getUser = asyncHandler(async (req:AuthRequest, res:Response) => {
+   
+    const userId = req.id
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId
+        }
+    })
+
+    return res.status(200).json({
+        user
+    })
+     
+})
+
+export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {
+   const userId = req.id
+    const minor = req.query.minor as string
+
+  
+    const users = await prisma.user.findMany({
+        where: {
+            id:{not: userId},
+            profile: {
+                minor,
+        },
+        },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profile: {
+                select: {
+                    bio: true,
+                    graduationYear: true,
+                    department: true,
+                }
+            }
+        }
+    })
+
+    return res.status(200).json({
+        users
+    })
+     
+})
+
+
 export const createProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
     const {success} = profileCreation.safeParse(req.body)
     if(!success){
@@ -125,6 +173,24 @@ export const createProfile = asyncHandler(async (req:AuthRequest, res:Response) 
     })
      
 })
+
+export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
+   
+    const userId = req.id
+
+    const profile = await prisma.profile.findUnique({
+        where: {
+            userId
+        }
+    })
+
+    return res.status(200).json({
+        profile
+    })
+     
+})
+
+
 
 export const updateProfile = asyncHandler( async (req: AuthRequest, res:Response) => {
     const {success} = profileUpdation.safeParse(req.body)

@@ -11,8 +11,7 @@ interface AuthRequest extends Request{
 
 export const followUser = asyncHandler(async (req:AuthRequest, res: Response) => {
     const userId = req.id as string
-    const tofollow = req.params.id;
-
+    const tofollow = req.query.id as string;
     const follow = await prisma.follow.create({
         data:{
             followerId: userId,
@@ -31,7 +30,7 @@ export const followUser = asyncHandler(async (req:AuthRequest, res: Response) =>
 
 export const unfollowUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.id as string
-    const tounfollow =  req.params.id
+    const tounfollow =  req.query.id as string
     
     await prisma.follow.delete({
         where: {
@@ -60,7 +59,8 @@ export const getFollowers = asyncHandler(async (req: AuthRequest, res:Response) 
     }
 
     return res.status(200).json({
-        followers
+        followers,
+        count: followers.length
     })
 })
 
@@ -76,7 +76,8 @@ export const getFollowing = asyncHandler(async(req:AuthRequest, res:Response) =>
     }
     
     return res.status(200).json({
-        followingUsers
+        followingUsers,
+        count: followingUsers.length
     })
 
 })
