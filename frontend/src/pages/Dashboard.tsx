@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
 
+// There is a small glitch in dashboard. Issue: Need to reload to get users.
+// Add Profile for every user.
 interface profileBody {
     bio?: string,
     graduationYear?: string,

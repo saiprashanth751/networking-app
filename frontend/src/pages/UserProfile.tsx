@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate,Link, useParams } from "react-router-dom";
+import { useNavigate,Link } from "react-router-dom";
 
 interface profileBody {
     bio?: string,
@@ -23,8 +23,7 @@ interface followingBody {
 }
 
 
-export default function Profile() {
-    const {id} = useParams()
+export default function UserProfile() {
     const [profile, setProfile] = useState<profileBody | null>(null)
     const [user, setUser] = useState<userBody | null>(null)
     const [following, setFollowing] = useState<followingBody | null>(null)
@@ -35,7 +34,7 @@ export default function Profile() {
         if (!token) {
             navigate("/signin")
         }
-        axios.get(`http://localhost:3000/api/v1/user/nativeProfile/?id=${id}`,
+        axios.get("http://localhost:3000/api/v1/user/profile",
             {
                 headers: { Authorization: `Bearer ${token}` },
             }
@@ -43,7 +42,7 @@ export default function Profile() {
             setProfile(response.data.profile)
         })
 
-        axios.get(`http://localhost:3000/api/v1/user/userProfile/?id=${id}`,
+        axios.get("http://localhost:3000/api/v1/user/",
             {
                 headers: { Authorization: `Bearer ${token}` },
             }
@@ -51,22 +50,22 @@ export default function Profile() {
             setUser(response.data.user)
         })
 
-        axios.get(`http://localhost:3000/api/v1/follow/userFollowing/?id=${id}`,
+        axios.get("http://localhost:3000/api/v1/follow/following",
             {
                 headers: {Authorization: `Bearer ${token}`}
             }
         ).then((response) => {setFollowing(response.data)})
 
-        axios.get(`http://localhost:3000/api/v1/follow/userFollowers/?id=${id}`,
+        axios.get("http://localhost:3000/api/v1/follow/followers",
             {
             headers: {Authorization: `Bearer ${token}`}
         }).then((response) => {setFollowers(response.data)})
-    }, [id])
+    }, [])
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-slate-300 to-white">
             <div className="relative bg-white shadow-lg rounded-2xl p-32 text-center">
-            {/* <div className="text-blue-500 hover:text-blue-700 absolute right-5 top-5"><Link to={"/updateprofile"}>Edit Profile</Link></div> */}
+            <div className="text-blue-500 hover:text-blue-700 absolute right-5 top-5"><Link to={"/updateprofile"}>Edit Profile</Link></div>
             <div className="text-blue-500 hover:text-blue-700 absolute left-7 top-5"><Link to={"/dashboard"}>Back</Link></div>
                 {/* Profile Image */}
                 <div className="absolute -top-10 left-1/2 transform -translate-x-1/2">

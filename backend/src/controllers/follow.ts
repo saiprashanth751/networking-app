@@ -46,6 +46,23 @@ export const unfollowUser = asyncHandler(async (req: AuthRequest, res: Response)
     })
 })
 
+export const getStatus = asyncHandler(async (req:AuthRequest, res: Response) => {
+    const userId = req.id as string
+    const tocheckId = req.query.id as string
+
+    const isFollowing = await prisma.follow.findUnique({
+        where: {
+            followerId_followingId: {
+                followerId: userId,
+                followingId: tocheckId
+            }
+        }
+    })
+    return res.json({
+        following: Boolean(isFollowing)
+    })
+})
+
 export const getFollowers = asyncHandler(async (req: AuthRequest, res:Response) => {
     const userId = req.id as string
     const followers = await prisma.follow.findMany({
@@ -54,9 +71,21 @@ export const getFollowers = asyncHandler(async (req: AuthRequest, res:Response) 
         }
     })
 
-    if(!followers){
-        throw new CustomError("No followers", 400)
-    }
+
+    return res.status(200).json({
+        followers,
+        count: followers.length
+    })
+})
+
+export const getNativeFollowers = asyncHandler(async (req: AuthRequest, res:Response) => {
+    const userId = req.query.id as string
+    const followers = await prisma.follow.findMany({
+        where:{
+            followingId: userId,
+        }
+    })
+
 
     return res.status(200).json({
         followers,
@@ -71,9 +100,21 @@ export const getFollowing = asyncHandler(async(req:AuthRequest, res:Response) =>
             followerId: userId,
         }
     })
-    if(!followingUsers){
-        throw new CustomError("User is not following anyone", 400)
-    }
+    
+    return res.status(200).json({
+        followingUsers,
+        count: followingUsers.length
+    })
+
+})
+
+export const getNativeFollowing = asyncHandler(async(req:AuthRequest, res:Response) => {
+    const userId = req.query.id as string
+    const followingUsers = await prisma.follow.findMany({
+        where: {
+            followerId: userId,
+        }
+    })
     
     return res.status(200).json({
         followingUsers,

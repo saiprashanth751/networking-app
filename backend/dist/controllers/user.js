@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProfile = exports.getProfile = exports.createProfile = exports.getUsers = exports.getUser = exports.userSignin = exports.userSignup = void 0;
+exports.updateProfile = exports.getNative = exports.getProfile = exports.createProfile = exports.getUsers = exports.getUserProfile = exports.getUser = exports.userSignin = exports.userSignup = void 0;
 const client_1 = require("@prisma/client");
 const asyncHandler_1 = require("../middleware/asyncHandler");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -90,6 +90,17 @@ exports.getUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 
         user
     });
 }));
+exports.getUserProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
+    const user = yield prisma.user.findUnique({
+        where: {
+            id
+        }
+    });
+    return res.status(200).json({
+        user
+    });
+}));
 exports.getUsers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.id;
     const minor = req.query.minor;
@@ -158,6 +169,17 @@ exports.getProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
     const profile = yield prisma.profile.findUnique({
         where: {
             userId
+        }
+    });
+    return res.status(200).json({
+        profile
+    });
+}));
+exports.getNative = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
+    const profile = yield prisma.profile.findUnique({
+        where: {
+            userId: id
         }
     });
     return res.status(200).json({

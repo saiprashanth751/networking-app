@@ -1,11 +1,26 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "./Button"
+import {Link} from "react-router-dom"
 import axios from "axios"
-export function User({user}: {user: any}) {
 
+export function User({user}: {user: any}) {
+    
     const [follow, setFollow] = useState(false)
+    useEffect(() => {
+        axios.get(`http://localhost:3000/api/v1/follow/?id=${user.id}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`
+                }
+            }
+        ).then((response) => {
+            setFollow(response.data.following)
+        })
+    },[])
+
     return (
         <>
+    <Link to={`/profile/${user.id}`}>
     <div className="flex items-center justify-between bg-slate-300 p-2 rounded-lg shadow-md w-full max-w-xl m-auto">
         {/* Left Section: Profile Image & Info */}
         <div className="flex items-center gap-x-4">
@@ -52,6 +67,7 @@ export function User({user}: {user: any}) {
             </div>
         </div>
     </div>
+    </Link>
 </>
 
     )

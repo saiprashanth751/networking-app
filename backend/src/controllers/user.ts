@@ -98,6 +98,21 @@ export const getUser = asyncHandler(async (req:AuthRequest, res:Response) => {
      
 })
 
+export const getUserProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
+   
+    const id = req.query.id as string
+    const user = await prisma.user.findUnique({
+        where: {
+            id
+        }
+    })
+
+    return res.status(200).json({
+        user
+    })
+     
+})
+
 export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {
    const userId = req.id
     const minor = req.query.minor as string
@@ -174,6 +189,7 @@ export const createProfile = asyncHandler(async (req:AuthRequest, res:Response) 
      
 })
 
+
 export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
    
     const userId = req.id
@@ -190,6 +206,20 @@ export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => 
      
 })
 
+export const getNative = asyncHandler(async (req:AuthRequest, res:Response) => {
+   
+    const id = req.query.id as string
+    const profile = await prisma.profile.findUnique({
+        where: {
+            userId: id
+        }
+    })
+
+    return res.status(200).json({
+        profile
+    })
+     
+})
 
 
 export const updateProfile = asyncHandler( async (req: AuthRequest, res:Response) => {

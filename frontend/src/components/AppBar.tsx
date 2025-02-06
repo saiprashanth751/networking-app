@@ -9,7 +9,7 @@ export function AppBar(){
                 <div className="text-xl font-semibold">Connect!</div>
                 <div className="flex gap-2">
                     <Button onClick={() => {
-                        navigate("/profile")
+                        navigate("/userprofile")
                     }}
                     label={"Profile"}></Button>
                     <Button onClick={() => {
