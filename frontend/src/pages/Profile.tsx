@@ -35,7 +35,7 @@ export default function Profile() {
         if (!token) {
             navigate("/signin")
         }
-        axios.get(`http://localhost:3000/api/v1/user/nativeProfile/?id=${id}`,
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/nativeProfile/?id=${id}`,
             {
                 headers: { Authorization: `Bearer ${token}` },
             }
@@ -43,7 +43,7 @@ export default function Profile() {
             setProfile(response.data.profile)
         })
 
-        axios.get(`http://localhost:3000/api/v1/user/userProfile/?id=${id}`,
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${id}`,
             {
                 headers: { Authorization: `Bearer ${token}` },
             }
@@ -51,13 +51,13 @@ export default function Profile() {
             setUser(response.data.user)
         })
 
-        axios.get(`http://localhost:3000/api/v1/follow/userFollowing/?id=${id}`,
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/userFollowing/?id=${id}`,
             {
                 headers: {Authorization: `Bearer ${token}`}
             }
         ).then((response) => {setFollowing(response.data)})
 
-        axios.get(`http://localhost:3000/api/v1/follow/userFollowers/?id=${id}`,
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/userFollowers/?id=${id}`,
             {
             headers: {Authorization: `Bearer ${token}`}
         }).then((response) => {setFollowers(response.data)})

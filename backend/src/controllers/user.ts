@@ -4,6 +4,7 @@ import { asyncHandler } from "../middleware/asyncHandler"
 import jwt from "jsonwebtoken"
 import CustomError from "../utils/customError"
 import bcrypt from "bcrypt"
+import { sendVerificationEmail } from "../utils/emailService"
 import { profileCreation, profileUpdation, signinBody, signupBody } from "../types/types"
 
 
@@ -40,6 +41,8 @@ export const userSignup = asyncHandler(async (req:Request, res:Response) => {
     }
     const token = jwt.sign({id: user.id}, process.env.JWT_SECRET);
 
+    await sendVerificationEmail(email, token)
+
     return res.status(200).json({
         message: "User created successfully",
         token
@@ -61,6 +64,12 @@ export const userSignin = asyncHandler(async (req:Request, res:Response) => {
 
     if(!user){
         throw new CustomError("User does not exist", 400)
+    }
+
+    if(!user.verified){
+        return res.status(400).json({
+            message: "Please verify your email before logging in."
+        })
     }
 
     const passwordVerification = await bcrypt.compare(password,user.password);

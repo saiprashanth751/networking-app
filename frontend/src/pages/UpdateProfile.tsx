@@ -64,7 +64,7 @@ export default function UpdateProfile() {
                 <div className="mt-6 flex justify-center">
                     <Button 
                         onClick={async () => {
-                            await axios.put("http://localhost:3000/api/v1/user/profile", {
+                            await axios.put("https://uni-networking-app.onrender.com/api/v1/user/profile", {
                                 bio,
                                 linkedin,
                                 github,

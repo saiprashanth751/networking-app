@@ -39,7 +39,7 @@ export default function Signup() {
                             }} />
 
                             <Button onClick={async () => {
-                                const response = await axios.post("http://localhost:3000/api/v1/user/signup", {
+                                const response = await axios.post("https://uni-networking-app.onrender.com/api/v1/user/signup", {
                                     firstName,
                                     lastName,
                                     email,
@@ -47,7 +47,7 @@ export default function Signup() {
                                 })
                                 localStorage.setItem("token", response.data.token)
                                 console.log(response.data.token)
-                                navigate("/createprofile")
+                                navigate("/verify")
                             }}
                                 label={"Sign up"} />
 

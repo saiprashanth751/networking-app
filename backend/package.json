@@ -2,13 +2,12 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
- "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "build": "tsc --build",
-  "start": "node dist/index.js",
-  "dev": "nodemon --watch src --ext ts --exec \"tsc --build && node dist/index.js\""
-}
-,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --build",
+    "start": "node dist/index.js",
+    "dev": "nodemon --watch src --ext ts --exec \"tsc --build && node dist/index.js\""
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -22,6 +21,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.10.0",
     "nodemon": "^3.1.9",
     "prisma": "^6.3.0",
     "zod": "^3.24.1"
@@ -30,6 +30,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.8"
+    "@types/jsonwebtoken": "^9.0.8",
+    "@types/nodemailer": "^6.4.17"
   }
 }

@@ -26,13 +26,13 @@ export default function Dashboard() {
             navigate("/signin")
         }
      
-        axios.get("http://localhost:3000/api/v1/user/profile",{
+        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile",{
             headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             setProfile(response.data.profile)
         })
 
-        axios.get(`http://localhost:3000/api/v1/user/bulk/?minor=${profile?.minor}`,{
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profile?.minor}`,{
             headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             setUsers(response.data.users)

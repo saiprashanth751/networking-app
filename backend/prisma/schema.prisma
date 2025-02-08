@@ -19,6 +19,7 @@ model User {
   lastName String?
   email String @unique
   password String
+  verified Boolean @default(false)
   profile Profile?
   project Project?
   createdAt DateTime @default(now())

@@ -31,13 +31,13 @@ export default function Signin() {
                             
 
                            <Button onClick={async () => {
-                            const response = await axios.post("http://localhost:3000/api/v1/user/signin", {
+                            const response = await axios.post("https://uni-networking-app.onrender.com/api/v1/user/signin", {
                                 email,
                                 password
                             })
                             localStorage.setItem("token", response.data.token)
                             console.log(response.data.token)
-                            navigate("/dashboard")
+                            navigate("/createprofile")
                            }}
                            label={"Sign in"}/>
                             

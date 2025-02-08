@@ -6,6 +6,7 @@ import CreateProfile from "./pages/CreateProfile"
 import UpdateProfile from "./pages/UpdateProfile"
 import UserProfile from "./pages/UserProfile"
 import Profile from "./pages/Profile"
+import Verify from "./pages/Verify"
 
 function App() {
 
@@ -16,6 +17,7 @@ function App() {
           <Route path="/" element={<Signup/>}></Route>
           <Route path="/signup" element={<Signup/>}></Route>
           <Route path="/signin" element={<Signin/>}></Route>
+          <Route path="/verify" element={<Verify/>}></Route>
           <Route path="/createprofile" element={<CreateProfile/>}></Route>
           <Route path="/updateprofile" element={<UpdateProfile/>}></Route>
           <Route path="/userprofile" element={<UserProfile/>}></Route>

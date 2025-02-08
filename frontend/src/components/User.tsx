@@ -7,7 +7,7 @@ export function User({user}: {user: any}) {
     
     const [follow, setFollow] = useState(false)
     useEffect(() => {
-        axios.get(`http://localhost:3000/api/v1/follow/?id=${user.id}`,
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
             {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("token")}`
@@ -20,9 +20,9 @@ export function User({user}: {user: any}) {
 
     return (
         <>
-    <Link to={`/profile/${user.id}`}>
     <div className="flex items-center justify-between bg-slate-300 p-2 rounded-lg shadow-md w-full max-w-xl m-auto">
         {/* Left Section: Profile Image & Info */}
+    <Link to={`/profile/${user.id}`}>
         <div className="flex items-center gap-x-4">
             <img 
                 alt="Profile" 
@@ -34,6 +34,7 @@ export function User({user}: {user: any}) {
                 <p className="text-xs text-gray-500">{user.profile.department} - {user.profile.graduationYear}</p>
             </div>
         </div>
+                </Link>
 
         {/* Right Section: Status & Role */}
         <div className="hidden sm:flex flex-col items-end">
@@ -67,7 +68,6 @@ export function User({user}: {user: any}) {
             </div>
         </div>
     </div>
-    </Link>
 </>
 
     )

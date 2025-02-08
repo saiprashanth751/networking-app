@@ -18,6 +18,7 @@ const asyncHandler_1 = require("../middleware/asyncHandler");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const customError_1 = __importDefault(require("../utils/customError"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const emailService_1 = require("../utils/emailService");
 const types_1 = require("../types/types");
 const prisma = new client_1.PrismaClient();
 exports.userSignup = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -47,6 +48,7 @@ exports.userSignup = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
         throw new customError_1.default("JWT_SECRET is not defined", 500);
     }
     const token = jsonwebtoken_1.default.sign({ id: user.id }, process.env.JWT_SECRET);
+    yield (0, emailService_1.sendVerificationEmail)(email, token);
     return res.status(200).json({
         message: "User created successfully",
         token
@@ -65,6 +67,11 @@ exports.userSignin = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
     });
     if (!user) {
         throw new customError_1.default("User does not exist", 400);
+    }
+    if (!user.verified) {
+        return res.status(400).json({
+            message: "Please verify your email before logging in."
+        });
     }
     const passwordVerification = yield bcrypt_1.default.compare(password, user.password);
     if (!passwordVerification) {
