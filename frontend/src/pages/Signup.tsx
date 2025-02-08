@@ -46,7 +46,7 @@ export default function Signup() {
                                     password
                                 })
                                 localStorage.setItem("token", response.data.token)
-                                console.log(response.data.token)
+                                
                                 navigate("/verify")
                             }}
                                 label={"Sign up"} />
