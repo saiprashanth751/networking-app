@@ -9,7 +9,7 @@ import cors from "cors"
 const app = express();
 app.use(express.json())
 app.use(cors({
-    origin: ["https://uni-networking-app.onrender.com"], // Replace with your actual frontend domain
+    origin: "*", // Replace with your actual frontend domain
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true // Allow cookies if using authentication
   }));
