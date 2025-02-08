@@ -19,6 +19,13 @@ app.use("/api/v1/project",projectRouter)
 app.use("/api/v1/follow", followRouter)
 app.use("api/v1/auth", authRouter)
 
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
+
 app.use(errorMiddleware);
 
 
