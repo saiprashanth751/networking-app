@@ -13,7 +13,7 @@ const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
-    origin: ["https://uni-networking-app.onrender.com"], // Replace with your actual frontend domain
+    origin: "*", // Replace with your actual frontend domain
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true // Allow cookies if using authentication
 }));
@@ -21,5 +21,8 @@ app.use("/api/v1/user", user_1.default);
 app.use("/api/v1/project", project_1.default);
 app.use("/api/v1/follow", follow_1.default);
 app.use("api/v1/auth", auth_1.default);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
 app.use(errorMiddleware_1.errorMiddleware);
-app.listen(3000);

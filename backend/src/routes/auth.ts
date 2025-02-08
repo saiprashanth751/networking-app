@@ -1,9 +1,8 @@
 import express from "express"
-import { authMiddleware } from "../middleware/authMiddleware"
 import { verifyEmail } from "../controllers/auth"
 
 const app = express.Router()
 
-app.get("/verify/:id",verifyEmail)
+app.get("/verify/:token",verifyEmail)
 
 export default app

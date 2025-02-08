@@ -11,12 +11,17 @@ interface AuthRequest extends Request{
 
 export const verifyEmail = asyncHandler( async (req: AuthRequest, res: Response) => {
     const token = req.params.token;
-
+    if(!token){
+        return res.status(400).json({
+            message: "Invalid token"
+        })
+    }
+    console.log(token)
     if (!process.env.JWT_SECRET) {
         throw new Error("JWT_SECRET is not defined");
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as unknown as { id: string }
-    
+
     if(!decoded){
         return res.status(400).json({
             message: "Invalid token"
