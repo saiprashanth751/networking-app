@@ -4,6 +4,6 @@ import { verifyEmail } from "../controllers/auth"
 
 const app = express.Router()
 
-app.get("/verify/:id", authMiddleware,verifyEmail)
+app.get("/verify/:id",verifyEmail)
 
 export default app
