@@ -59,7 +59,11 @@ const ProfilePage = () => {
         }).then((response) => {
             setUsers(response.data.users)
         })
-        axios.get("https://uni-networking-app.onrender.com/api/v1/post/all").then((response) => {
+        axios.get("https://uni-networking-app.onrender.com/api/v1/post/userAll",{
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }).then((response) => {
             setPosts(response.data.posts)
         })
 
