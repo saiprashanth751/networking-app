@@ -74,9 +74,10 @@ exports.deletePost = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
 }));
 //Get User Post
 exports.getUserPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const postId = req.id;
+    const userId = req.id;
+    console.log(userId);
     const posts = yield prisma.post.findMany({
-        where: { userId: postId },
+        where: { userId: userId },
         include: {
             user: {
                 select: {
