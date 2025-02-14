@@ -81,6 +81,14 @@ export const getAllPosts = asyncHandler(async (req, res: Response) => {
     const posts = await prisma.post.findMany({
         orderBy: {
             createdAt: 'desc'
+        },
+        include: {
+            user: {
+                select: {
+                    firstName: true,
+                    lastName: true
+                }
+            }
         }
     })
 
@@ -89,6 +97,7 @@ export const getAllPosts = asyncHandler(async (req, res: Response) => {
         posts
     })
 })
+
 
 // Get Post By ID
 export const getPostById = asyncHandler(async (req, res: Response) => {

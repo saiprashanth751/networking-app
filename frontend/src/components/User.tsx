@@ -30,15 +30,15 @@ export function User({user}: {user: any}) {
                 className="w-12 h-12 flex-none rounded-full bg-gray-100 object-cover"
             />
             <div>
-                <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
-                <p className="text-xs text-gray-500">{user.profile.department} - {user.profile.graduationYear}</p>
+                <p className="text-sm font-semibold text-gray-900">{user.firstName}</p>
+                {/* <p className="text-xs text-gray-500">{user.profile.department} - {user.profile.graduationYear}</p> */}
             </div>
         </div>
                 </Link>
 
         {/* Right Section: Status & Role */}
         <div className="hidden sm:flex flex-col items-end">
-            <p className="text-sm text-gray-900 font-medium">{user.profile.bio}</p>
+            {/* <p className="text-sm text-gray-900 font-medium">{user.profile.bio}</p> */}
             <div className="flex items-center gap-x-2 mt-1 px-2">
 
                 {/* Memory Button */}

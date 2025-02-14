@@ -22,17 +22,17 @@ export default function Dashboard() {
     useEffect(() => {
 
         const token = localStorage.getItem("token")
-        if(!token){
+        if (!token) {
             navigate("/signin")
         }
-     
-        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile",{
+
+        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile", {
             headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             setProfile(response.data.profile)
         })
 
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profile?.minor}`,{
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profile?.minor}`, {
             headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             setUsers(response.data.users)
@@ -42,11 +42,14 @@ export default function Dashboard() {
     return (
         <>
             <AppBar></AppBar>
-                    <div className="flex flex-col justify-center gap-2">
-                        {users?.map((user: any) => {
-                            return <User user={user}></User>
-                        })}
-                    </div>
-            </>
-            )
+            <div className="w-64 bg-gray-800 rounded-lg p-6">
+                <h3 className="text-xl font-bold mb-4">You might like</h3>
+                <div className="space-y-4">
+                    {users?.map((user: any) => (
+                        <User key={user.id} user={user} />
+                    ))}
+                </div>
+            </div>
+        </>
+    )
 }

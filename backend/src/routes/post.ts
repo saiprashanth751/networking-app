@@ -3,8 +3,8 @@ import { createPost, getAllPosts, getPostById, updatePost } from "../controllers
 
 const app = express.Router();
 
-app.post("/post",createPost);
-app.put("/post",updatePost);
+app.post("/userPost",createPost);
+app.put("/updatePost",updatePost);
 app.get("/all",getAllPosts);
 app.get("/:id",getPostById);
 

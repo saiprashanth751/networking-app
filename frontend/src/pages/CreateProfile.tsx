@@ -25,7 +25,7 @@ export default function CreateProfile() {
 
         axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile", {
             headers: {
-                Authorization: localStorage.getItem("token")
+                Authorization: `Bearer ${token}`
             }
         }).then((response) => {
             setProfile(response.data)

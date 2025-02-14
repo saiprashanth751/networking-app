@@ -77,6 +77,14 @@ exports.getAllPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(v
     const posts = yield prisma.post.findMany({
         orderBy: {
             createdAt: 'desc'
+        },
+        include: {
+            user: {
+                select: {
+                    firstName: true,
+                    lastName: true
+                }
+            }
         }
     });
     return res.status(200).json({
