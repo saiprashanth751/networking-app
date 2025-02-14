@@ -1,9 +1,5 @@
 // import React from "react";
 
-import { useEffect, useState } from "react";
-
-
-
 export function Post({post}: {post : any} ) {
 
   return (
@@ -12,7 +8,7 @@ export function Post({post}: {post : any} ) {
     {/* <h3 className="text-xl font-bold mb-6">Your Posts</h3> */}
     {/* <div className="space-y-6"> */}
         {/* Example Post 1 */}
-        <div className="bg-gray-700 rounded-lg p-6">
+        <div className="bg-gray-700 rounded-lg p-6 mb-3 overflow-auto">
             <div className="flex items-center justify-between">
                 {/* User Info */}
                 <div className="flex items-center space-x-4">
@@ -22,8 +18,8 @@ export function Post({post}: {post : any} ) {
                         className="w-10 h-10 rounded-full"
                     />
                     <div>
-                        <p className="font-semibold">{post?.user.firstName}</p>
-                        <p className="text-sm text-gray-400">{post?.user.lastName}</p>
+                        <p className="font-semibold text-white">{post?.user.firstName} {post?.user.lastName}</p>
+                        {/* <p className="text-sm text-gray-400"></p> */}
                     </div>
                 </div>
                 {/* Timestamp */}

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPostById = exports.getAllPosts = exports.deletePost = exports.updatePost = exports.createPost = void 0;
+exports.getPostById = exports.getAllPosts = exports.getUserPosts = exports.deletePost = exports.updatePost = exports.createPost = void 0;
 const client_1 = require("@prisma/client");
 const asyncHandler_1 = require("../middleware/asyncHandler");
 const customError_1 = __importDefault(require("../utils/customError"));
@@ -70,6 +70,20 @@ exports.deletePost = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
     });
     return res.status(200).json({
         message: "Post successfully deleted"
+    });
+}));
+//Get User Post
+exports.getUserPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const postId = req.id;
+    const posts = yield prisma.post.findMany({
+        where: { userId: postId }
+    });
+    if (!posts) {
+        throw new customError_1.default("Post not found", 404);
+    }
+    return res.status(200).json({
+        message: "Post retrieved successfully",
+        posts
     });
 }));
 // Get All Posts

@@ -76,6 +76,24 @@ export const deletePost = asyncHandler(async (req: AuthRequest, res: Response) =
     })
 })
 
+//Get User Post
+export const getUserPosts = asyncHandler(async (req:AuthRequest, res: Response) => {
+    const postId = req.id
+    const posts = await prisma.post.findMany({
+        where: { userId: postId }
+    })
+
+    if (!posts) {
+        throw new CustomError("Post not found", 404)
+    }
+
+    return res.status(200).json({
+        message: "Post retrieved successfully",
+        posts
+    })
+})
+
+
 // Get All Posts
 export const getAllPosts = asyncHandler(async (req, res: Response) => {
     const posts = await prisma.post.findMany({
