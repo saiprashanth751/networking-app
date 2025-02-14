@@ -130,7 +130,7 @@ export const getAllPosts = asyncHandler(async (req, res: Response) => {
 // Get Post By ID
 export const getPostById = asyncHandler(async (req, res: Response) => {
     const id = req.params.id
-    const post = await prisma.post.findUnique({
+    const post = await prisma.post.findMany({
         where: { userId: id }
     })
 

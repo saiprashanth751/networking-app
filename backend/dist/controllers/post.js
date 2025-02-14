@@ -118,7 +118,7 @@ exports.getAllPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(v
 // Get Post By ID
 exports.getPostById = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.params.id;
-    const post = yield prisma.post.findUnique({
+    const post = yield prisma.post.findMany({
         where: { userId: id }
     });
     if (!post) {
