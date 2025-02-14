@@ -44,7 +44,7 @@ export function User({user}: {user: any}) {
                 {/* Memory Button */}
                 <Button onClick={ async () => {
                     if(follow===false){
-                        await axios.post(`http://localhost:3000/api/v1/follow/?id=${user.id}`, 
+                        await axios.post(`https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`, 
                         {}, 
                         {
                             headers : {
@@ -54,7 +54,7 @@ export function User({user}: {user: any}) {
                         setFollow(true)
                     }
                     else{ 
-                        await axios.delete(`http://localhost:3000/api/v1/follow/?id=${user.id}`, {
+                        await axios.delete(`https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`, {
                             headers : {
                                 Authorization: `Bearer ${localStorage.getItem("token")}`
                             }

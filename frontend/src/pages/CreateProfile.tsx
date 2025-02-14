@@ -65,7 +65,7 @@ export default function CreateProfile() {
                 <div className="mt-6 flex justify-center">
                     <Button 
                         onClick={async () => {
-                            await axios.post("http://localhost:3000/api/v1/user/profile", {
+                            await axios.post("https://uni-networking-app.onrender.com/api/v1/user/profile", {
                                 bio,
                                 graduationYear: graduation,
                                 department: selectedDepartment ? selectedDepartment.name : "",
