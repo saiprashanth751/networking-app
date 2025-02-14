@@ -3,6 +3,7 @@ import userRouter from "./routes/user"
 import projectRouter from "./routes/project"
 import followRouter from "./routes/follow"
 import authRouter from "./routes/auth"
+import postRouter from "./routes/post"
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import cors from "cors"
 
@@ -18,6 +19,7 @@ app.use("/api/v1/user",userRouter)
 app.use("/api/v1/project",projectRouter)
 app.use("/api/v1/follow", followRouter)
 app.use("/api/v1/auth", authRouter)
+app.use("/api/v1/post", postRouter)
 
 const PORT = process.env.PORT || 3000;
 

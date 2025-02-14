@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProjectBody = exports.profileUpdation = exports.profileCreation = exports.signinBody = exports.signupBody = void 0;
+exports.PostBody = exports.ProjectBody = exports.profileUpdation = exports.profileCreation = exports.signinBody = exports.signupBody = void 0;
 const zod_1 = __importDefault(require("zod"));
 exports.signupBody = zod_1.default.object({
     firstName: zod_1.default.string(),
@@ -31,6 +31,10 @@ exports.profileUpdation = zod_1.default.object({
     github: zod_1.default.string().optional()
 });
 exports.ProjectBody = zod_1.default.object({
+    title: zod_1.default.string(),
+    description: zod_1.default.string()
+});
+exports.PostBody = zod_1.default.object({
     title: zod_1.default.string(),
     description: zod_1.default.string()
 });

@@ -22,6 +22,7 @@ model User {
   verified Boolean @default(false)
   profile Profile?
   project Project?
+  posts Post[]
   createdAt DateTime @default(now())
 
   followers Follow[] @relation(name: "followers")
@@ -60,4 +61,13 @@ model Follow {
   followingId String
 
   @@unique([followerId, followingId])
+}
+
+model Post{
+  id String @id @default(uuid())
+  title String
+  description String
+  userId String @unique
+  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }

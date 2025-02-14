@@ -14,6 +14,7 @@ export default function CreateProfile() {
     const [selectedMinor, setSelectedMinor] = useState<{ name: string } | null>(null);
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
+    const [profile, setProfile] = useState(null);
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -21,6 +22,19 @@ export default function CreateProfile() {
         if(!token){
             navigate("/signin")
         }
+
+        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile", {
+            headers: {
+                Authorization: localStorage.getItem("token")
+            }
+        }).then((response) => {
+            setProfile(response.data)
+        })
+
+        if(profile){
+            navigate("/dashboard")
+        }
+
     })
 
     return (

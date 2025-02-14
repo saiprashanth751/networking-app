@@ -76,3 +76,13 @@ export declare const ProjectBody: zod.ZodObject<{
     title: string;
     description: string;
 }>;
+export declare const PostBody: zod.ZodObject<{
+    title: zod.ZodString;
+    description: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    title: string;
+    description: string;
+}, {
+    title: string;
+    description: string;
+}>;

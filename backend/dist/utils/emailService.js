@@ -24,8 +24,8 @@ const transporter = nodemailer_1.default.createTransport({
     }
 });
 const sendVerificationEmail = (email, token) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(process.env.BASE_URL);
     const url = `${process.env.BASE_URL}/api/v1/auth/verify/${token}`;
+    console.log(url);
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,

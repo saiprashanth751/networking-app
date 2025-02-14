@@ -34,3 +34,8 @@ export const ProjectBody = zod.object({
     description: zod.string()
 })
 
+export const PostBody = zod.object({
+    title: zod.string(),
+    description: zod.string()
+})
+
