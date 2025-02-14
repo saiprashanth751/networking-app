@@ -117,9 +117,9 @@ exports.getAllPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(v
 }));
 // Get Post By ID
 exports.getPostById = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const postId = req.params.id;
+    const id = req.params.id;
     const post = yield prisma.post.findUnique({
-        where: { id: postId }
+        where: { userId: id }
     });
     if (!post) {
         throw new customError_1.default("Post not found", 404);

@@ -129,9 +129,9 @@ export const getAllPosts = asyncHandler(async (req, res: Response) => {
 
 // Get Post By ID
 export const getPostById = asyncHandler(async (req, res: Response) => {
-    const postId = req.params.id
+    const id = req.params.id
     const post = await prisma.post.findUnique({
-        where: { id: postId }
+        where: { userId: id }
     })
 
     if (!post) {

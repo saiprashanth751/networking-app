@@ -37,38 +37,49 @@ const ProfilePage = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token) navigate('/signin');
-
+    
+        // Fetch profile data first
         axios.get('https://uni-networking-app.onrender.com/api/v1/user/profile', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setProfile(response.data.profile));
-
+    
+        // Fetch user data
         axios.get('https://uni-networking-app.onrender.com/api/v1/user/', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
-
+    
+        // Fetch following and followers data
         axios.get('https://uni-networking-app.onrender.com/api/v1/follow/following', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setFollowing(response.data));
-
+    
         axios.get('https://uni-networking-app.onrender.com/api/v1/follow/followers', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setFollowers(response.data));
-
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profile?.minor}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).then((response) => {
-            setUsers(response.data.users)
-        })
-        axios.get("https://uni-networking-app.onrender.com/api/v1/post/userAll",{
+    
+        // Fetch user's posts
+        axios.get("https://uni-networking-app.onrender.com/api/v1/post/userAll", {
             headers: {
                 Authorization: `Bearer ${token}`
             }
         }).then((response) => {
             setPosts(response.data.posts)
         })
-
-    }, [profile?.minor, following, followers]);
-
+    
+    }, []); // Run once on mount
+    
+    // Separate useEffect for users based on minor
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (profile?.minor) {
+            axios.get(`https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profile.minor}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            }).then((response) => {
+                setUsers(response.data.users)
+            })
+        }
+    }, [profile?.minor]); // Triggered only when profile.minor changes
+    
     return (
         <div className="bg-gray-900 text-white min-h-screen flex p-8 space-x-8">
             {/* Left Profile Section */}
@@ -98,11 +109,11 @@ const ProfilePage = () => {
                     <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
                     <div className="flex justify-center items-center text-gray-400 gap-40 mt-2">
                         <div>
-                            <p className="text-lg font-bold">{followers?.count}</p>
+                            <p className="text-lg font-bold text-center">{followers?.count}</p>
                             <p className="text-xs">Followers</p>
                         </div>
                         <div>
-                            <p className="text-lg font-bold">{following?.count}</p>
+                            <p className="text-lg font-bold text-center">{following?.count}</p>
                             <p className="text-xs">Following</p>
                         </div>
                     </div>
