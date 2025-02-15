@@ -75,7 +75,6 @@ exports.deletePost = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
 //Get User Post
 exports.getUserPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.id;
-    console.log(userId);
     const posts = yield prisma.post.findMany({
         where: { userId: userId },
         include: {
@@ -118,14 +117,22 @@ exports.getAllPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(v
 // Get Post By ID
 exports.getPostById = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.params.id;
-    const post = yield prisma.post.findMany({
-        where: { userId: id }
+    const posts = yield prisma.post.findMany({
+        where: { userId: id },
+        include: {
+            user: {
+                select: {
+                    firstName: true,
+                    lastName: true
+                }
+            }
+        }
     });
-    if (!post) {
-        throw new customError_1.default("Post not found", 404);
+    if (posts.length === 0) {
+        throw new customError_1.default("No posts found for this user", 404);
     }
     return res.status(200).json({
-        message: "Post retrieved successfully",
-        post
+        message: "Posts retrieved successfully",
+        posts
     });
 }));
