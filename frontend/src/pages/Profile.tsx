@@ -125,8 +125,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { GraduationCap, Book, Link as LinkIcon } from 'lucide-react';
-import { User } from "../components/User"; // Ensure this component exists
-import { Post } from "../components/Post"; // Ensure this component exists
+import { Post } from "../components/Post";
 
 interface ProfileBody {
     bio?: string;
@@ -160,12 +159,8 @@ export default function Profile() {
     }
     
     const [posts, setPosts] = useState<PostBody[]>([]); // State for posts
-    interface User {
-        id: string;
-        // Add other properties of a user here
-    }
 
-    const [users, setUsers] = useState<User[]>([]); // State for recommended users
+    
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -202,10 +197,8 @@ export default function Profile() {
         });
 
         // Fetch user's posts
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/post/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).then((response) => {
-            setPosts(response.data.posts);
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/post/${id}`).then((response) => {
+            setPosts(response.data.post);
         });
 
     }, [id, navigate]);
@@ -296,9 +289,9 @@ export default function Profile() {
             <div className="flex-1 bg-gray-800 rounded-lg p-6">
                 <h3 className="text-xl font-bold mb-6">Posts</h3>
                 <div className="space-y-6">
-                    {posts.map((post) => (
-                        <Post key={post.id} post={post} />
-                    ))}
+                    {posts?.map((post) => {
+                    return <Post key={post.id} post={post} />
+                    })}
                 </div>
             </div>
         </div>
