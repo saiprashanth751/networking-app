@@ -25,6 +25,8 @@ model User {
   posts Post[]
   createdAt DateTime @default(now())
 
+  messagesSent Message[] @relation("MessageSent")
+  messagesReceived Message[] @relation("MessageReceived")
   followers Follow[] @relation(name: "followers")
   following Follow[] @relation(name: "following")
 }
@@ -70,4 +72,14 @@ model Post{
   userId String
   user User @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model Message{
+  id String @id @default(uuid())
+  senderID String
+  receiverID String
+  content String
+  timestamp DateTime @default(now())
+  sender User @relation("MessageSent", fields: [senderID], references: [id])
+  receiver User @relation("MessageReceived", fields: [receiverID], references: [id]) 
 }
