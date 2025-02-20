@@ -10,7 +10,7 @@ interface AuthRequest extends Request {
     id?: string
 }
 
-export const createMessage = asyncHandler(async(req:AuthRequest,  res:Response ) => {
+export const sendMessage = asyncHandler(async(req:AuthRequest,  res:Response ) => {
     const {success} = MessageBody.safeParse(req.body);
     if(!success){
         new CustomError("Invalid input", 400);
@@ -21,12 +21,12 @@ export const createMessage = asyncHandler(async(req:AuthRequest,  res:Response )
         throw new CustomError("User ID is missing", 400);
     }
 
-    const {receiverID, content} = req.body
+    const {receiverId, content} = req.body
 
     const message = await prisma.message.create({
         data: {
-            senderID: id,
-            receiverID,
+            senderId: id,
+            receiverId,
             content
         }
     })
@@ -41,7 +41,7 @@ export const createMessage = asyncHandler(async(req:AuthRequest,  res:Response )
 export const getMessages = asyncHandler(async(req:AuthRequest,  res:Response ) => {
 
     const id = req.id as string;
-    const receiverID = req.params.id
+    const receiverId = req.params.id
 
     if (!id) {
         throw new CustomError("User ID is missing", 400);
@@ -50,8 +50,8 @@ export const getMessages = asyncHandler(async(req:AuthRequest,  res:Response ) =
     const messages = await prisma.message.findMany({
         where: {
             OR : [ 
-                {senderID: id,receiverID},
-                {senderID: receiverID, receiverID: id}
+                {senderId: id, receiverId},
+                {senderId: receiverId, receiverId: id}
             ]
         },
         orderBy: {

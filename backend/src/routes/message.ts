@@ -1,10 +1,10 @@
 import express from "express"
-import { createMessage, getMessages } from "../controllers/message";
+import { getMessages, sendMessage } from "../controllers/message";
 import { authMiddleware } from "../middleware/authMiddleware";
 
 const app = express.Router()
 
-app.post("/send", createMessage)
+app.post("/send",authMiddleware ,sendMessage)
 app.get("/:id", authMiddleware, getMessages)
 
 export default app;
