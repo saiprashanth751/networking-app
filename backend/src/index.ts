@@ -46,7 +46,7 @@ io.on("connection", (socket) => {
   
   socket.on("sendMessage", async ({ senderId, receiverId, content }) => {
     const message = await prisma.message.create({
-        data: { senderId, receiverId, content }
+        data: { senderId, receiverId, content, read:false }
     });
 
     const room = [senderId, receiverId].sort().join("_")

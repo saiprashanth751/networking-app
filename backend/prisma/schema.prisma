@@ -80,6 +80,7 @@ model Message{
   receiverId String
   content String
   timestamp DateTime @default(now())
+  read Boolean @default(false)
 
   sender User @relation("MessageSent", fields: [senderId], references: [id])
   receiver User @relation("MessageReceived", fields: [receiverId], references: [id])
