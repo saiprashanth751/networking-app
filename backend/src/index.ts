@@ -43,7 +43,19 @@ io.on("connection", (socket) => {
     socket.join(room);
     console.log(`User ${senderId} joined room ${room}`);
   })
-  
+
+  socket.on("userOnline", async (userId:string) => {
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        isOnline: true
+      }
+    })
+    io.emit("updateUserStatus", {userId, isOnline: true})
+  })
+
   socket.on("sendMessage", async ({ senderId, receiverId, content }) => {
     const message = await prisma.message.create({
         data: { senderId, receiverId, content, read:false }
@@ -53,8 +65,19 @@ io.on("connection", (socket) => {
     io.to(room).emit("receiveMessage", message)
 })
 
-socket.on("disconnect", () => {
-  console.log("User disconnected:", socket.id)
+socket.on("disconnect", async () => {
+  if(socket.data.userId) {
+    await prisma.user.update({
+      where: {
+        id: socket.data.userId
+      },
+      data: {
+        isOnline: false
+    }
+    })
+    io.emit("updateUserStatus", {userId: socket.data.userId, isOnline: false})
+  }
+  
 })
 
 })

@@ -257,3 +257,19 @@ export const updateProfile = asyncHandler( async (req: AuthRequest, res:Response
     })
 
 })
+
+export const getOnlineStatus = asyncHandler( (async (req:AuthRequest, res:Response) => {
+    const  id  = req.params.id;
+    const user = await prisma.user.findUnique({
+        where: { id },
+        select: { isOnline: true }
+    });
+
+    if(!user){
+        throw new CustomError("user not found", 400);
+    
+    }
+    return res.json({ isOnline: user.isOnline });
+}
+
+));
