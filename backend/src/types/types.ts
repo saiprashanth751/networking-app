@@ -39,3 +39,8 @@ export const PostBody = zod.object({
     description: zod.string()
 })
 
+export const MessageBody = zod.object({
+    senderId: zod.string(),
+    receiverId: zod.string(),
+    content: zod.string()
+})

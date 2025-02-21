@@ -64,3 +64,23 @@ export const getMessages = asyncHandler(async(req:AuthRequest,  res:Response ) =
         messages
     })
 })
+
+export const markMessagesAsRead = asyncHandler(async(req:AuthRequest, res:Response) => {
+    const id = req.id;
+    const senderId = req.params.id 
+    
+    await prisma.message.updateMany({
+        where: {
+            senderId,
+            receiverId: id,
+            read: false
+        },
+        data: {
+            read: true
+        }
+    })
+
+    res.status(200).json({
+        messages: "Messages marked as read"
+    })
+})
