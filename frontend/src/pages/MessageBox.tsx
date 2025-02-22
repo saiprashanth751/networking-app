@@ -20,30 +20,6 @@ export default function MessageBox() {
       return;
     }
   
-    // Fetch previous messages
-    const fetchMessages = async () => {
-      try {
-        const res = await axios.get(
-          `https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-  
-        // Extract the messages array from the response
-        if (res.data && Array.isArray(res.data.messages)) {
-          setMessages(res.data.messages);
-          console.log("Previous messages fetched:", res.data.messages);
-        } else {
-          console.error("Invalid response format:", res.data);
-        }
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-      }
-    };
-  
-    fetchMessages();
-  
     // Initialize Socket.IO connection
     const newSocket = io("https://uni-networking-app.onrender.com", {
       withCredentials: true,
@@ -55,7 +31,6 @@ export default function MessageBox() {
   
     setSocket(newSocket);
   
-    // Socket.IO event listeners
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket server");
   
@@ -77,7 +52,6 @@ export default function MessageBox() {
       console.log("Disconnected from WebSocket server:", reason);
     });
   
-    // Cleanup on unmount
     return () => {
       newSocket.disconnect();
     };
