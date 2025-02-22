@@ -10,7 +10,7 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
 import http from "http";
 import cors from "cors";
-import authMiddleware from "./middleware/authMiddleware"; // Import your auth middleware
+import {authMiddleware} from "./middleware/authMiddleware"; // Import your auth middleware
 
 const app = express();
 app.use(express.json());
@@ -47,7 +47,12 @@ const io = new Server(server, {
 
 // Authenticate Socket.IO connections
 io.use((socket, next) => {
-  authMiddleware(socket.request, {} as any, next); // Use your auth middleware
+  authMiddleware(socket.request as express.Request, {} as any, (err?: any) => {
+    if (err) {
+      return next(new Error(err));
+    }
+    next();
+  });
 });
 
 // Socket.IO connection handler
