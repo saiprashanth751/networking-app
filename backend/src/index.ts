@@ -70,7 +70,7 @@ io.on("connection", (socket) => {
   console.log("New User Connected:", socket.id);
 
   // Extract senderId from authenticated user
-  const senderId = (socket.request as any).user?.id; // Ensure correct extraction
+  const senderId = (socket.request as any).id; // Ensure correct extraction
   if (!senderId) {
     console.error("Sender ID not found. Disconnecting socket.");
     socket.disconnect();
@@ -84,10 +84,19 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const room = [senderId, receiverId].sort().join("_"); // Ensure sorted room name
+    // Log the receiverId being passed
+    console.log(`Receiver ID passed to joinRoom: ${receiverId}`);
+
+    // Create room name (sorted combination of senderId and receiverId)
+    const room = [senderId, receiverId].sort().join("_");
     socket.join(room);
     socket.data.userId = senderId;
     console.log(`User ${senderId} joined room ${room}`);
+
+    // Log all users in the room
+    io.in(room).fetchSockets().then((sockets) => {
+      console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+    });
   });
 
   // Send message event
@@ -98,31 +107,39 @@ io.on("connection", (socket) => {
     }
 
     try {
-      // Save message in DB
+      // Save message to the database
       const message = await prisma.message.create({
         data: { senderId, receiverId, content, read: false },
       });
-
       console.log("Message saved to database:", message);
 
+      // Create room name (sorted combination of senderId and receiverId)
       const room = [senderId, receiverId].sort().join("_");
 
-      // Emit message only to receiver
+      // Emit the message to the room (excluding the sender)
       socket.to(room).emit("receiveMessage", message);
       console.log(`Message sent to room ${room}:`, message);
+
+      // Log all users in the room
+      io.in(room).fetchSockets().then((sockets) => {
+        console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+      });
     } catch (error) {
       console.error("Error sending message:", error);
     }
   });
 
-  // Handle disconnection
+  // Disconnect event
   socket.on("disconnect", async () => {
     console.log("User disconnected:", socket.id);
-    await prisma.user.update({
-      where: { id: senderId },
-      data: { isOnline: false },
-    });
-    io.emit("updateUserStatus", { userId: senderId, isOnline: false });
+
+    if (senderId) {
+      await prisma.user.update({
+        where: { id: senderId },
+        data: { isOnline: false },
+      });
+      io.emit("updateUserStatus", { userId: senderId, isOnline: false });
+    }
   });
 });
 

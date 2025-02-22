@@ -20,6 +20,7 @@ export default function MessageBox() {
       return;
     }
   
+    // Fetch previous messages
     const fetchMessages = async () => {
       try {
         const res = await axios.get(
@@ -29,8 +30,12 @@ export default function MessageBox() {
           }
         );
   
+        // Extract the messages array from the response
         if (res.data && Array.isArray(res.data.messages)) {
           setMessages(res.data.messages);
+          console.log("Previous messages fetched:", res.data.messages);
+        } else {
+          console.error("Invalid response format:", res.data);
         }
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -39,42 +44,65 @@ export default function MessageBox() {
   
     fetchMessages();
   
+    // Initialize Socket.IO connection
     const newSocket = io("https://uni-networking-app.onrender.com", {
       withCredentials: true,
       transports: ["websocket", "polling"],
-      auth: { token },
+      auth: {
+        token: token,
+      },
     });
   
     setSocket(newSocket);
   
+    // Socket.IO event listeners
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket server");
-      newSocket.emit("joinRoom", { receiverId }); // Ensure joining correct room
+  
+      // Join the room with the receiverId
+      newSocket.emit("joinRoom", { receiverId });
+      console.log(`Joining room with receiverId: ${receiverId}`);
     });
   
-    newSocket.on("receiveMessage", (message) => {
-      setMessages((prev) => [...prev, message]);
+    newSocket.on("receiveMessage", (message: any) => {
+      console.log("New message received:", message);
+      setMessages((prevMessages) => [...prevMessages, message]);
     });
   
+    newSocket.on("connect_error", (error) => {
+      console.error("WebSocket connection error:", error);
+    });
+  
+    newSocket.on("disconnect", (reason) => {
+      console.log("Disconnected from WebSocket server:", reason);
+    });
+  
+    // Cleanup on unmount
     return () => {
       newSocket.disconnect();
     };
   }, [receiverId]);
-  
+
   const sendMessage = () => {
-    if (!newMessage.trim() || !socket || !receiverId) return;
-  
-    const tempMessage = {
-      id: Math.random().toString(), // Temporary ID
-      senderId: "me", // Mark this as the sender's message in UI
-      receiverId,
-      content: newMessage,
-      timestamp: new Date().toISOString(),
-    };
-  
-    setMessages((prev) => [...prev, tempMessage]);
-  
+    if (newMessage.trim() === "" || !socket || !receiverId) {
+      console.error("Message is empty or socket/receiverId is missing");
+      return;
+    }
+
+    console.log("Sending message:", { receiverId, content: newMessage });
     socket.emit("sendMessage", { receiverId, content: newMessage });
+
+    // Optimistically update the UI
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: "temp", // Temporary ID for optimistic update
+        senderId: "me", // Temporary senderId for optimistic update
+        receiverId,
+        content: newMessage,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
     setNewMessage("");
   };
   
