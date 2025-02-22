@@ -10,16 +10,42 @@ export default function MessageBox() {
   >([]);
   const [newMessage, setNewMessage] = useState("");
   const [socket, setSocket] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
+  // Fetch previous messages when the component mounts or receiverId changes
   useEffect(() => {
     if (!receiverId) return;
-  
+
+    const fetchMessages = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found. User is not logged in.");
+          return;
+        }
+
+        const response = await axios.get(`/api/v1/message/${receiverId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setMessages(response.data.messages);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    };
+
+    fetchMessages();
+  }, [receiverId]);
+
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    if (!receiverId) return;
+
     const token = localStorage.getItem("token");
     if (!token) {
       console.error("No token found. User is not logged in.");
       return;
     }
-  
+
     // Initialize Socket.IO connection
     const newSocket = io("https://uni-networking-app.onrender.com", {
       withCredentials: true,
@@ -28,58 +54,67 @@ export default function MessageBox() {
         token: token,
       },
     });
-  
+
     setSocket(newSocket);
-  
+
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket server");
-  
+      setIsConnected(true);
+
       // Join the room with the receiverId
       newSocket.emit("joinRoom", { receiverId });
       console.log(`Joining room with receiverId: ${receiverId}`);
     });
-  
+
     newSocket.on("receiveMessage", (message: any) => {
       console.log("New message received:", message);
       setMessages((prevMessages) => [...prevMessages, message]);
     });
-  
+
     newSocket.on("connect_error", (error) => {
       console.error("WebSocket connection error:", error);
+      setIsConnected(false);
     });
-  
+
     newSocket.on("disconnect", (reason) => {
       console.log("Disconnected from WebSocket server:", reason);
+      setIsConnected(false);
     });
-  
+
     return () => {
       newSocket.disconnect();
     };
   }, [receiverId]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (newMessage.trim() === "" || !socket || !receiverId) {
       console.error("Message is empty or socket/receiverId is missing");
       return;
     }
 
-    console.log("Sending message:", { receiverId, content: newMessage });
-    socket.emit("sendMessage", { receiverId, content: newMessage });
-
-    // Optimistically update the UI
-    setMessages((prev) => [
-      ...prev,
-      {
+    try {
+      // Optimistically update the UI
+      const tempMessage = {
         id: "temp", // Temporary ID for optimistic update
         senderId: "me", // Temporary senderId for optimistic update
         receiverId,
         content: newMessage,
         timestamp: new Date().toISOString(),
-      },
-    ]);
-    setNewMessage("");
+      };
+      setMessages((prev) => [...prev, tempMessage]);
+      setNewMessage("");
+
+      // Send the message to the server
+      socket.emit("sendMessage", { receiverId, content: newMessage });
+
+      // Optionally, you can wait for the server to confirm the message was saved
+      // and update the UI with the actual message from the server.
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Revert the optimistic update if the message fails to send
+      setMessages((prev) => prev.filter((msg) => msg.id !== "temp"));
+    }
   };
-  
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -119,12 +154,14 @@ export default function MessageBox() {
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type a message..."
           className="flex-1 p-2 border border-gray-300 rounded-lg mr-2 focus:outline-none focus:border-blue-500"
+          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
         />
         <button
           onClick={sendMessage}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none"
+          disabled={!isConnected}
         >
-          Send
+          {isConnected ? "Send" : "Connecting..."}
         </button>
       </div>
     </div>

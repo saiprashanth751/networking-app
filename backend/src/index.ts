@@ -65,14 +65,11 @@ io.use((socket, next) => {
   });
 });
 
-// Socket.IO connection handler
-// Socket.IO connection handler
 io.on("connection", (socket) => {
   console.log("New User Connected:", socket.id);
 
   // Extract senderId from authenticated user
-  const senderId = (socket.request as any).id; // Ensure correct extraction
-  console.log(senderId)
+  const senderId = (socket.request as any).id; // Correct extraction
   if (!senderId) {
     console.error("Sender ID not found. Disconnecting socket.");
     socket.disconnect();
@@ -99,6 +96,12 @@ io.on("connection", (socket) => {
       return;
     }
 
+    // Validate that receiverId is not the same as senderId
+    if (receiverId === senderId) {
+      console.error("Receiver ID cannot be the same as Sender ID.");
+      return;
+    }
+
     // Log the receiverId being passed
     console.log(`Receiver ID passed to joinRoom: ${receiverId}`);
 
@@ -120,6 +123,12 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async ({ receiverId, content }) => {
     if (!receiverId || !content) {
       console.error("Receiver ID or content not provided.");
+      return;
+    }
+
+    // Validate that receiverId is not the same as senderId
+    if (receiverId === senderId) {
+      console.error("Receiver ID cannot be the same as Sender ID.");
       return;
     }
 
@@ -165,7 +174,7 @@ io.on("connection", (socket) => {
       }
     }
   });
-});
+});;
 
 // Error middleware
 app.use(errorMiddleware);
