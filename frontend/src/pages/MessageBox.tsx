@@ -58,6 +58,8 @@ export default function MessageBox() {
     // Socket.IO event listeners
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket server");
+
+      // Join the room with the receiverId
       newSocket.emit("joinRoom", { receiverId });
     });
 

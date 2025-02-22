@@ -89,6 +89,11 @@ io.on("connection", (socket) => {
     socket.join(room);
     socket.data.userId = senderId;
     console.log(`User ${senderId} joined room ${room}`);
+
+    // Log all users in the room
+    io.in(room).fetchSockets().then((sockets) => {
+      console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+    });
   });
 
   // Send message event
@@ -111,6 +116,11 @@ io.on("connection", (socket) => {
       // Emit the message to the room
       io.to(room).emit("receiveMessage", message);
       console.log(`Message sent to room ${room}:`, message);
+
+      // Log all users in the room
+      io.in(room).fetchSockets().then((sockets) => {
+        console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+      });
     } catch (error) {
       console.error("Error sending message:", error);
     }
