@@ -13,49 +13,57 @@ export default function MessageBox() {
 
   useEffect(() => {
     if (!receiverId) return;
-
-    // Initialize Socket.IO connection
-    const newSocket = io("https://uni-networking-app.onrender.com", {
-      withCredentials: true,
-      transports: ["websocket", "polling"],
-    });
-
-    setSocket(newSocket);
-
-    // Debugging: Log connection status
-    newSocket.on("connect", () => {
-      console.log("Connected to WebSocket server");
-      newSocket.emit("joinRoom", { receiverId }); // Join room with receiverId
-    });
-
-    newSocket.on("connect_error", (error) => {
-      console.error("WebSocket connection error:", error);
-    });
-
-    newSocket.on("disconnect", (reason) => {
-      console.log("Disconnected from WebSocket server:", reason);
-    });
-
-    // Fetch existing messages
+  
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found. User is not logged in.");
+      return;
+    }
+  
+    // Fetch previous messages
     axios
       .get(`https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
         if (Array.isArray(res.data)) {
           setMessages(res.data);
+          console.log("Previous messages fetched:", res.data);
         }
       })
       .catch((error) => {
         console.error("Error fetching messages:", error);
       });
-
-    // Listen for new messages
+  
+    // Initialize Socket.IO connection
+    const newSocket = io("https://uni-networking-app.onrender.com", {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+      auth: {
+        token: token,
+      },
+    });
+  
+    setSocket(newSocket);
+  
+    newSocket.on("connect", () => {
+      console.log("Connected to WebSocket server");
+      newSocket.emit("joinRoom", { receiverId });
+    });
+  
     newSocket.on("receiveMessage", (message: any) => {
+      console.log("New message received:", message);
       setMessages((prevMessages) => [...prevMessages, message]);
     });
-
-    // Cleanup on unmount
+  
+    newSocket.on("connect_error", (error) => {
+      console.error("WebSocket connection error:", error);
+    });
+  
+    newSocket.on("disconnect", (reason) => {
+      console.log("Disconnected from WebSocket server:", reason);
+    });
+  
     return () => {
       newSocket.disconnect();
     };

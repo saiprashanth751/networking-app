@@ -96,14 +96,20 @@ io.on("connection", (socket) => {
   // Send message event
   socket.on("sendMessage", async ({ receiverId, content }) => {
     if (!senderId || !receiverId || !content) return;
-
+  
     try {
+      
       const message = await prisma.message.create({
         data: { senderId, receiverId, content, read: false },
       });
-
+      console.log("Message saved to database:", message);
+  
+      
       const room = [senderId, receiverId].sort().join("_");
+  
+      
       io.to(room).emit("receiveMessage", message);
+      console.log(`Message sent to room ${room}:`, message);
     } catch (error) {
       console.error("Error sending message:", error);
     }
