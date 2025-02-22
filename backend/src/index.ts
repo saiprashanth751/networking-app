@@ -72,6 +72,7 @@ io.on("connection", (socket) => {
 
   // Extract senderId from authenticated user
   const senderId = (socket.request as any).id; // Ensure correct extraction
+  console.log(senderId)
   if (!senderId) {
     console.error("Sender ID not found. Disconnecting socket.");
     socket.disconnect();
