@@ -10,7 +10,7 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
 import http from "http";
 import cors from "cors";
-import {authMiddleware} from "./middleware/authMiddleware";
+import { authMiddleware } from "./middleware/authMiddleware";
 
 const app = express();
 app.use(express.json());
@@ -84,6 +84,7 @@ io.on("connection", (socket) => {
       return;
     }
 
+    // Create room name (sorted combination of senderId and receiverId)
     const room = [senderId, receiverId].sort().join("_");
     socket.join(room);
     socket.data.userId = senderId;
@@ -104,7 +105,7 @@ io.on("connection", (socket) => {
       });
       console.log("Message saved to database:", message);
 
-      // Create room name
+      // Create room name (sorted combination of senderId and receiverId)
       const room = [senderId, receiverId].sort().join("_");
 
       // Emit the message to the room
