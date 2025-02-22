@@ -26,7 +26,7 @@ function App() {
           <Route path="/profile/:id" element={<Profile/>}></Route>
           <Route path="/userPost" element={<UserPost/>}></Route>
           <Route path="/dashboard" element={<Dashboard/>}></Route>
-          <Route path="/messaging" element={<MessageBox/>}></Route>
+          <Route path="/messaging/:userId" element={<MessageBox/>}></Route>
           </Routes>  
       </BrowserRouter>
     </>

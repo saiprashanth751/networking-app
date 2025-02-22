@@ -1,108 +1,93 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios'
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import axios from "axios";
+import { useParams } from "react-router-dom";
 
-export default function MessageBox () {
-    const { recipientId } = useParams();
-    const [messages, setMessages] = useState<any[]>([]);
-    const [message, setMessage] = useState('');
-    const [ws, setWs] = useState<WebSocket | null>(null);
+export default function MessageBox() {
+  const { userId } = useParams();
+  const [messages, setMessages] = useState<{ senderId: string; receiverId: string; content: string }[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [users, setUsers] = useState<{ id: string; isOnline: boolean }[]>([]);
+  const [socket, setSocket] = useState<any>(null);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  useEffect(() => {
+    if (!userId) return;
 
-        const webSocket = new WebSocket('ws://localhost:8080');
-        setWs(webSocket);
+    const newSocket = io("https://uni-networking-app.onrender.com", { withCredentials: true });
+    setSocket(newSocket);
 
-        webSocket.onopen = () => {
-            console.log('Connected to WebSocket server');
-        };
+    newSocket.emit("join", { userId });
 
-        webSocket.onmessage = (event) => {
-            const newMessage = JSON.parse(event.data);
-            setMessages((prevMessages) => [...prevMessages, newMessage]);
-        };
-
-        webSocket.onclose = () => {
-            console.log('Disconnected from WebSocket server');
-        };
-
-        return () => {
-            webSocket.close();
-        };
-    }, []);
-
-    useEffect(() => {
-        const fetchMessages = async () => {
-            const token = localStorage.getItem('token');
-            try {
-                const response = await axios.get(`/api/messages/${recipientId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-                setMessages(response.data.messages);
-            } catch (error) {
-                console.error('Failed to fetch messages:', error);
-            }
-        };
-
-        fetchMessages();
-    }, [recipientId]);
-
-    interface Message {
-        senderId: string;
-        content: string;
-    }
-
-    const handleMessageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setMessage(event.target.value);
-    };
-
-    const handleSendMessage = () => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            const token = localStorage.getItem('token');
-            const messageData = {
-                receiverId: recipientId,
-                content: message,
-            };
-            ws.send(JSON.stringify(messageData));
-            setMessage('');
+    axios
+      .get(`https://uni-networking-app.onrender.com/api/v1/message/${userId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      })
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setMessages(res.data);
         }
+      });
+
+    newSocket.on("receiveMessage", (message: any) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    newSocket.on("updateUserStatus", (data: any) => {
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === data.userId ? { ...user, isOnline: data.isOnline } : user
+        )
+      );
+    });
+
+    return () => {
+      newSocket.emit("leave", { userId });
+      newSocket.off("receiveMessage");
+      newSocket.off("updateUserStatus");
+      newSocket.disconnect();
+    };
+  }, [userId]);
+
+  const sendMessage = () => {
+    if (newMessage.trim() === "" || !socket) return;
+
+    const senderId = localStorage.getItem("userId"); // Assuming userId is stored in localStorage
+    if (!senderId) return;
+
+    const messageData = {
+      senderId,
+      receiverId: userId!,
+      content: newMessage,
     };
 
-    return (
-        <div className="max-w-2xl mx-auto p-4">
-            <h2 className="text-2xl font-semibold mb-4">Chat with {recipientId}</h2>
-            <div className="bg-gray-100 p-4 rounded-lg shadow-lg mb-4 h-80 overflow-y-auto">
-                {messages.map((msg, index) => (
-                    <div
-                        key={index}
-                        className={`mb-2 p-2 rounded-lg ${msg.senderId === localStorage.getItem('userId') ? 'bg-blue-200 text-right' : 'bg-gray-200 text-left'}`}
-                    >
-                        <strong>{msg.senderId === localStorage.getItem('userId') ? 'You' : 'Them'}: </strong>
-                        {msg.content}
-                    </div>
-                ))}
-            </div>
-            <div className="flex items-center">
-                <input
-                    type="text"
-                    value={message}
-                    onChange={handleMessageChange}
-                    className="flex-grow p-2 border rounded-lg shadow-sm focus:outline-none focus:border-blue-300"
-                    placeholder="Type your message..."
-                />
-                <button
-                    onClick={handleSendMessage}
-                    className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-sm hover:bg-blue-600"
-                >
-                    Send
-                </button>
-            </div>
-        </div>
-    );
-};
+    socket.emit("sendMessage", messageData);
 
+    setMessages((prev) => [...prev, messageData]);
+    setNewMessage("");
+  };
 
+  return (
+    <div>
+      <h1>Chat</h1>
+      <div style={{ border: "1px solid black", padding: "10px", height: "300px", overflowY: "scroll" }}>
+        {messages.length > 0 ? (
+          messages.map((msg, index) => (
+            <p key={index} style={{ textAlign: msg.senderId === userId ? "right" : "left" }}>
+              {msg.content}
+            </p>
+          ))
+        ) : (
+          <p>No messages yet</p>
+        )}
+      </div>
+
+      <input
+        type="text"
+        value={newMessage}
+        onChange={(e) => setNewMessage(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={sendMessage}>Send</button>
+    </div>
+  );
+}
