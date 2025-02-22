@@ -23,7 +23,7 @@ export const sendMessage = asyncHandler(async(req:AuthRequest,  res:Response ) =
 
     const {receiverId, content} = req.body
 
-    const message = await prisma.message.create({
+    const msg = await prisma.message.create({
         data: {
             senderId: id,
             receiverId,
@@ -33,7 +33,7 @@ export const sendMessage = asyncHandler(async(req:AuthRequest,  res:Response ) =
 
     return res.status(200).json({
         mes: "Message Sent",
-        message
+        msg
     })
 })
 
