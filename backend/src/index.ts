@@ -47,9 +47,19 @@ const io = new Server(server, {
 
 // Authenticate Socket.IO connections
 io.use((socket, next) => {
+  // Extract token from handshake auth
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error("Invalid User / User not logged in"));
+  }
+
+  // Attach token to the request object for authMiddleware
+  socket.request.headers = { authorization: `Bearer ${token}` };
+
+  // Use your auth middleware
   authMiddleware(socket.request as express.Request, {} as any, (err?: any) => {
     if (err) {
-      return next(new Error(err));
+      return next(new Error("Authentication failed"));
     }
     next();
   });
@@ -70,6 +80,17 @@ io.on("connection", (socket) => {
     socket.join(room);
     socket.data.userId = senderId;
     console.log(`User ${senderId} joined room ${room}`);
+  });
+
+  // User online event
+  socket.on("userOnline", async () => {
+    if (!senderId) return;
+
+    await prisma.user.update({
+      where: { id: senderId },
+      data: { isOnline: true },
+    });
+    io.emit("updateUserStatus", { userId: senderId, isOnline: true });
   });
 
   // Send message event

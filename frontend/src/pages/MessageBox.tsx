@@ -4,17 +4,17 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 
 export default function MessageBox() {
-  const { userId } = useParams();
+  const { userId: receiverId } = useParams(); // receiverId from URL params
   const [messages, setMessages] = useState<
     { senderId: string; receiverId: string; content: string }[]
   >([]);
   const [newMessage, setNewMessage] = useState("");
-  const [users, setUsers] = useState<{ id: string; isOnline: boolean }[]>([]);
   const [socket, setSocket] = useState<any>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!receiverId) return;
 
+    // Initialize Socket.IO connection
     const newSocket = io("https://uni-networking-app.onrender.com", {
       withCredentials: true,
       transports: ["websocket", "polling"],
@@ -22,10 +22,10 @@ export default function MessageBox() {
 
     setSocket(newSocket);
 
-    
+    // Debugging: Log connection status
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket server");
-      newSocket.emit("join", { userId });
+      newSocket.emit("joinRoom", { receiverId }); // Join room with receiverId
     });
 
     newSocket.on("connect_error", (error) => {
@@ -36,9 +36,9 @@ export default function MessageBox() {
       console.log("Disconnected from WebSocket server:", reason);
     });
 
-    
+    // Fetch existing messages
     axios
-      .get(`https://uni-networking-app.onrender.com/api/v1/message/${userId}`, {
+      .get(`https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       })
       .then((res) => {
@@ -50,43 +50,29 @@ export default function MessageBox() {
         console.error("Error fetching messages:", error);
       });
 
-    
+    // Listen for new messages
     newSocket.on("receiveMessage", (message: any) => {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
 
-    
-    newSocket.on("updateUserStatus", (data: any) => {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === data.userId ? { ...user, isOnline: data.isOnline } : user
-        )
-      );
-    });
-
-    
+    // Cleanup on unmount
     return () => {
-      newSocket.emit("leave", { userId });
       newSocket.disconnect();
     };
-  }, [userId]);
+  }, [receiverId]);
 
-  
+  // Send message handler
   const sendMessage = () => {
-    if (newMessage.trim() === "" || !socket) return;
+    if (newMessage.trim() === "" || !socket || !receiverId) return;
 
-    const senderId = localStorage.getItem("userId");
-    if (!senderId) return;
+    // Send only receiverId and content
+    socket.emit("sendMessage", { receiverId, content: newMessage });
 
-    const messageData = {
-      senderId,
-      receiverId: userId!,
-      content: newMessage,
-    };
-
-    socket.emit("sendMessage", messageData);
-
-    setMessages((prev) => [...prev, messageData]);
+    // Optimistically update the UI
+    setMessages((prev) => [
+      ...prev,
+      { senderId: "me", receiverId, content: newMessage }, // Temporary senderId
+    ]);
     setNewMessage("");
   };
 
@@ -105,7 +91,7 @@ export default function MessageBox() {
           messages.map((msg, index) => (
             <p
               key={index}
-              style={{ textAlign: msg.senderId === userId ? "right" : "left" }}
+              style={{ textAlign: msg.senderId === "me" ? "right" : "left" }}
             >
               {msg.content}
             </p>
