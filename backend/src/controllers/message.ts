@@ -60,7 +60,6 @@ export const getMessages = asyncHandler(async(req:AuthRequest,  res:Response ) =
     })
 
     return res.status(200).json({
-        mes: "Message Sent",
         messages
     })
 })

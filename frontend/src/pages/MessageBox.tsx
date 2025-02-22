@@ -13,13 +13,13 @@ export default function MessageBox() {
 
   useEffect(() => {
     if (!receiverId) return;
-  
+
     const token = localStorage.getItem("token");
     if (!token) {
       console.error("No token found. User is not logged in.");
       return;
     }
-  
+
     // Fetch previous messages
     axios
       .get(`https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`, {
@@ -34,7 +34,7 @@ export default function MessageBox() {
       .catch((error) => {
         console.error("Error fetching messages:", error);
       });
-  
+
     // Initialize Socket.IO connection
     const newSocket = io("https://uni-networking-app.onrender.com", {
       withCredentials: true,
@@ -43,43 +43,45 @@ export default function MessageBox() {
         token: token,
       },
     });
-  
+
     setSocket(newSocket);
-  
+
     newSocket.on("connect", () => {
       console.log("Connected to WebSocket server");
       newSocket.emit("joinRoom", { receiverId });
     });
-  
+
     newSocket.on("receiveMessage", (message: any) => {
       console.log("New message received:", message);
       setMessages((prevMessages) => [...prevMessages, message]);
     });
-  
+
     newSocket.on("connect_error", (error) => {
       console.error("WebSocket connection error:", error);
     });
-  
+
     newSocket.on("disconnect", (reason) => {
       console.log("Disconnected from WebSocket server:", reason);
     });
-  
+
     return () => {
       newSocket.disconnect();
     };
   }, [receiverId]);
 
-  // Send message handler
   const sendMessage = () => {
-    if (newMessage.trim() === "" || !socket || !receiverId) return;
+    if (newMessage.trim() === "" || !socket || !receiverId) {
+      console.error("Message is empty or socket/receiverId is missing");
+      return;
+    }
 
-    // Send only receiverId and content
+    console.log("Sending message:", { receiverId, content: newMessage });
     socket.emit("sendMessage", { receiverId, content: newMessage });
 
     // Optimistically update the UI
     setMessages((prev) => [
       ...prev,
-      { senderId: "me", receiverId, content: newMessage }, // Temporary senderId
+      { senderId: "me", receiverId, content: newMessage },
     ]);
     setNewMessage("");
   };

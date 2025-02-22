@@ -10,7 +10,7 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
 import http from "http";
 import cors from "cors";
-import {authMiddleware} from "./middleware/authMiddleware"; // Import your auth middleware
+import authMiddleware from "./middleware/authMiddleware"; // Import your auth middleware
 
 const app = express();
 app.use(express.json());
@@ -57,7 +57,7 @@ io.use((socket, next) => {
   socket.request.headers = { authorization: `Bearer ${token}` };
 
   // Use your auth middleware
-  authMiddleware(socket.request as express.Request, {} as any, (err?: any) => {
+  authMiddleware(socket.request, {} as any, (err?: any) => {
     if (err) {
       return next(new Error("Authentication failed"));
     }
@@ -71,10 +71,18 @@ io.on("connection", (socket) => {
 
   // Extract senderId from authenticated user
   const senderId = (socket.request as any).user?.id;
+  if (!senderId) {
+    console.error("Sender ID not found. Disconnecting socket.");
+    socket.disconnect();
+    return;
+  }
 
   // Join room event
   socket.on("joinRoom", ({ receiverId }) => {
-    if (!senderId || !receiverId) return;
+    if (!receiverId) {
+      console.error("Receiver ID not provided.");
+      return;
+    }
 
     const room = [senderId, receiverId].sort().join("_");
     socket.join(room);
@@ -82,32 +90,24 @@ io.on("connection", (socket) => {
     console.log(`User ${senderId} joined room ${room}`);
   });
 
-  // User online event
-  socket.on("userOnline", async () => {
-    if (!senderId) return;
-
-    await prisma.user.update({
-      where: { id: senderId },
-      data: { isOnline: true },
-    });
-    io.emit("updateUserStatus", { userId: senderId, isOnline: true });
-  });
-
   // Send message event
   socket.on("sendMessage", async ({ receiverId, content }) => {
-    if (!senderId || !receiverId || !content) return;
-  
+    if (!receiverId || !content) {
+      console.error("Receiver ID or content not provided.");
+      return;
+    }
+
     try {
-      
+      // Save message to the database
       const message = await prisma.message.create({
         data: { senderId, receiverId, content, read: false },
       });
       console.log("Message saved to database:", message);
-  
-      
+
+      // Create room name
       const room = [senderId, receiverId].sort().join("_");
-  
-      
+
+      // Emit the message to the room
       io.to(room).emit("receiveMessage", message);
       console.log(`Message sent to room ${room}:`, message);
     } catch (error) {
