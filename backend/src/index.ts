@@ -13,10 +13,10 @@ import cors from "cors"
 
 const app = express();
 app.use(express.json());
+
 app.use(cors({
-  origin: "*", // Replace with your actual frontend domain
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true // Allow cookies if using authentication
+  origin: "http://localhost:5173",
+  credentials: true
 }));
 
 const prisma = new PrismaClient();
@@ -31,22 +31,24 @@ app.use("/api/v1/message", messageRouter);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
   }
 });
 
 io.on("connection", (socket) => {
   console.log("New User Connected: ", socket.id);
 
-  // Join Room
+ 
   socket.on("joinRoom", ({ senderId: authUserId, receiverId: userId }: { senderId: string, receiverId: string }) => {
     const room = [authUserId, userId].sort().join("_");
     socket.join(room);
-    socket.data.userId = authUserId; // Store userId in socket for disconnect event
+    socket.data.userId = authUserId;
     console.log(`User ${authUserId} joined room ${room}`);
   });
 
-  // User Online Status
+ 
   socket.on("userOnline", async (userId: string) => {
     await prisma.user.update({
       where: { id: userId },
@@ -55,7 +57,7 @@ io.on("connection", (socket) => {
     io.emit("updateUserStatus", { userId, isOnline: true });
   });
 
-  // Send Message
+
   socket.on("sendMessage", async ({ senderId, receiverId, content }) => {
     const message = await prisma.message.create({
       data: { senderId, receiverId, content, read: false }
@@ -65,7 +67,7 @@ io.on("connection", (socket) => {
     io.to(room).emit("receiveMessage", message);
   });
 
-  // User Disconnect
+
   socket.on("disconnect", async () => {
     if (socket.data.userId) {
       await prisma.user.update({

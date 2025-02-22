@@ -13,7 +13,7 @@ export default function MessageBox() {
   useEffect(() => {
     if (!userId) return;
 
-    const newSocket = io("https://uni-networking-app.onrender.com", { withCredentials: true });
+    const newSocket = io("https://uni-networking-app.onrender.com", { withCredentials: true, transports: ["websocket", "polling"] });
     setSocket(newSocket);
 
     newSocket.emit("join", { userId });
