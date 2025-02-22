@@ -77,6 +77,19 @@ io.on("connection", (socket) => {
     return;
   }
 
+  // Update user status to online
+  prisma.user
+    .update({
+      where: { id: senderId },
+      data: { isOnline: true },
+    })
+    .then(() => {
+      io.emit("updateUserStatus", { userId: senderId, isOnline: true });
+    })
+    .catch((error) => {
+      console.error("Error updating user status to online:", error);
+    });
+
   // Join room event
   socket.on("joinRoom", ({ receiverId }) => {
     if (!receiverId) {
@@ -94,9 +107,11 @@ io.on("connection", (socket) => {
     console.log(`User ${senderId} joined room ${room}`);
 
     // Log all users in the room
-    io.in(room).fetchSockets().then((sockets) => {
-      console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
-    });
+    io.in(room)
+      .fetchSockets()
+      .then((sockets) => {
+        console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+      });
   });
 
   // Send message event
@@ -121,9 +136,11 @@ io.on("connection", (socket) => {
       console.log(`Message sent to room ${room}:`, message);
 
       // Log all users in the room
-      io.in(room).fetchSockets().then((sockets) => {
-        console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
-      });
+      io.in(room)
+        .fetchSockets()
+        .then((sockets) => {
+          console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+        });
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -134,11 +151,16 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
 
     if (senderId) {
-      await prisma.user.update({
-        where: { id: senderId },
-        data: { isOnline: false },
-      });
-      io.emit("updateUserStatus", { userId: senderId, isOnline: false });
+      try {
+        // Update user status to offline
+        await prisma.user.update({
+          where: { id: senderId },
+          data: { isOnline: false },
+        });
+        io.emit("updateUserStatus", { userId: senderId, isOnline: false });
+      } catch (error) {
+        console.error("Error updating user status to offline:", error);
+      }
     }
   });
 });
