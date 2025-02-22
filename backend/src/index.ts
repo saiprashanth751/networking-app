@@ -10,7 +10,7 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
 import http from "http";
 import cors from "cors";
-import authMiddleware from "./middleware/authMiddleware"; // Import your auth middleware
+import {authMiddleware} from "./middleware/authMiddleware";
 
 const app = express();
 app.use(express.json());
@@ -57,7 +57,7 @@ io.use((socket, next) => {
   socket.request.headers = { authorization: `Bearer ${token}` };
 
   // Use your auth middleware
-  authMiddleware(socket.request, {} as any, (err?: any) => {
+  authMiddleware(socket.request as express.Request, {} as any, (err?: any) => {
     if (err) {
       return next(new Error("Authentication failed"));
     }
@@ -70,7 +70,7 @@ io.on("connection", (socket) => {
   console.log("New User Connected: ", socket.id);
 
   // Extract senderId from authenticated user
-  const senderId = (socket.request as any).user?.id;
+  const senderId = (socket.request as any).id;
   if (!senderId) {
     console.error("Sender ID not found. Disconnecting socket.");
     socket.disconnect();
