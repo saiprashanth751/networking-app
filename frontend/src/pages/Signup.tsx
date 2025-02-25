@@ -75,7 +75,7 @@ export default function Signup() {
                                 />
                             </div>
                             <InputBox
-                                label="University Email ID"
+                                label="Email ID"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 type={"email"}
