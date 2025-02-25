@@ -38,7 +38,7 @@ export const verifyEmail = asyncHandler( async (req: AuthRequest, res: Response)
         }
         
     }) 
-    res.redirect("http://localhost:5173/signin")
+    res.redirect("https://networking-app-navy.vercel.app/signin")
 
     return res.status(200).json({
         message: "You are successfully verified. You can log in..."
