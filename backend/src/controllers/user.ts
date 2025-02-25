@@ -143,6 +143,7 @@ export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {
                     bio: true,
                     graduationYear: true,
                     department: true,
+                    profilePic: true,
                 }
             }
         }
@@ -154,49 +155,73 @@ export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {
      
 })
 
+export const createProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.id;
 
-export const createProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
-    const {success} = profileCreation.safeParse(req.body)
-    if(!success){
-        throw new CustomError("Invalid input data", 400)
-    }
-    const userId = req.id
-
+   
     const existingProfile = await prisma.profile.findUnique({
-        where: {
-            userId
-        }
-    })
-
-    if(existingProfile){
-        throw new CustomError("Profile already created. Only updates are available after creation",400)
+        where: { userId }
+    });
+    if (existingProfile) {
+        throw new CustomError("Profile already exists. Use update instead.", 400);
     }
 
-    const {bio, profilePic, department, graduationYear, minor, linkedin, github} = req.body
-    
+
+    const { 
+        bio, 
+        department, 
+        graduationYear, 
+        minor, 
+        linkedin, 
+        github, 
+        leetcode, 
+        codeforces, 
+        geekforgeeks 
+    } = req.body;
+
+   
+    const profilePic = req.file ? req.file.path : null;
+
+    const validation = profileCreation.safeParse({
+        bio,
+        department,
+        graduationYear, 
+        minor,
+        linkedin,
+        github,
+        leetcode,
+        codeforces,
+        geekforgeeks,
+    });
+
+    if (!validation.success) {
+        throw new CustomError("Invalid data input", 400);
+    }
+
+    const parsedGraduationYear = graduationYear ? parseInt(graduationYear) : null;
+
+
     const profile = await prisma.profile.create({
         data: {
             bio,
-            profilePic,
+            profilePic, 
             department,
-            graduationYear,
+            graduationYear: parsedGraduationYear ?? 0,
             minor,
             linkedin,
             github,
-            user: {
-                connect: {
-                    id: userId
-                }
-            }
+            leetcode,
+            codeforces,
+            geekforgeeks,
+            user: { connect: { id: userId } }
         }
-    })
+    });
 
-    return res.status(200).json({
+    return res.status(201).json({
         message: "Profile created successfully",
         profile
-    })
-     
-})
+    });
+});
 
 
 export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
@@ -215,6 +240,32 @@ export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => 
      
 })
 
+export const getUserByName = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { name } = req.query;
+    const userId = req.id
+    if (!name || typeof name !== "string") {
+        return res.status(400).json({ error: "Name query parameter is required and must be a string" });
+    }
+
+    try {
+        const users = await prisma.user.findMany({
+            where: {
+                id: {not : userId},
+                firstName: {
+                    contains: name,
+                    mode: "insensitive",
+                },
+            },
+        });
+
+        res.status(200).json({ users });
+    } catch (error) {
+        console.error("Error searching users:", error);
+        res.status(500).json({ error: "Failed to search users" });
+    }
+});
+
+
 export const getNative = asyncHandler(async (req:AuthRequest, res:Response) => {
    
     const id = req.query.id as string
@@ -231,32 +282,42 @@ export const getNative = asyncHandler(async (req:AuthRequest, res:Response) => {
 })
 
 
-export const updateProfile = asyncHandler( async (req: AuthRequest, res:Response) => {
-    const {success} = profileUpdation.safeParse(req.body)
-    if(!success){
-        throw new CustomError("Invalid input data", 400)
+export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.id;
+
+ 
+    const { success } = profileUpdation.safeParse(req.body);
+    if (!success) {
+        throw new CustomError("Invalid input data", 400);
     }
-    const userId = req.id
-    const {bio , profilePic, linkedin, github} = req.body
+
+    
+    const { bio, linkedin, github, leetcode, codeforces, geekforgeeks } = req.body;
+
+
+    const profilePic = req.file ? req.file.path : undefined;
+
+    // Create an object with only the fields that are provided
+    const updateData: any = {};
+    if (bio !== undefined) updateData.bio = bio;
+    if (profilePic !== undefined) updateData.profilePic = profilePic;
+    if (linkedin !== undefined) updateData.linkedin = linkedin;
+    if (github !== undefined) updateData.github = github;
+    if (leetcode !== undefined) updateData.leetcode = leetcode;
+    if (codeforces !== undefined) updateData.codeforces = codeforces;
+    if (geekforgeeks !== undefined) updateData.geekforgeeks = geekforgeeks;
+
 
     const profile = await prisma.profile.update({
-        where: {
-            userId
-        },
-        data:{
-            bio,
-            profilePic,
-            linkedin,
-            github
-        }
-    })
+        where: { userId },
+        data: updateData,
+    });
 
     return res.status(200).json({
         message: "Profile successfully updated",
-        profile
-    })
-
-})
+        profile,
+    });
+});
 
 export const getOnlineStatus = asyncHandler( (async (req:AuthRequest, res:Response) => {
     const  id  = req.params.id;
