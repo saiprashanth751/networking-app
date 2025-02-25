@@ -19,7 +19,7 @@ app.use(express.json());
 // CORS configuration
 app.use(
   cors({
-    origin: "https://uni-networking-app.onrender.com",
+    origin: "https://networking-app-navy.vercel.app",
     credentials: true,
   })
 );
@@ -40,7 +40,7 @@ const server = http.createServer(app);
 // Socket.IO setup with authentication
 const io = new Server(server, {
   cors: {
-    origin: "https://uni-networking-app.onrender.com",
+    origin: "https://networking-app-navy.vercel.app",
     methods: ["GET", "POST"],
     credentials: true,
   },
