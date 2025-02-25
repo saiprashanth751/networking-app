@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProfile = exports.getNative = exports.getProfile = exports.createProfile = exports.getUsers = exports.getUserProfile = exports.getUser = exports.userSignin = exports.userSignup = void 0;
+exports.getOnlineStatus = exports.updateProfile = exports.getNative = exports.getUserByName = exports.getProfile = exports.createProfile = exports.getUsers = exports.getUserProfile = exports.getUser = exports.userSignin = exports.userSignup = void 0;
 const client_1 = require("@prisma/client");
 const asyncHandler_1 = require("../middleware/asyncHandler");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -127,6 +127,7 @@ exports.getUsers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void
                     bio: true,
                     graduationYear: true,
                     department: true,
+                    profilePic: true,
                 }
             }
         }
@@ -136,37 +137,46 @@ exports.getUsers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void
     });
 }));
 exports.createProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { success } = types_1.profileCreation.safeParse(req.body);
-    if (!success) {
-        throw new customError_1.default("Invalid input data", 400);
-    }
     const userId = req.id;
     const existingProfile = yield prisma.profile.findUnique({
-        where: {
-            userId
-        }
+        where: { userId }
     });
     if (existingProfile) {
-        throw new customError_1.default("Profile already created. Only updates are available after creation", 400);
+        throw new customError_1.default("Profile already exists. Use update instead.", 400);
     }
-    const { bio, profilePic, department, graduationYear, minor, linkedin, github } = req.body;
+    const { bio, department, graduationYear, minor, linkedin, github, leetcode, codeforces, geekforgeeks } = req.body;
+    const profilePic = req.file ? req.file.path : null;
+    const validation = types_1.profileCreation.safeParse({
+        bio,
+        department,
+        graduationYear,
+        minor,
+        linkedin,
+        github,
+        leetcode,
+        codeforces,
+        geekforgeeks,
+    });
+    if (!validation.success) {
+        throw new customError_1.default("Invalid data input", 400);
+    }
+    const parsedGraduationYear = graduationYear ? parseInt(graduationYear) : null;
     const profile = yield prisma.profile.create({
         data: {
             bio,
             profilePic,
             department,
-            graduationYear,
+            graduationYear: parsedGraduationYear !== null && parsedGraduationYear !== void 0 ? parsedGraduationYear : 0,
             minor,
             linkedin,
             github,
-            user: {
-                connect: {
-                    id: userId
-                }
-            }
+            leetcode,
+            codeforces,
+            geekforgeeks,
+            user: { connect: { id: userId } }
         }
     });
-    return res.status(200).json({
+    return res.status(201).json({
         message: "Profile created successfully",
         profile
     });
@@ -182,6 +192,29 @@ exports.getProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(vo
         profile
     });
 }));
+exports.getUserByName = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name } = req.query;
+    const userId = req.id;
+    if (!name || typeof name !== "string") {
+        return res.status(400).json({ error: "Name query parameter is required and must be a string" });
+    }
+    try {
+        const users = yield prisma.user.findMany({
+            where: {
+                id: { not: userId },
+                firstName: {
+                    contains: name,
+                    mode: "insensitive",
+                },
+            },
+        });
+        res.status(200).json({ users });
+    }
+    catch (error) {
+        console.error("Error searching users:", error);
+        res.status(500).json({ error: "Failed to search users" });
+    }
+}));
 exports.getNative = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.query.id;
     const profile = yield prisma.profile.findUnique({
@@ -194,25 +227,46 @@ exports.getNative = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(voi
     });
 }));
 exports.updateProfile = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.id;
     const { success } = types_1.profileUpdation.safeParse(req.body);
     if (!success) {
         throw new customError_1.default("Invalid input data", 400);
     }
-    const userId = req.id;
-    const { bio, profilePic, linkedin, github } = req.body;
+    const { bio, linkedin, github, leetcode, codeforces, geekforgeeks } = req.body;
+    const profilePic = req.file ? req.file.path : undefined;
+    // Create an object with only the fields that are provided
+    const updateData = {};
+    if (bio !== undefined)
+        updateData.bio = bio;
+    if (profilePic !== undefined)
+        updateData.profilePic = profilePic;
+    if (linkedin !== undefined)
+        updateData.linkedin = linkedin;
+    if (github !== undefined)
+        updateData.github = github;
+    if (leetcode !== undefined)
+        updateData.leetcode = leetcode;
+    if (codeforces !== undefined)
+        updateData.codeforces = codeforces;
+    if (geekforgeeks !== undefined)
+        updateData.geekforgeeks = geekforgeeks;
     const profile = yield prisma.profile.update({
-        where: {
-            userId
-        },
-        data: {
-            bio,
-            profilePic,
-            linkedin,
-            github
-        }
+        where: { userId },
+        data: updateData,
     });
     return res.status(200).json({
         message: "Profile successfully updated",
-        profile
+        profile,
     });
 }));
+exports.getOnlineStatus = (0, asyncHandler_1.asyncHandler)(((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    const user = yield prisma.user.findUnique({
+        where: { id },
+        select: { isOnline: true }
+    });
+    if (!user) {
+        throw new customError_1.default("user not found", 400);
+    }
+    return res.json({ isOnline: user.isOnline });
+})));

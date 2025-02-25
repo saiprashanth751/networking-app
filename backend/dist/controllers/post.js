@@ -20,46 +20,77 @@ const types_1 = require("../types/types");
 const prisma = new client_1.PrismaClient();
 // Create Post
 exports.createPost = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { title, description, labels, links } = req.body;
+    let photoPaths = [];
+    if (req.files && Array.isArray(req.files)) {
+        photoPaths = req.files.map((file) => file.path);
+    }
+    const parsedLabels = labels ? JSON.parse(labels) : [];
+    const parsedLinks = links ? JSON.parse(links) : [];
+    const validation = types_1.PostBody.safeParse({
+        title,
+        description,
+        labels: parsedLabels,
+        links: parsedLinks,
+        photos: photoPaths,
+    });
+    if (!validation.success) {
+        throw new customError_1.default("Invalid data input", 400);
+    }
+    // Create the post
+    try {
+        const post = yield prisma.post.create({
+            data: {
+                title,
+                description,
+                labels: parsedLabels,
+                links: parsedLinks,
+                photos: photoPaths,
+                user: {
+                    connect: {
+                        id: req.id,
+                    },
+                },
+            },
+        });
+        return res.status(201).json({
+            message: "Post successfully created",
+            post,
+        });
+    }
+    catch (error) {
+        console.error("Failed to create post:", error);
+        throw new customError_1.default("Failed to create post", 500);
+    }
+}));
+// Update Post
+exports.updatePost = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { success } = types_1.PostBody.safeParse(req.body);
     if (!success) {
         throw new customError_1.default("Invalid data input", 400);
     }
-    const userId = req.id;
-    const { title, content } = req.body;
-    const post = yield prisma.post.create({
-        data: {
-            title,
-            description: content,
-            user: {
-                connect: {
-                    id: userId
-                }
-            }
-        }
-    });
-    return res.status(201).json({
-        message: "Post successfully created",
-        post
-    });
-}));
-// Update Post
-exports.updatePost = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { success, data } = types_1.PostBody.safeParse(req.body);
-    if (!success) {
-        throw new customError_1.default("Invalid data input", 400);
-    }
     const postId = req.params.id;
-    const { title, content } = req.body;
+    const userId = req.id;
+    const { title, content, labels, links } = req.body;
+    // Check if the post belongs to the user
+    const existingPost = yield prisma.post.findUnique({
+        where: { id: postId },
+    });
+    if (!existingPost || existingPost.userId !== userId) {
+        throw new customError_1.default("You are not authorized to update this post", 403);
+    }
     const post = yield prisma.post.update({
         where: { id: postId },
         data: {
             title,
-            description: content
-        }
+            description: content,
+            labels: labels ? JSON.parse(labels) : existingPost.labels,
+            links: links ? JSON.parse(links) : existingPost.links,
+        },
     });
     return res.status(200).json({
         message: "Post successfully updated",
-        post
+        post,
     });
 }));
 // Delete Post
@@ -81,14 +112,31 @@ exports.getUserPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(
             user: {
                 select: {
                     firstName: true,
-                    lastName: true
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true
+                        }
+                    }
                 }
             }
         }
     });
-    if (!posts) {
-        throw new customError_1.default("Post not found", 404);
+    if (!posts.length) {
+        return res.status(200).json({
+            message: "No posts found",
+            posts: []
+        });
     }
+    // Flatten the profile picture into the user object
+    // const formattedPosts = posts.map(post => ({
+    //     ...post,
+    //     user: {
+    //         firstName: post.user.firstName,
+    //         lastName: post.user.lastName,
+    //         profilePic: post.user.profile?.profilePic || null
+    //     }
+    // }));
     return res.status(200).json({
         message: "Posts retrieved successfully",
         posts
@@ -96,22 +144,42 @@ exports.getUserPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(
 }));
 // Get All Posts
 exports.getAllPosts = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
     const posts = yield prisma.post.findMany({
-        orderBy: {
-            createdAt: 'desc'
-        },
+        skip: offset,
+        take: Number(limit),
+        orderBy: { createdAt: 'desc' },
         include: {
             user: {
                 select: {
                     firstName: true,
-                    lastName: true
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true
+                        }
+                    }
                 }
             }
         }
     });
+    const totalPosts = yield prisma.post.count();
+    // Format the posts to flatten profile data
+    // const formattedPosts = posts.map(post => ({
+    //     ...post,
+    //     user: {
+    //         firstName: post.user.firstName,
+    //         lastName: post.user.lastName,
+    //         profilePic: post.user.profile?.profilePic || null
+    //     }
+    // }));
     return res.status(200).json({
         message: "All posts retrieved successfully",
-        posts
+        posts,
+        totalPosts,
+        totalPages: Math.ceil(totalPosts / Number(limit)),
+        currentPage: Number(page)
     });
 }));
 // Get Post By ID
@@ -123,10 +191,20 @@ exports.getPostById = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(v
             user: {
                 select: {
                     firstName: true,
-                    lastName: true
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true
+                        }
+                    },
+                    posts: {
+                        select: {
+                            photos: true
+                        }
+                    }
                 }
             }
-        }
+        },
     });
     if (posts.length === 0) {
         throw new customError_1.default("No posts found for this user", 404);

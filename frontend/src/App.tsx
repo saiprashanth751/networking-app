@@ -8,7 +8,7 @@ import UserProfile from "./pages/UserProfile"
 import Profile from "./pages/Profile"
 import Verify from "./pages/Verify"
 import UserPost from "./pages/UserPost"
-import MessageBox from "./pages/MessageBox"
+// import MessageBox from "./pages/MessageBox"
 
 function App() {
 
@@ -26,7 +26,7 @@ function App() {
           <Route path="/profile/:id" element={<Profile/>}></Route>
           <Route path="/userPost" element={<UserPost/>}></Route>
           <Route path="/dashboard" element={<Dashboard/>}></Route>
-          <Route path="/messaging/:userId" element={<MessageBox/>}></Route>
+          {/* <Route path="/messaging/:userId" element={<MessageBox/>}></Route> */}
           </Routes>  
       </BrowserRouter>
     </>

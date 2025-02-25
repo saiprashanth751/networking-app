@@ -6,5 +6,7 @@ export declare const getUserProfile: (req: Request, res: Response, next: import(
 export declare const getUsers: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const createProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const getProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
+export declare const getUserByName: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const getNative: (req: Request, res: Response, next: import("express").NextFunction) => void;
 export declare const updateProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
+export declare const getOnlineStatus: (req: Request, res: Response, next: import("express").NextFunction) => void;

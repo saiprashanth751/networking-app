@@ -28,61 +28,91 @@ export declare const signinBody: zod.ZodObject<{
 export declare const profileCreation: zod.ZodObject<{
     bio: zod.ZodOptional<zod.ZodString>;
     profilePic: zod.ZodOptional<zod.ZodString>;
-    graduationYear: zod.ZodOptional<zod.ZodNumber>;
+    graduationYear: zod.ZodOptional<zod.ZodString>;
     department: zod.ZodString;
     minor: zod.ZodString;
     linkedin: zod.ZodOptional<zod.ZodString>;
     github: zod.ZodOptional<zod.ZodString>;
+    leetcode: zod.ZodOptional<zod.ZodString>;
+    codeforces: zod.ZodOptional<zod.ZodString>;
+    geekforgeeks: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     department: string;
     minor: string;
     bio?: string | undefined;
     profilePic?: string | undefined;
-    graduationYear?: number | undefined;
+    graduationYear?: string | undefined;
     linkedin?: string | undefined;
     github?: string | undefined;
+    leetcode?: string | undefined;
+    codeforces?: string | undefined;
+    geekforgeeks?: string | undefined;
 }, {
     department: string;
     minor: string;
     bio?: string | undefined;
     profilePic?: string | undefined;
-    graduationYear?: number | undefined;
+    graduationYear?: string | undefined;
     linkedin?: string | undefined;
     github?: string | undefined;
+    leetcode?: string | undefined;
+    codeforces?: string | undefined;
+    geekforgeeks?: string | undefined;
 }>;
 export declare const profileUpdation: zod.ZodObject<{
     bio: zod.ZodOptional<zod.ZodString>;
     profilePic: zod.ZodOptional<zod.ZodString>;
     linkedin: zod.ZodOptional<zod.ZodString>;
     github: zod.ZodOptional<zod.ZodString>;
+    leetcode: zod.ZodOptional<zod.ZodString>;
+    codeforces: zod.ZodOptional<zod.ZodString>;
+    geekforgeeks: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     bio?: string | undefined;
     profilePic?: string | undefined;
     linkedin?: string | undefined;
     github?: string | undefined;
+    leetcode?: string | undefined;
+    codeforces?: string | undefined;
+    geekforgeeks?: string | undefined;
 }, {
     bio?: string | undefined;
     profilePic?: string | undefined;
     linkedin?: string | undefined;
     github?: string | undefined;
-}>;
-export declare const ProjectBody: zod.ZodObject<{
-    title: zod.ZodString;
-    description: zod.ZodString;
-}, "strip", zod.ZodTypeAny, {
-    title: string;
-    description: string;
-}, {
-    title: string;
-    description: string;
+    leetcode?: string | undefined;
+    codeforces?: string | undefined;
+    geekforgeeks?: string | undefined;
 }>;
 export declare const PostBody: zod.ZodObject<{
     title: zod.ZodString;
     description: zod.ZodString;
+    labels: zod.ZodArray<zod.ZodString, "many">;
+    photos: zod.ZodOptional<zod.ZodArray<zod.ZodString, "many">>;
+    links: zod.ZodOptional<zod.ZodArray<zod.ZodString, "many">>;
 }, "strip", zod.ZodTypeAny, {
     title: string;
     description: string;
+    labels: string[];
+    photos?: string[] | undefined;
+    links?: string[] | undefined;
 }, {
     title: string;
     description: string;
+    labels: string[];
+    photos?: string[] | undefined;
+    links?: string[] | undefined;
+}>;
+export declare const MessageBody: zod.ZodObject<{
+    senderId: zod.ZodString;
+    receiverId: zod.ZodString;
+    content: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    senderId: string;
+    receiverId: string;
+    content: string;
+}, {
+    senderId: string;
+    receiverId: string;
+    content: string;
 }>;

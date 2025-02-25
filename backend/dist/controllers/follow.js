@@ -68,11 +68,19 @@ exports.getFollowers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(
     const followers = yield prisma.follow.findMany({
         where: {
             followingId: userId,
-        }
+        },
+        include: {
+            follower: {
+                select: {
+                    id: true,
+                    firstName: true,
+                },
+            },
+        },
     });
     return res.status(200).json({
-        followers,
-        count: followers.length
+        followers: followers.map((follow) => follow.follower),
+        count: followers.length,
     });
 }));
 exports.getNativeFollowers = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -92,11 +100,19 @@ exports.getFollowing = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(
     const followingUsers = yield prisma.follow.findMany({
         where: {
             followerId: userId,
-        }
+        },
+        include: {
+            following: {
+                select: {
+                    id: true,
+                    firstName: true,
+                },
+            },
+        },
     });
     return res.status(200).json({
-        followingUsers,
-        count: followingUsers.length
+        following: followingUsers.map((follow) => follow.following),
+        count: followingUsers.length,
     });
 }));
 exports.getNativeFollowing = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
