@@ -8,7 +8,7 @@ export function User({ user }: { user: any }) {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:3000/api/v1/follow/?id=${user.id}`, {
+      .get(`https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -21,7 +21,7 @@ export function User({ user }: { user: any }) {
   const getImageUrl = (photo: string) => {
     if (!photo) return "";
     const formattedUrl = photo.replace(/\\/g, "/");
-    if (!formattedUrl.startsWith("http") && !formattedUrl.startsWith("/uploads")) {
+    if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
       return `/uploads/${formattedUrl.split("/").pop()}`;
     }
     return formattedUrl;
@@ -36,7 +36,7 @@ export function User({ user }: { user: any }) {
         <div className="flex items-center gap-x-4">
           <img
             alt="Profile"
-            src={`http://localhost:3000${profileUrl}`}
+            src={`https://uni-networking-app.onrender.com${profileUrl}`}
             className="w-12 h-12 flex-none rounded-full bg-gray-700 object-cover"
           />
           <div>
@@ -52,7 +52,7 @@ export function User({ user }: { user: any }) {
             onClick={async () => {
               if (!follow) {
                 await axios.post(
-                  `http://localhost:3000/api/v1/follow/?id=${user.id}`,
+                  `hhttps://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
                   {},
                   {
                     headers: {
@@ -63,7 +63,7 @@ export function User({ user }: { user: any }) {
                 setFollow(true);
               } else {
                 await axios.delete(
-                  `http://localhost:3000/api/v1/follow/?id=${user.id}`,
+                  `https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
                   {
                     headers: {
                       Authorization: `Bearer ${localStorage.getItem("token")}`,

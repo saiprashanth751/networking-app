@@ -78,16 +78,16 @@ export function CreatePost({ onCreate }: { onCreate: () => void }) {
         photos.forEach((photo) => formData.append('photos', photo));
 
         try {
-            await axios.post('http://localhost:3000/api/v1/post/create', formData, {
+            await axios.post('https://uni-networking-app.onrender.com/api/v1/post/create', formData, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'multipart/form-data',
                 },
             });
             toast.success('Post created successfully!');
-            onCreate(); // Refresh posts after creation
-            setIsFormVisible(false); // Hide the form after submission
-            setTitle(''); // Reset form fields
+            onCreate(); 
+            setIsFormVisible(false); 
+            setTitle(''); 
             setDescription('');
             setLabels([]);
             setPhotos([]);

@@ -30,7 +30,7 @@ export default function CreateProfile() {
         }
 
         setIsLoading(true);
-        axios.get("http://localhost:3000/api/v1/user/profile", {
+        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile", {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -72,7 +72,7 @@ export default function CreateProfile() {
         }
 
         try {
-            await axios.post("http://localhost:3000/api/v1/user/profile", formData, {
+            await axios.post("https://uni-networking-app.onrender.com/api/v1/user/profile", formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "multipart/form-data",

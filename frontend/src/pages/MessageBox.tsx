@@ -40,7 +40,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
         }
 
         const response = await axios.get(
-          `http://localhost:3000/api/v1/message/${receiverId}`,
+          `https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -57,7 +57,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
     const token = localStorage.getItem("token");
     if (!token || !receiverId) return;
 
-    const newSocket = io("http://localhost:3000", {
+    const newSocket = io("https://uni-networking-app.onrender.com", {
       withCredentials: true,
       transports: ["websocket", "polling"],
       auth: { token },

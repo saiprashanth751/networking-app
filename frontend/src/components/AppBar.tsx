@@ -17,7 +17,7 @@ export function AppBar() {
 
         setIsLoading(true);
         try {
-            const response = await axios.get(`http://localhost:3000/api/v1/user/search?name=${searchQuery}`, {
+            const response = await axios.get(`https://uni-networking-app.onrender.com/api/v1/user/search?name=${searchQuery}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("token")}`
                 }

@@ -1,14 +1,14 @@
 
 export function Post({ post }: { post: any }) {
-    // Function to handle image URL formatting
+
     const getImageUrl = (photo: string) => {
         if (!photo) return "";
 
-        // Replace backslashes with forward slashes (Windows compatibility)
+    
         const formattedUrl = photo.replace(/\\/g, "/");
 
-        // Ensure the URL starts with '/uploads'
-        if (!formattedUrl.startsWith("http") && !formattedUrl.startsWith("/uploads")) {
+     
+        if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
             return `/uploads/${formattedUrl.split("/").pop()}`;
         }
 
@@ -24,7 +24,7 @@ export function Post({ post }: { post: any }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <img
-                        src={`http://localhost:3000${profilUrl}` || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
+                        src={`https://uni-networking-app.onrender.com${profilUrl}` || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
                         alt="Profile"
                         className="w-10 h-10 rounded-full"
                     />
@@ -69,7 +69,7 @@ export function Post({ post }: { post: any }) {
                         return (
                             <img
                                 key={index}
-                                src={`http://localhost:3000${imageUrl}`}
+                                src={`https://uni-networking-app.onrender.com${imageUrl}`}
                                 alt={`Post photo ${index + 1}`}
                                 className="w-full h-auto rounded-lg"
                                 onError={(e) => {

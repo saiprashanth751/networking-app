@@ -60,7 +60,7 @@ const ProfilePage = () => {
     const fetchUserDetails = async (userId: string) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:3000/api/v1/user/${userId}`, {
+            const response = await axios.get(`https://uni-networking-app.onrender.com/api/v1/user/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return response.data.user;
@@ -83,7 +83,7 @@ const ProfilePage = () => {
         setError("");
 
         
-        axios.get('http://localhost:3000/api/v1/user/profile', {
+        axios.get('https://uni-networking-app.onrender.com/api/v1/user/profile', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(async (response) => {
             const profileData = response.data.profile;
@@ -102,19 +102,19 @@ const ProfilePage = () => {
         });
 
         
-        axios.get('http://localhost:3000/api/v1/user', {
+        axios.get('https://uni-networking-app.onrender.com/api/v1/user', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
 
         // Fetch followers and following
-        axios.get('http://localhost:3000/api/v1/follow/followers', {
+        axios.get('https://uni-networking-app.onrender.com/api/v1/follow/followers', {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setFollowers(response.data);
             setFollowerUsers(response.data.followers); 
         });
 
-        axios.get('http://localhost:3000/api/v1/follow/following', {
+        axios.get('https://uni-networking-app.onrender.com/api/v1/follow/following', {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setFollowing(response.data);
@@ -122,7 +122,7 @@ const ProfilePage = () => {
         });
 
        
-        axios.get("http://localhost:3000/api/v1/post/userAll", {
+        axios.get("https://uni-networking-app.onrender.com/api/v1/post/userAll", {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setPosts(response.data.posts);
@@ -136,7 +136,7 @@ const ProfilePage = () => {
         const formattedUrl = photo.replace(/\\/g, "/");
 
         
-        if (!formattedUrl.startsWith("http") && !formattedUrl.startsWith("/uploads")) {
+        if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
             return `/uploads/${formattedUrl.split("/").pop()}`;
         }
 
@@ -154,7 +154,7 @@ const ProfilePage = () => {
                     <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-4">
                             <img
-                                src={`http://localhost:3000${profileUrl}`}
+                                src={`https://uni-networking-app.onrender.com${profileUrl}`}
                                 alt="Profile"
                                 className="w-32 h-32 rounded-full border-4 border-gray-800"
                             />

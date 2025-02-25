@@ -33,7 +33,7 @@ export default function Dashboard() {
     const fetchProfileAndUsers = async (token: string) => {
         try {
            
-            const profileResponse = await axios.get('http://localhost:3000/api/v1/user/profile', {
+            const profileResponse = await axios.get('https://uni-networking-app.onrender.com/api/v1/user/profile', {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -44,7 +44,7 @@ export default function Dashboard() {
 
             
             const usersResponse = await axios.get(
-                `http://localhost:3000/api/v1/user/bulk/?minor=${profileResponse.data.profile.minor}`,
+                `https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profileResponse.data.profile.minor}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -54,7 +54,7 @@ export default function Dashboard() {
 
             
             const followedUsersResponse = await axios.get(
-                'http://localhost:3000/api/v1/follow/following',
+                'https://uni-networking-app.onrender.com/api/v1/follow/following',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -79,7 +79,7 @@ export default function Dashboard() {
     
     const fetchPosts = async () => {
         try {
-            const postsResponse = await axios.get('http://localhost:3000/api/v1/post/all');
+            const postsResponse = await axios.get('https://uni-networking-app.onrender.com/api/v1/post/all');
             setPosts(postsResponse.data.posts);
             setFilteredPosts(postsResponse.data.posts); 
         } catch (error) {

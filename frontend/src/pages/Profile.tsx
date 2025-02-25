@@ -60,7 +60,7 @@ const ProfilePage = () => {
         setError("");
 
         // Fetch profile data
-        axios.get(`http://localhost:3000/api/v1/user/nativeProfile/?id=${id}`, {
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/nativeProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(async (response) => {
             const profileData = response.data.profile;
@@ -79,19 +79,19 @@ const ProfilePage = () => {
         });
 
         // Fetch user data, posts, followers, etc.
-        axios.get(`http://localhost:3000/api/v1/user/userProfile/?id=${id}`, {
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
 
-        axios.get(`http://localhost:3000/api/v1/follow/userFollowing/?id=${id}`, {
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/userFollowing/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setFollowing(response.data));
 
-        axios.get(`http://localhost:3000/api/v1/follow/userFollowers/?id=${id}`, {
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/userFollowers/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setFollowers(response.data));
 
-        axios.get(`http://localhost:3000/api/v1/post/${id}`, {
+        axios.get(`https://uni-networking-app.onrender.com/api/v1/post/${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setPosts(response.data.posts);
@@ -105,7 +105,7 @@ const ProfilePage = () => {
         const formattedUrl = photo.replace(/\\/g, "/");
 
         
-        if (!formattedUrl.startsWith("http") && !formattedUrl.startsWith("/uploads")) {
+        if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
             return `/uploads/${formattedUrl.split("/").pop()}`;
         }
 
@@ -123,7 +123,7 @@ const ProfilePage = () => {
                     <div className="flex items-start justify-between">
                         <div>
                             <img
-                                src={`http://localhost:3000${profileUrl}`}
+                                src={`https://uni-networking-app.onrender.com${profileUrl}`}
                                 alt="Profile"
                                 className="w-32 h-32 rounded-full border-4 border-gray-800 ml-5"
                             />
