@@ -25,7 +25,7 @@ export default function UpdateProfile() {
         }
 
         // Fetch existing profile data
-        axios.get("http://localhost:3000/api/v1/user/profile", {
+        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile", {
             headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             const profileData = response.data.profile;
@@ -61,7 +61,7 @@ export default function UpdateProfile() {
             if (profilePic) formData.append("profilePic", profilePic); 
 
            
-            await axios.put("http://localhost:3000/api/v1/user/profile", formData, {
+            await axios.put("https://uni-networking-app.onrender.com/api/v1/user/profile", formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "multipart/form-data", 
@@ -82,7 +82,7 @@ export default function UpdateProfile() {
         const formattedUrl = photo.replace(/\\/g, "/");
 
         
-        if (!formattedUrl.startsWith("http") && !formattedUrl.startsWith("/uploads")) {
+        if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
             return `/uploads/${formattedUrl.split("/").pop()}`;
         }
 
@@ -109,7 +109,7 @@ export default function UpdateProfile() {
                         <div className="mt-2">
                             <p className="text-sm text-gray-500">Current Profile Picture:</p>
                             <img
-                                src={`http://localhost:3000${imgUrl}`}
+                                src={`https://uni-networking-app.onrender.com${imgUrl}`}
                                 alt="Current Profile"
                                 className="w-24 h-24 rounded-full border-2 border-gray-300 mt-2"
                             />
