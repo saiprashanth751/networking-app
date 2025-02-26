@@ -20,12 +20,28 @@ export function User({ user }: { user: any }) {
 
   const getImageUrl = (photo: string) => {
     if (!photo) return "";
+
     const formattedUrl = photo.replace(/\\/g, "/");
-    if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
-      return `/uploads/${formattedUrl.split("/").pop()}`;
+
+
+    const filename = formattedUrl.split("/").pop();
+
+
+    if (formattedUrl.startsWith("https")) {
+        return formattedUrl;
     }
-    return formattedUrl;
-  };
+
+    if (formattedUrl.startsWith("/uploads")) {
+        return formattedUrl;
+    }
+
+
+    if (formattedUrl.startsWith("/opt/render/project/src/backend/dist/uploads")) {
+        return `/uploads/${filename}`;
+    }
+
+    return `/uploads/${filename}`;
+};
 
   const profileUrl = getImageUrl(user?.profile?.profilePic);
 
@@ -36,7 +52,11 @@ export function User({ user }: { user: any }) {
         <div className="flex items-center gap-x-4">
           <img
             alt="Profile"
-            src={`https://uni-networking-app.onrender.com${profileUrl} || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"`}
+            src={
+              profileUrl
+                  ? `https://uni-networking-app.onrender.com${profileUrl}`
+                  : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+          }
             className="w-12 h-12 flex-none rounded-full bg-gray-700 object-cover"
           />
           <div>

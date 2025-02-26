@@ -77,16 +77,27 @@ export default function UpdateProfile() {
 
     const getImageUrl = (photo: string) => {
         if (!photo) return "";
-
-        
+    
         const formattedUrl = photo.replace(/\\/g, "/");
+    
 
-        
-        if (!formattedUrl.startsWith("https") && !formattedUrl.startsWith("/uploads")) {
-            return `/uploads/${formattedUrl.split("/").pop()}`;
+        const filename = formattedUrl.split("/").pop();
+    
+
+        if (formattedUrl.startsWith("https")) {
+            return formattedUrl;
         }
-
-        return formattedUrl;
+    
+        if (formattedUrl.startsWith("/uploads")) {
+            return formattedUrl;
+        }
+    
+ 
+        if (formattedUrl.startsWith("/opt/render/project/src/backend/dist/uploads")) {
+            return `/uploads/${filename}`;
+        }
+    
+        return `/uploads/${filename}`;
     };
 
     const imgUrl = getImageUrl(currentProfilePic)
@@ -109,7 +120,11 @@ export default function UpdateProfile() {
                         <div className="mt-2">
                             <p className="text-sm text-gray-500">Current Profile Picture:</p>
                             <img
-                                src={`https://uni-networking-app.onrender.com${imgUrl}`}
+                                src={
+                                    imgUrl
+                                        ? `https://uni-networking-app.onrender.com${imgUrl}`
+                                        : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                                }
                                 alt="Current Profile"
                                 className="w-24 h-24 rounded-full border-2 border-gray-300 mt-2"
                             />
