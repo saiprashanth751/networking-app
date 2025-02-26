@@ -133,7 +133,6 @@ export default function CreateProfile() {
                         selected={selectedMinor} 
                         setSelected={setSelectedMinor} 
                     />
-
                     <InputBox 
                         onChange={(e) => setLinkedin(e.target.value)} 
                         label="LinkedIn Profile"
@@ -141,30 +140,32 @@ export default function CreateProfile() {
                         type={"text"}
                     />
 
+                    <div className="font-semibold text-md my-1"><span className="font-bold">Note:</span> Atleast 2 profiles are recommended.</div>
+                    
                     <InputBox 
                         onChange={(e) => setGithub(e.target.value)} 
-                        label="GitHub Username" 
+                        label="GitHub Username (optional)" 
                         value={github}
                         type={"text"}
                     />
 
                     <InputBox 
                         onChange={(e) => setLeetcode(e.target.value)} 
-                        label="LeetCode Username" 
+                        label="LeetCode Username (optional)" 
                         value={leetcode}
                         type={"text"}
                     />
 
                     <InputBox 
                         onChange={(e) => setCodeforces(e.target.value)} 
-                        label="Codeforces Username" 
+                        label="Codeforces Username (optional)" 
                         value={codeforces}
                         type={"text"}
                     />
 
                     <InputBox 
                         onChange={(e) => setGeekforgeeks(e.target.value)} 
-                        label="GeeksforGeeks Username"
+                        label="GeeksforGeeks Username (optional)"
                         value={geekforgeeks}
                         type={"text"} 
                     />
