@@ -154,7 +154,7 @@ const ProfilePage = () => {
                     <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-4">
                             <img
-                                src={`https://uni-networking-app.onrender.com${profileUrl}`}
+                                src={`https://uni-networking-app.onrender.com${profileUrl}` || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
                                 alt="Profile"
                                 className="w-32 h-32 rounded-full border-4 border-gray-800"
                             />
