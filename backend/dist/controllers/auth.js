@@ -42,7 +42,7 @@ exports.verifyEmail = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(v
             verified: true
         }
     });
-    res.redirect("http://localhost:5173/signin");
+    res.redirect("https://networking-app-navy.vercel.app/signin");
     return res.status(200).json({
         message: "You are successfully verified. You can log in..."
     });

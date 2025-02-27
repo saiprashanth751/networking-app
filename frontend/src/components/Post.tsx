@@ -1,32 +1,8 @@
 
 export function Post({ post }: { post: any }) {
 
-    const getImageUrl = (photo: string) => {
-        if (!photo) return "";
-    
-        const formattedUrl = photo.replace(/\\/g, "/");
-    
 
-        const filename = formattedUrl.split("/").pop();
-    
-
-        if (formattedUrl.startsWith("https")) {
-            return formattedUrl;
-        }
-    
-        if (formattedUrl.startsWith("/uploads")) {
-            return formattedUrl;
-        }
-    
- 
-        if (formattedUrl.startsWith("/opt/render/project/src/backend/dist/uploads")) {
-            return `/uploads/${filename}`;
-        }
-    
-        return `/uploads/${filename}`;
-    };
-
-    const profileUrl = getImageUrl(post?.user?.profile?.profilePic)
+    const profileUrl = post?.user?.profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     return (
         <div className="bg-gray-800 rounded-lg p-6  overflow-auto">
@@ -34,11 +10,7 @@ export function Post({ post }: { post: any }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <img
-                        src={
-                            profileUrl
-                                ? `https://uni-networking-app.onrender.com${profileUrl}`
-                                : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                        }
+                        src={profileUrl}
                         alt="Profile"
                         className="w-10 h-10 rounded-full"
                     />
@@ -79,11 +51,11 @@ export function Post({ post }: { post: any }) {
             {post?.photos?.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     {post.photos.map((photo: string, index: number) => {
-                        const imageUrl = getImageUrl(photo);
+                        const imageUrl = photo;
                         return (
                             <img
                                 key={index}
-                                src={`https://uni-networking-app.onrender.com${imageUrl}`}
+                                src={imageUrl}
                                 alt={`Post photo ${index + 1}`}
                                 className="w-full h-auto rounded-lg"
                                 onError={(e) => {
