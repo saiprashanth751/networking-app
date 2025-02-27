@@ -21,7 +21,7 @@ export const createPost = asyncHandler(async (req: AuthRequest, res: Response) =
 
     let photoPaths: string[] = [];
     if (req.files && Array.isArray(req.files)) {
-        photoPaths = req.files.map((file: any) => file.path); 
+        photoPaths = req.files.map((file: any) => file.secure_url); 
     }
 
    

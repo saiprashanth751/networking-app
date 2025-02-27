@@ -36,7 +36,7 @@ export default function UpdateProfile() {
             setLeetcode(profileData.leetcode || "");
             setCodeforces(profileData.codeforces || "");
             setGFG(profileData.geekforgeeks || "");
-            setCurrentProfilePic(profileData.profilePic || ""); 
+            setCurrentProfilePic(profileData.profilePic || null); 
         }).catch((error) => {
             console.error("Failed to fetch profile data:", error);
             setError("Failed to fetch profile data. Please try again.");
@@ -77,7 +77,7 @@ export default function UpdateProfile() {
 
     
 
-    const profilePicUrl = currentProfilePic|| "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+    const profilePicUrl = currentProfilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4">
