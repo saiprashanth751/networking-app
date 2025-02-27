@@ -7,7 +7,6 @@ import bcrypt from "bcrypt"
 import { sendVerificationEmail } from "../utils/emailService"
 import { profileCreation, profileUpdation, signinBody, signupBody } from "../types/types"
 
-
 const prisma = new PrismaClient()
 
 export const userSignup = asyncHandler(async (req:Request, res:Response) => {
@@ -180,7 +179,7 @@ export const createProfile = asyncHandler(async (req: AuthRequest, res: Response
     } = req.body;
 
    
-    const profilePic = req.file ? req.file.path : null;
+    const profilePic = req.file ? (req.file as any).secure_url : null;
 
     const validation = profileCreation.safeParse({
         bio,
@@ -295,7 +294,7 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
     const { bio, linkedin, github, leetcode, codeforces, geekforgeeks } = req.body;
 
 
-    const profilePic = req.file ? req.file.path : undefined;
+    const profilePic = req.file ? (req.file as any).secure_url : undefined;
 
     // Create an object with only the fields that are provided
     const updateData: any = {};
