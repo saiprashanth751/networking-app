@@ -184,7 +184,7 @@ export default function Dashboard() {
     {/* Right Sidebar - Recommended Users */}
     <div className="w-full lg:w-1/4  dark:bg-gray-900 p-6 rounded-lg shadow-md dark:shadow-gray-800 overflow-y-auto mt-4 lg:mt-0 lg:ml-4">
         <h3 className="text-xl font-bold mb-3 sticky top-0  dark:bg-gray-900 py-4 flex items-center text-gray-200">
-            <FaUser className="mr-2 text-gray-400" /> Recommended Users / Known
+            <FaUser className="mr-2 text-gray-400" /> Recommended / Known  Users
         </h3>
         {users.map((user) => (
             <div key={user.id} className="bg-gray-700 dark:bg-gray-800 rounded-lg mb-2 p-0.5">

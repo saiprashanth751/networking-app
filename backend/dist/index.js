@@ -29,7 +29,7 @@ const app = (0, express_1.default)();
 app.use(express_1.default.json());
 // CORS configuration
 app.use((0, cors_1.default)({
-    origin: "http://localhost:5173",
+    origin: "https://networking-app-navy.vercel.app",
     credentials: true,
 }));
 const prisma = new client_1.PrismaClient();
@@ -45,7 +45,7 @@ const server = http_1.default.createServer(app);
 // Socket.IO setup with authentication
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: "https://networking-app-navy.vercel.app",
         methods: ["GET", "POST"],
         credentials: true,
     },
@@ -92,54 +92,43 @@ io.on("connection", (socket) => {
         .catch((error) => {
         console.error("Error updating user status to online:", error);
     });
-    // Join room event
     socket.on("joinRoom", ({ receiverId }) => {
         if (!receiverId) {
             console.error("Receiver ID not provided.");
             return;
         }
-        // Log the receiverId being passed
         console.log(`Receiver ID passed to joinRoom: ${receiverId}`);
-        // Validate that receiverId is not the same as senderId
         if (receiverId === senderId) {
             console.error("Receiver ID cannot be the same as Sender ID.");
             return;
         }
-        // Create room name (sorted combination of senderId and receiverId)
         const room = [senderId, receiverId].sort().join("_");
         socket.join(room);
         socket.data.userId = senderId;
         console.log(`User ${senderId} joined room ${room}`);
-        // Log all users in the room
         io.in(room)
             .fetchSockets()
             .then((sockets) => {
             console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
         });
     });
-    // Send message event
     socket.on("sendMessage", (_a) => __awaiter(void 0, [_a], void 0, function* ({ receiverId, content }) {
         if (!receiverId || !content) {
             console.error("Receiver ID or content not provided.");
             return;
         }
-        // Validate that receiverId is not the same as senderId
         if (receiverId === senderId) {
             console.error("Receiver ID cannot be the same as Sender ID.");
             return;
         }
         try {
-            // Save message to the database
             const message = yield prisma.message.create({
                 data: { senderId, receiverId, content, read: false },
             });
             console.log("Message saved to database:", message);
-            // Create room name (sorted combination of senderId and receiverId)
             const room = [senderId, receiverId].sort().join("_");
-            // Emit the message to the room (excluding the sender)
             socket.to(room).emit("receiveMessage", message);
             console.log(`Message sent to room ${room}:`, message);
-            // Log all users in the room
             io.in(room)
                 .fetchSockets()
                 .then((sockets) => {

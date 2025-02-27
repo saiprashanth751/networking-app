@@ -129,32 +129,9 @@ const ProfilePage = () => {
         });
     }, [navigate]);
 
-    const getImageUrl = (photo: string) => {
-        if (!photo) return "";
-    
-        const formattedUrl = photo.replace(/\\/g, "/");
-    
 
-        const filename = formattedUrl.split("/").pop();
-    
 
-        if (formattedUrl.startsWith("https")) {
-            return formattedUrl;
-        }
-    
-        if (formattedUrl.startsWith("/uploads")) {
-            return formattedUrl;
-        }
-    
- 
-        if (formattedUrl.startsWith("/opt/render/project/src/backend/dist/uploads")) {
-            return `/uploads/${filename}`;
-        }
-    
-        return `/uploads/${filename}`;
-    };
-
-    const profileUrl = getImageUrl(profile?.profilePic || "");
+    const profilePicUrl = profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     return (
         <div className="bg-gray-900 text-white min-h-screen flex flex-col lg:flex-row p-8 space-y-8 lg:space-y-0 lg:space-x-8">
@@ -165,11 +142,7 @@ const ProfilePage = () => {
                     <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-4">
                             <img
-                                src={
-                                    profileUrl
-                                        ? `https://uni-networking-app.onrender.com${profileUrl}`
-                                        : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                                }
+                                src={profilePicUrl}
                                 alt="Profile"
                                 className="w-32 h-32 rounded-full border-4 border-gray-800"
                             />
