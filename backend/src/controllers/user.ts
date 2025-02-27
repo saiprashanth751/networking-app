@@ -294,7 +294,8 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
     const { bio, linkedin, github, leetcode, codeforces, geekforgeeks } = req.body;
 
 
-    const profilePic = req.file ? (req.file as any).secure_url : undefined;
+    const profilePic = (req.file as any)?.cloudinaryUrl || undefined;
+
 
     // Create an object with only the fields that are provided
     const updateData: any = {};

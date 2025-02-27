@@ -1,6 +1,6 @@
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { Readable } from 'stream';
 
 
 cloudinary.config({
@@ -10,23 +10,41 @@ cloudinary.config({
 });
 
 
-interface StorageParams {
-    folder: string;
-    format: (req: Express.Request, file: Express.Multer.File) => Promise<string>;
-    public_id: (req: Express.Request, file: Express.Multer.File) => string;
-}
-
-const storage: CloudinaryStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'profile-pics',
-        format: async (req: Express.Request, file: Express.Multer.File): Promise<string> => 'jpg',
-        public_id: (req: Express.Request, file: Express.Multer.File): string => {
-            const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-            return `${file.fieldname}-${uniqueSuffix}`;
-        },
-    } as StorageParams,
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({ storage });
+
+
+export const uploadToCloudinary = (fieldName: string) => {
+    return async (req: any, res: any, next: any) => {
+        if (!req.file) {
+            req.file = {};  // Ensure req.file exists
+            req.file.cloudinaryUrl = null;  // Default value
+            return next();
+        }
+
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder: "profile-pics",
+                public_id: `profilePic-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+            },
+            (error, result) => {
+                if (error) {
+                    console.error("Error uploading to Cloudinary:", error);
+                    return res.status(500).json({ error: "Cloudinary upload failed" });
+                }
+
+                req.file.cloudinaryUrl = result?.secure_url || null;
+                next();
+            }
+        );
+
+        const bufferStream = new Readable();
+        bufferStream.push(req.file.buffer);
+        bufferStream.push(null);
+        bufferStream.pipe(stream);
+    };
+};
+
+
 export default upload;
