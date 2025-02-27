@@ -11,18 +11,27 @@ import { Server } from "socket.io";
 import http from "http";
 import cors from "cors";
 import { authMiddleware } from "./middleware/authMiddleware";
+import { v2 as cloudinary } from 'cloudinary';
 
 
 const app = express();
-app.use(express.json());
-
-// CORS configuration
 app.use(
   cors({
     origin: "https://networking-app-navy.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+app.use(express.json());
+
+
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const prisma = new PrismaClient();
 
