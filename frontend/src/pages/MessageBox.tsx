@@ -132,7 +132,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           <h1 className="text-2xl font-bold">Chat</h1>
           {/* Display receiver's name */}
           {receiver && (
-            <p className="text-sm text-gray-600">
+            <p className="text-xl text-white font-semibold">
               Chatting with: {receiver.firstName} {receiver.lastName}
             </p>
           )}
