@@ -28,7 +28,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [receiver, setReceiver] = useState<User | null>(null); 
+  const [receiver, setReceiver] = useState<User | null>(null);
   useEffect(() => {
     const fetchMessagesAndUser = async () => {
       try {
@@ -38,7 +38,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           return;
         }
 
-        
+
         const decoded = jwtDecode<{ id: string }>(token);
         if (decoded?.id) {
           setCurrentUserId(decoded.id);
@@ -46,19 +46,19 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           console.error("Failed to decode token or missing user ID");
         }
 
-      
+
         const messagesResponse = await axios.get(
           `https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(messagesResponse.data.messages);
 
-        
+
         const userResponse = await axios.get(
           `https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setReceiver(userResponse.data.user); 
+        setReceiver(userResponse.data.user);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -127,13 +127,16 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
 
   return (
     <div className="max-w-2xl mx-auto p-4 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 bg-gray-800 p-4 rounded-lg shadow-md">
         <div>
-          <h1 className="text-2xl font-bold">Chat</h1>
+          <h1 className="text-2xl font-bold text-white">Chat</h1>
           {/* Display receiver's name */}
           {receiver && (
-            <p className="text-sm text-gray-600">
-              Chatting with: {receiver.firstName} {receiver.lastName}
+            <p className="text-lg text-gray-300 mt-2">
+              Chatting with:{" "}
+              <span className="font-semibold text-blue-400">
+                {receiver.firstName} {receiver.lastName}
+              </span>
             </p>
           )}
         </div>
@@ -150,16 +153,14 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${
-                msg.senderId === currentUserId ? "justify-end" : "justify-start"
-              } mb-4`}
+              className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"
+                } mb-4`}
             >
               <div
-                className={`max-w-[70%] p-3 rounded-lg ${
-                  msg.senderId === currentUserId
+                className={`max-w-[70%] p-3 rounded-lg ${msg.senderId === currentUserId
                     ? "bg-blue-500 text-white"
                     : "bg-gray-200 text-black"
-                }`}
+                  }`}
               >
                 {msg.content}
               </div>
