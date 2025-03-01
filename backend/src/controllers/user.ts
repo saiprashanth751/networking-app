@@ -241,28 +241,54 @@ export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => 
 
 export const getUserByName = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name } = req.query;
-    const userId = req.id
-    if (!name || typeof name !== "string") {
-        return res.status(400).json({ error: "Name query parameter is required and must be a string" });
+    const userId = req.id;
+  
+    if (!name || typeof name !== "string" || name.trim().length < 1) {
+      throw new CustomError("Name query parameter must be at least 1 characters long", 400);
     }
-
+  
     try {
-        const users = await prisma.user.findMany({
-            where: {
-                id: {not : userId},
-                firstName: {
-                    contains: name,
-                    mode: "insensitive",
-                },
+      const users = await prisma.user.findMany({
+        where: {
+          id: { not: userId },
+          OR: [
+            {
+              firstName: {
+                contains: name,
+                mode: "insensitive",
+              },
             },
-        });
-
-        res.status(200).json({ users });
+            {
+              lastName: {
+                contains: name,
+                mode: "insensitive",
+              },
+            },
+            {
+              firstName: {
+                startsWith: name,
+                mode: "insensitive",
+              },
+            },
+            {
+              lastName: {
+                startsWith: name,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+        orderBy: {
+          firstName: "asc",
+        },
+      });
+  
+      res.status(200).json({ users });
     } catch (error) {
-        console.error("Error searching users:", error);
-        res.status(500).json({ error: "Failed to search users" });
+      console.error("Error searching users:", error);
+      res.status(500).json({ error: "Failed to search users" });
     }
-});
+  });
 
 
 export const getNative = asyncHandler(async (req:AuthRequest, res:Response) => {

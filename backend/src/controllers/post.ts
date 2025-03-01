@@ -134,7 +134,10 @@ export const getUserPosts = asyncHandler(async (req: AuthRequest, res: Response)
                     }
                 }
             }
-        }
+        },
+        orderBy: {
+            createdAt: "desc"
+        },
     });
 
     if (!posts.length) {
@@ -230,6 +233,9 @@ export const getPostById = asyncHandler(async (req, res: Response) => {
                     }
                 }
             }
+        },
+        orderBy: {
+            createdAt: "desc",
         },
         
     });
