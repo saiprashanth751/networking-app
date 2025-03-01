@@ -32,8 +32,13 @@ export function Post({ post, showFollowButton = false }: PostProps) {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
-            const decodedToken = JSON.parse(atob(token.split('.')[1])); // Decode JWT token
-            setLoggedInUserId(decodedToken.id); // Set logged-in user ID
+            axios.get("https://uni-networking-app.onrender.com/api/v1/user", {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            }).then((response) => {
+                setLoggedInUserId(response.data.user.id)
+            })
         }
     }, []);
 
