@@ -1,4 +1,4 @@
-import { Link as LinkIcon, GraduationCap, Book, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Link as LinkIcon, GraduationCap, Book, ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Post } from '../components/Post';
 import axios from 'axios';
