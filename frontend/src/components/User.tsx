@@ -44,7 +44,7 @@ export function User({ user }: { user: any }) {
             onClick={async () => {
               if (!follow) {
                 await axios.post(
-                  `hhttps://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
+                  `https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
                   {},
                   {
                     headers: {

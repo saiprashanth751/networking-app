@@ -182,16 +182,26 @@ export default function Dashboard() {
     </div>
 
     {/* Right Sidebar - Recommended Users */}
-    <div className="w-full lg:w-1/4  dark:bg-gray-900 p-6 rounded-lg shadow-md dark:shadow-gray-800 overflow-y-auto mt-4 lg:mt-0 lg:ml-4">
-        <h3 className="text-xl font-bold mb-3 sticky top-0  dark:bg-gray-900 py-4 flex items-center text-gray-200">
-            <FaUser className="mr-2 text-gray-400" /> Recommended / Known  Users
-        </h3>
-        {users.map((user) => (
-            <div key={user.id} className="bg-gray-700 dark:bg-gray-800 rounded-lg mb-2 p-0.5">
-                <User user={user} />
-            </div>
-        ))}
+    <div className="w-full lg:w-1/4 dark:bg-gray-900 p-6 rounded-lg shadow-md dark:shadow-gray-800 overflow-y-auto mt-4 lg:mt-0 lg:ml-4">
+  <h3 className="text-xl font-bold mb-3 sticky top-0 dark:bg-gray-900 py-4 flex items-center text-gray-200">
+    <FaUser className="mr-2 text-gray-400" /> Recommended / Known Users
+  </h3>
+
+  {/* Informative Note */}
+  <div className="text-sm text-gray-400 mb-4 p-3 bg-gray-800 dark:bg-gray-700 rounded-lg">
+    <p>
+      The users below are recommended based on your minor. To discover more users
+      who share your interests, explore their posts or use the search feature.
+    </p>
+  </div>
+
+  {/* List of Users */}
+  {users.map((user) => (
+    <div key={user.id} className="bg-gray-700 dark:bg-gray-800 rounded-lg mb-2 p-0.5">
+      <User user={user} />
     </div>
+  ))}
+</div>
     
 </div>
 

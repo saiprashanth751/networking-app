@@ -11,6 +11,12 @@ interface Message {
   timestamp: string;
 }
 
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface MessageBoxProps {
   receiverId: string;
   onClose: () => void;
@@ -22,9 +28,10 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [receiver, setReceiver] = useState<User | null>(null); // State to store receiver's details
 
   useEffect(() => {
-    const fetchMessages = async () => {
+    const fetchMessagesAndUser = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
@@ -32,6 +39,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           return;
         }
 
+        // Decode token to get current user ID
         const decoded = jwtDecode<{ id: string }>(token);
         if (decoded?.id) {
           setCurrentUserId(decoded.id);
@@ -39,18 +47,25 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           console.error("Failed to decode token or missing user ID");
         }
 
-        const response = await axios.get(
+        // Fetch messages
+        const messagesResponse = await axios.get(
           `https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        setMessages(messagesResponse.data.messages);
 
-        setMessages(response.data.messages);
+        // Fetch receiver's details
+        const userResponse = await axios.get(
+          `https://uni-networking-app.onrender.com/api/v1/user/?id=${receiverId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setReceiver(userResponse.data.user); // Assuming the API returns the user object
       } catch (error) {
-        console.error("Error fetching messages:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
-    if (receiverId) fetchMessages();
+    if (receiverId) fetchMessagesAndUser();
   }, [receiverId]);
 
   useEffect(() => {
@@ -100,7 +115,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
         content: newMessage,
         timestamp: new Date().toISOString(),
       };
-      
+
       setMessages((prev) => [...prev, tempMessage]);
       setNewMessage("");
       socket.emit("sendMessage", { receiverId, content: newMessage });
@@ -114,7 +129,15 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   return (
     <div className="max-w-2xl mx-auto p-4 h-full flex flex-col">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Chat</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Chat</h1>
+          {/* Display receiver's name */}
+          {receiver && (
+            <p className="text-sm text-gray-600">
+              Chatting with: {receiver.firstName} {receiver.lastName}
+            </p>
+          )}
+        </div>
         <button
           onClick={onClose}
           className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
