@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client'
 import { asyncHandler } from '../middleware/asyncHandler'
 import CustomError from '../utils/customError'
 import { PostBody } from '../types/types'
-import { tuple } from 'zod'
 
 
 const prisma = new PrismaClient()
@@ -21,7 +20,7 @@ export const createPost = asyncHandler(async (req: AuthRequest, res: Response) =
 
     let photoPaths: string[] = [];
     if (req.files && Array.isArray(req.files)) {
-        photoPaths = req.files.map((file: any) => file.secure_url); 
+        photoPaths = req.files.map((file: any) => file.cloudinaryUrl); 
     }
 
    
