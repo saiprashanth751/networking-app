@@ -235,9 +235,11 @@ const ProfilePage = () => {
                 {/* Posts Section */}
                 <div className="mt-8">
                     <h3 className="text-xl font-bold mb-6">Your Posts</h3>
-                    <div>
+                    <div className="space-y-6">
                         {posts.map((post) => (
-                            <Post post={post} />
+                            <div className="bg-gray-700 p-4 rounded-lg shadow-md">
+                                <Post post={post} />
+                            </div>
                         ))}
                     </div>
                 </div>
