@@ -240,7 +240,7 @@ const ProfilePage = () => {
                 {/* Posts Section */}
                 <div className="mt-8">
                     <h3 className="text-xl font-bold mb-6">Your Posts</h3>
-                    <div className="space-y-6">
+                    <div className="space-y-6 bg-gray-800 p-2 rounded-lg">
                         {posts.map((post) => (
                             <Post  post={post} />
                         ))}
