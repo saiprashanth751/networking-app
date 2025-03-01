@@ -179,7 +179,7 @@ export const createProfile = asyncHandler(async (req: AuthRequest, res: Response
     } = req.body;
 
    
-    const profilePic = req.file ? (req.file as any).secure_url : null;
+    const profilePic = req.file ? (req.file as any).cloudinaryUrl : null;
 
     const validation = profileCreation.safeParse({
         bio,
