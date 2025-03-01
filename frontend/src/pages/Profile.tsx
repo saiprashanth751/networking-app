@@ -41,7 +41,7 @@ const ProfilePage = () => {
     const [isFollowing, setIsFollowing] = useState(false);
     const navigate = useNavigate();
 
-    // Fetch follow status
+    
     const fetchFollowStatus = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -57,12 +57,11 @@ const ProfilePage = () => {
         }
     };
 
-    // Toggle follow/unfollow
+    
     const toggleFollow = async () => {
         try {
             const token = localStorage.getItem('token');
             if (!isFollowing) {
-
                 await axios.post(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
                     {},
@@ -71,7 +70,6 @@ const ProfilePage = () => {
                     }
                 );
             } else {
-                // Unfollow the user
                 await axios.delete(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
                     {
@@ -108,7 +106,6 @@ const ProfilePage = () => {
             const profileData = response.data.profile;
             setProfile(profileData);
 
-
             if (profileData.leetcode) {
                 const leetcodeStats = await fetchLeetCodeStats(profileData.leetcode);
                 setLeetCodeStats(leetcodeStats);
@@ -119,7 +116,6 @@ const ProfilePage = () => {
         }).finally(() => {
             setLoading(false);
         });
-
 
         axios.get(`https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -139,7 +135,7 @@ const ProfilePage = () => {
             setPosts(response.data.posts);
         });
 
-        // Fetch follow status
+        
         fetchFollowStatus();
     }, [id, navigate]);
 
@@ -147,26 +143,35 @@ const ProfilePage = () => {
 
     return (
         <div className="bg-gray-900 text-white min-h-screen flex p-8 space-x-8">
-            {/* Left Section (User Details + Posts) */}
+            
             <div className="w-2/3 bg-gray-800 rounded-lg p-6 overflow-auto">
-                {/* User Details */}
+                
                 <div className="mb-8">
                     <div className="flex items-start justify-between">
-                        <div>
+                        
+                        <div className="flex items-center space-x-4">
                             <img
                                 src={profileUrl}
                                 alt="Profile"
-                                className="w-32 h-32 rounded-full border-4 border-gray-800 ml-5"
+                                className="w-32 h-32 rounded-full border-4 border-gray-800"
                             />
+                            <div>
+                                <h2 className="text-2xl font-bold">
+                                    {user?.firstName} {user?.lastName}
+                                </h2>
+                                <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
+                            </div>
                         </div>
-                        <div className='flex gap-6'>
+
+                        
+                        <div className="flex gap-4">
                             <button
                                 onClick={() => navigate("/dashboard")}
                                 className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
                             >
                                 Go to Dashboard
                             </button>
-                            {/* Follow/Unfollow Button */}
+                           
                             <button
                                 onClick={toggleFollow}
                                 className={`${isFollowing
@@ -179,87 +184,57 @@ const ProfilePage = () => {
                         </div>
                     </div>
 
-                    <div className="mt-6">
-                        <div className="flex items-start justify-between">
-                            {/* Profile Picture and Name */}
-                            <div className="flex items-center space-x-4">
-                                <img
-                                    src={profileUrl}
-                                    alt="Profile"
-                                    className="w-32 h-32 rounded-full border-4 border-gray-800"
-                                />
-                                <div>
-                                    <h2 className="text-2xl font-bold">
-                                        {user?.firstName} {user?.lastName}
-                                    </h2>
-                                    <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
-                                </div>
-                            </div>
-
-                            {/* Buttons (e.g., Go to Dashboard, Follow/Unfollow) */}
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={() => navigate("/dashboard")}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
-                                >
-                                    Go to Dashboard
-                                </button>
-                                {/* Add Follow/Unfollow button here if needed */}
-                            </div>
+                    
+                    <div className="flex justify-start items-center text-gray-400 gap-40 mt-2">
+                        <div>
+                            <p className="text-lg font-bold text-center">{followers?.count}</p>
+                            <p className="text-xs">Followers</p>
                         </div>
-
-                        {/* Followers and Following Count */}
-                        <div className="flex justify-start items-center text-gray-400 gap-40 mt-2">
-                            <div>
-                                <p className="text-lg font-bold text-center">{followers?.count}</p>
-                                <p className="text-xs">Followers</p>
-                            </div>
-                            <div>
-                                <p className="text-lg font-bold text-center">{following?.count}</p>
-                                <p className="text-xs">Following</p>
-                            </div>
+                        <div>
+                            <p className="text-lg font-bold text-center">{following?.count}</p>
+                            <p className="text-xs">Following</p>
                         </div>
+                    </div>
 
-                        {/* Bio */}
-                        <p className="mt-7 text-gray-300">{profile?.bio}</p>
+                    
+                    <p className="mt-7 text-gray-300">{profile?.bio}</p>
 
-                        {/* Profile Details */}
-                        <div className="mt-6 space-y-4">
-                            <div className="flex items-center text-gray-400">
-                                <GraduationCap className="w-5 h-5 mr-2" />
-                                <p>{profile?.department} ({profile?.graduationYear})</p>
-                            </div>
-                            <div className="flex items-center text-gray-400">
-                                <Book className="w-5 h-5 mr-2" />
-                                <p>Minor in {profile?.minor}</p>
-                            </div>
-                            <div className="flex items-center text-gray-400">
-                                <LinkIcon className="w-5 h-5 mr-2" />
-                                <a
-                                    href={profile?.linkedin}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-blue-500"
-                                >
-                                    LinkedIn
-                                </a>
-                            </div>
-                            <div className="flex items-center text-gray-400">
-                                <LinkIcon className="w-5 h-5 mr-2" />
-                                <a
-                                    href={profile?.github}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-blue-500"
-                                >
-                                    GitHub
-                                </a>
-                            </div>
+                    
+                    <div className="mt-6 space-y-4">
+                        <div className="flex items-center text-gray-400">
+                            <GraduationCap className="w-5 h-5 mr-2" />
+                            <p>{profile?.department} ({profile?.graduationYear})</p>
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                            <Book className="w-5 h-5 mr-2" />
+                            <p>Minor in {profile?.minor}</p>
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                            <LinkIcon className="w-5 h-5 mr-2" />
+                            <a
+                                href={profile?.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-blue-500"
+                            >
+                                LinkedIn
+                            </a>
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                            <LinkIcon className="w-5 h-5 mr-2" />
+                            <a
+                                href={profile?.github}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-blue-500"
+                            >
+                                GitHub
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                {/* Posts Section */}
+                
                 <div className="mt-8">
                     <h3 className="text-xl font-bold mb-6">Your Posts</h3>
                     <div className="space-y-6">
@@ -272,7 +247,7 @@ const ProfilePage = () => {
                 </div>
             </div>
 
-            {/* Right Section (Platform Stats) */}
+            
             <div className="w-1/3 bg-gray-800 rounded-lg p-6 h-screen sticky top-0 overflow-y-auto">
                 <h3 className="text-xl font-bold mt-6 mb-4">Platform Stats</h3>
                 {loading && (
@@ -286,7 +261,7 @@ const ProfilePage = () => {
                 )}
 
                 <div className="space-y-6">
-                    {/* LeetCode Stat Card */}
+                    
                     {profile?.leetcode && leetCodeStats && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">LeetCode</h4>
@@ -306,7 +281,7 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    {/* GeeksforGeeks Stat Card */}
+                    
                     {profile?.geekforgeeks && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">GeeksforGeeks</h4>
@@ -318,7 +293,7 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    {/* Codeforces Stat Card */}
+                    
                     {profile?.codeforces && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">Codeforces</h4>
@@ -330,7 +305,7 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    {/* GitHub Stat Card */}
+                    
                     {profile?.github && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">GitHub</h4>
