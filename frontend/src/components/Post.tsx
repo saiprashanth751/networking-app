@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import {Link} from "react-router-dom"
 import axios from 'axios';
 
 interface PostProps {
@@ -106,12 +107,14 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                         alt="Profile"
                         className="w-10 h-10 rounded-full"
                     />
-                    <div>
-                        <p className="font-semibold text-white">
-                            {post?.user?.firstName} {post?.user?.lastName}
-                        </p>
-                        <p className="text-sm text-gray-400">{post?.user?.department}</p>
-                    </div>
+                    <Link to={`/profile/${post?.user?.id}`}>
+                        <div>
+                            <p className="font-semibold text-white">
+                                {post?.user?.firstName} {post?.user?.lastName}
+                            </p>
+                            <p className="text-sm text-gray-400">{post?.user?.department}</p>
+                        </div>
+                    </Link>
                 </div>
                 <div className="flex items-center space-x-4">
                     <p className="text-sm text-gray-400">
