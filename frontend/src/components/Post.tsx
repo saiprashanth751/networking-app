@@ -25,11 +25,21 @@ interface PostProps {
 
 export function Post({ post, showFollowButton = false }: PostProps) {
     const [isFollowing, setIsFollowing] = useState(false);
+    const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null); // Logged-in user ID
     const profileUrl = post?.user?.profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+
+    // Fetch logged-in user ID
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const decodedToken = JSON.parse(atob(token.split('.')[1])); // Decode JWT token
+            setLoggedInUserId(decodedToken.id); // Set logged-in user ID
+        }
+    }, []);
 
     // Fetch follow status for the post's user
     useEffect(() => {
-        if (showFollowButton) {
+        if (showFollowButton && loggedInUserId && post.user.id !== loggedInUserId) {
             const fetchFollowStatus = async () => {
                 try {
                     const token = localStorage.getItem('token');
@@ -39,21 +49,21 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                             headers: { Authorization: `Bearer ${token}` },
                         }
                     );
-                    setIsFollowing(response.data.following);
+                    setIsFollowing(response.data.following); // Set follow status
                 } catch (error) {
                     console.error("Failed to fetch follow status:", error);
                 }
             };
             fetchFollowStatus();
         }
-    }, [post.user.id, showFollowButton]);
+    }, [post.user.id, showFollowButton, loggedInUserId]);
 
     // Toggle follow/unfollow
     const toggleFollow = async () => {
         try {
             const token = localStorage.getItem('token');
             if (!isFollowing) {
-              
+                // Follow the user
                 await axios.post(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
                     {},
@@ -62,7 +72,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                     }
                 );
             } else {
-                
+                // Unfollow the user
                 await axios.delete(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
                     {
@@ -70,11 +80,14 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                     }
                 );
             }
-            setIsFollowing(!isFollowing);
+            setIsFollowing(!isFollowing); // Toggle follow status
         } catch (error) {
             console.error("Failed to toggle follow status:", error);
         }
     };
+
+    // Hide follow button for the logged-in user
+    const shouldShowFollowButton = showFollowButton && loggedInUserId && post.user.id !== loggedInUserId;
 
     return (
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
@@ -98,7 +111,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                         {new Date(post?.createdAt).toLocaleString()}
                     </p>
                     {/* Conditionally render follow/unfollow button */}
-                    {showFollowButton && (
+                    {shouldShowFollowButton && (
                         <button
                             onClick={toggleFollow}
                             className={`${
