@@ -190,7 +190,7 @@ export default function Dashboard() {
   {/* Informative Note */}
   <div className="text-sm text-gray-400 mb-4 p-3 bg-gray-800 dark:bg-gray-700 rounded-lg">
     <p>
-      Note: The users below are recommended based on your minor. To discover more users
+      <span className='font-semibold'>Note:</span> The users below are recommended based on your minor. To discover more users
       who share your interests, explore their posts or use the search feature.
     </p>
   </div>
