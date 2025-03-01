@@ -62,7 +62,7 @@ const ProfilePage = () => {
         try {
             const token = localStorage.getItem('token');
             if (!isFollowing) {
-                
+
                 await axios.post(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
                     {},
@@ -108,7 +108,7 @@ const ProfilePage = () => {
             const profileData = response.data.profile;
             setProfile(profileData);
 
-            
+
             if (profileData.leetcode) {
                 const leetcodeStats = await fetchLeetCodeStats(profileData.leetcode);
                 setLeetCodeStats(leetcodeStats);
@@ -120,7 +120,7 @@ const ProfilePage = () => {
             setLoading(false);
         });
 
-        
+
         axios.get(`https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
@@ -169,22 +169,46 @@ const ProfilePage = () => {
                             {/* Follow/Unfollow Button */}
                             <button
                                 onClick={toggleFollow}
-                                className={`${
-                                    isFollowing
+                                className={`${isFollowing
                                         ? "bg-red-500 hover:bg-red-600"
                                         : "bg-blue-500 hover:bg-blue-600"
-                                } text-white py-2 px-4 rounded-lg`}
+                                    } text-white py-2 px-4 rounded-lg`}
                             >
                                 {isFollowing ? "Unfollow" : "Follow"}
                             </button>
                         </div>
                     </div>
 
-                    <div className="mt-6 ml-5">
-                        <h2 className="text-2xl font-bold">
-                            {user?.firstName} {user?.lastName}
-                        </h2>
-                        <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
+                    <div className="mt-6">
+                        <div className="flex items-start justify-between">
+                            {/* Profile Picture and Name */}
+                            <div className="flex items-center space-x-4">
+                                <img
+                                    src={profileUrl}
+                                    alt="Profile"
+                                    className="w-32 h-32 rounded-full border-4 border-gray-800"
+                                />
+                                <div>
+                                    <h2 className="text-2xl font-bold">
+                                        {user?.firstName} {user?.lastName}
+                                    </h2>
+                                    <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
+                                </div>
+                            </div>
+
+                            {/* Buttons (e.g., Go to Dashboard, Follow/Unfollow) */}
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => navigate("/dashboard")}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
+                                >
+                                    Go to Dashboard
+                                </button>
+                                {/* Add Follow/Unfollow button here if needed */}
+                            </div>
+                        </div>
+
+                        {/* Followers and Following Count */}
                         <div className="flex justify-start items-center text-gray-400 gap-40 mt-2">
                             <div>
                                 <p className="text-lg font-bold text-center">{followers?.count}</p>
@@ -196,7 +220,10 @@ const ProfilePage = () => {
                             </div>
                         </div>
 
+                        {/* Bio */}
                         <p className="mt-7 text-gray-300">{profile?.bio}</p>
+
+                        {/* Profile Details */}
                         <div className="mt-6 space-y-4">
                             <div className="flex items-center text-gray-400">
                                 <GraduationCap className="w-5 h-5 mr-2" />
