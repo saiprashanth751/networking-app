@@ -175,7 +175,7 @@ export default function Dashboard() {
         >
             {filteredPosts.map((post) => (
                 <div key={post.id} className="bg-gray-800 dark:bg-gray-900 p-2 rounded-lg">
-                    <Post post={post} />
+                    <Post post={post} showFollowButton={true}/>
                 </div>
             ))}
         </motion.div>

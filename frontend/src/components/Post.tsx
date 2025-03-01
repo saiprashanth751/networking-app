@@ -1,11 +1,83 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
-export function Post({ post }: { post: any }) {
+interface PostProps {
+    post: {
+        id: string;
+        title: string;
+        description: string;
+        labels: string[];
+        links: string[];
+        photos: string[];
+        createdAt: string;
+        user: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            department: string;
+            profile: {
+                profilePic: string;
+            };
+        };
+    };
+    showFollowButton?: boolean;
+}
 
-
+export function Post({ post, showFollowButton = false }: PostProps) {
+    const [isFollowing, setIsFollowing] = useState(false);
     const profileUrl = post?.user?.profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
+    // Fetch follow status for the post's user
+    useEffect(() => {
+        if (showFollowButton) {
+            const fetchFollowStatus = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await axios.get(
+                        `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
+                        {
+                            headers: { Authorization: `Bearer ${token}` },
+                        }
+                    );
+                    setIsFollowing(response.data.following);
+                } catch (error) {
+                    console.error("Failed to fetch follow status:", error);
+                }
+            };
+            fetchFollowStatus();
+        }
+    }, [post.user.id, showFollowButton]);
+
+    // Toggle follow/unfollow
+    const toggleFollow = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!isFollowing) {
+              
+                await axios.post(
+                    `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
+                    {},
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+            } else {
+                
+                await axios.delete(
+                    `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+            }
+            setIsFollowing(!isFollowing);
+        } catch (error) {
+            console.error("Failed to toggle follow status:", error);
+        }
+    };
+
     return (
-        <div className="bg-gray-800 rounded-lg p-6  overflow-auto">
+        <div className="bg-gray-800 rounded-lg p-6 mb-6">
             {/* User Info */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -21,7 +93,24 @@ export function Post({ post }: { post: any }) {
                         <p className="text-sm text-gray-400">{post?.user?.department}</p>
                     </div>
                 </div>
-                <p className="text-sm text-gray-400">{new Date(post?.createdAt).toLocaleString()}</p>
+                <div className="flex items-center space-x-4">
+                    <p className="text-sm text-gray-400">
+                        {new Date(post?.createdAt).toLocaleString()}
+                    </p>
+                    {/* Conditionally render follow/unfollow button */}
+                    {showFollowButton && (
+                        <button
+                            onClick={toggleFollow}
+                            className={`${
+                                isFollowing
+                                    ? "bg-red-500 hover:bg-red-600"
+                                    : "bg-blue-500 hover:bg-blue-600"
+                            } text-white py-1 px-3 rounded-lg text-sm`}
+                        >
+                            {isFollowing ? "Unfollow" : "Follow"}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Labels */}
@@ -38,13 +127,22 @@ export function Post({ post }: { post: any }) {
             {/* Post Content */}
             <p className="mt-4 text-gray-300 font-bold">{post?.title}</p>
             <p className="mt-2 text-gray-300">{post?.description}</p>
-            
+
+            {/* Links */}
             {post?.links?.length > 0 && (
-                <>
+                <div className="mt-4 space-y-2">
                     {post.links.map((link: string, index: number) => (
-                        <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="text-white">Link : {link} </a>
+                        <a
+                            key={index}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 break-words"
+                        >
+                            Link: {link}
+                        </a>
                     ))}
-                </>
+                </div>
             )}
 
             {/* Photos */}
@@ -67,7 +165,6 @@ export function Post({ post }: { post: any }) {
                     })}
                 </div>
             )}
-
 
             {/* Engagement Buttons */}
             <div className="flex items-center justify-between mt-6">
