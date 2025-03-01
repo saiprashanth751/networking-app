@@ -25,10 +25,10 @@ interface PostProps {
 
 export function Post({ post, showFollowButton = false }: PostProps) {
     const [isFollowing, setIsFollowing] = useState(false);
-    const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null); // Logged-in user ID
+    const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null); 
     const profileUrl = post?.user?.profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
-    // Fetch logged-in user ID
+    
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -37,14 +37,16 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                     Authorization: `Bearer ${token}`,
                 }
             }).then((response) => {
-                setLoggedInUserId(response.data.user.id)
-            })
+                setLoggedInUserId(response.data.user.id); 
+            }).catch((error) => {
+                console.error("Failed to fetch logged-in user ID:", error);
+            });
         }
     }, []);
 
-    // Fetch follow status for the post's user
+  
     useEffect(() => {
-        if (showFollowButton && loggedInUserId && post.user.id !== loggedInUserId) {
+        if (showFollowButton && loggedInUserId && post.user.id && post.user.id !== loggedInUserId) {
             const fetchFollowStatus = async () => {
                 try {
                     const token = localStorage.getItem('token');
@@ -54,7 +56,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                             headers: { Authorization: `Bearer ${token}` },
                         }
                     );
-                    setIsFollowing(response.data.following); // Set follow status
+                    setIsFollowing(response.data.following);
                 } catch (error) {
                     console.error("Failed to fetch follow status:", error);
                 }
@@ -63,12 +65,12 @@ export function Post({ post, showFollowButton = false }: PostProps) {
         }
     }, [post.user.id, showFollowButton, loggedInUserId]);
 
-    // Toggle follow/unfollow
+    
     const toggleFollow = async () => {
         try {
             const token = localStorage.getItem('token');
             if (!isFollowing) {
-                // Follow the user
+             
                 await axios.post(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
                     {},
@@ -77,7 +79,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                     }
                 );
             } else {
-                // Unfollow the user
+                
                 await axios.delete(
                     `https://uni-networking-app.onrender.com/api/v1/follow/?id=${post.user.id}`,
                     {
@@ -85,14 +87,14 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                     }
                 );
             }
-            setIsFollowing(!isFollowing); // Toggle follow status
+            setIsFollowing(!isFollowing);
         } catch (error) {
             console.error("Failed to toggle follow status:", error);
         }
     };
 
     // Hide follow button for the logged-in user
-    const shouldShowFollowButton = showFollowButton && loggedInUserId && post.user.id !== loggedInUserId;
+    const shouldShowFollowButton = showFollowButton && loggedInUserId && post.user.id && post.user.id !== loggedInUserId;
 
     return (
         <div className="bg-gray-800 rounded-lg p-6 mb-6">

@@ -173,6 +173,7 @@ export const getAllPosts = asyncHandler(async (req, res: Response) => {
         include: {
             user: {
                 select: {
+                    id: true,
                     firstName: true,
                     lastName: true,
                     profile: { 
