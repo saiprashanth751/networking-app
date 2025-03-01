@@ -28,8 +28,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [receiver, setReceiver] = useState<User | null>(null); // State to store receiver's details
-
+  const [receiver, setReceiver] = useState<User | null>(null); 
   useEffect(() => {
     const fetchMessagesAndUser = async () => {
       try {
@@ -39,7 +38,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           return;
         }
 
-        // Decode token to get current user ID
+        
         const decoded = jwtDecode<{ id: string }>(token);
         if (decoded?.id) {
           setCurrentUserId(decoded.id);
@@ -47,19 +46,19 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           console.error("Failed to decode token or missing user ID");
         }
 
-        // Fetch messages
+      
         const messagesResponse = await axios.get(
           `https://uni-networking-app.onrender.com/api/v1/message/${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(messagesResponse.data.messages);
 
-        // Fetch receiver's details
+        
         const userResponse = await axios.get(
-          `https://uni-networking-app.onrender.com/api/v1/user/?id=${receiverId}`,
+          `https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setReceiver(userResponse.data.user); // Assuming the API returns the user object
+        setReceiver(userResponse.data.user); 
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -177,7 +176,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-black"
           onKeyPress={(e) => e.key === "Enter" && sendMessage()}
         />
         <button
