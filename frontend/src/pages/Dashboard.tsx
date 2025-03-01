@@ -176,7 +176,7 @@ export default function Dashboard() {
             </div>
 
 
-            <div className="w-full lg:w-1/4 dark:bg-gray-900 p-6 rounded-lg shadow-md dark:shadow-gray-800 overflow-y-auto mt-4 lg:mt-0 lg:ml-4">
+            <div className="w-full lg:w-1/4 dark:bg-gray-900 p-6 rounded-lg shadow-md dark:shadow-gray-800 overflow-y-auto mt-4 lg:mt-0 lg:ml-4 border-l-2 border-gray-200">
                 <h3 className="text-xl font-bold mb-3 sticky top-0 dark:bg-gray-900 py-4 flex items-center text-gray-200">
                     <FaUser className="mr-2 text-gray-400" /> Recommended / Known Users
                 </h3>
