@@ -45,18 +45,18 @@ const ProfilePage = () => {
     const [followingUsers, setFollowingUsers] = useState<UserBody[]>([]);
     const navigate = useNavigate();
 
-    
+
     const fetchLeetCodeStats = async (username: string) => {
         try {
             const response = await axios.get(`https://leetcard.jacoblin.cool/${username}`);
-            return response.data; 
+            return response.data;
         } catch (error) {
             console.error("Failed to fetch LeetCode stats:", error);
             return null;
         }
     };
 
- 
+
     const fetchUserDetails = async (userId: string) => {
         try {
             const token = localStorage.getItem('token');
@@ -72,7 +72,7 @@ const ProfilePage = () => {
 
     const fetchAllUserDetails = async (userIds: string[]) => {
         const users = await Promise.all(userIds.map((id) => fetchUserDetails(id)));
-        return users.filter((user) => user !== null); 
+        return users.filter((user) => user !== null);
     };
 
     useEffect(() => {
@@ -82,14 +82,14 @@ const ProfilePage = () => {
         setLoading(true);
         setError("");
 
-        
+
         axios.get('https://uni-networking-app.onrender.com/api/v1/user/profile', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(async (response) => {
             const profileData = response.data.profile;
             setProfile(profileData);
 
-            
+
             if (profileData.leetcode) {
                 const leetcodeStats = await fetchLeetCodeStats(profileData.leetcode);
                 setLeetCodeStats(leetcodeStats);
@@ -101,7 +101,7 @@ const ProfilePage = () => {
             setLoading(false);
         });
 
-        
+
         axios.get('https://uni-networking-app.onrender.com/api/v1/user', {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
@@ -111,7 +111,7 @@ const ProfilePage = () => {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setFollowers(response.data);
-            setFollowerUsers(response.data.followers); 
+            setFollowerUsers(response.data.followers);
         });
 
         axios.get('https://uni-networking-app.onrender.com/api/v1/follow/following', {
@@ -121,7 +121,7 @@ const ProfilePage = () => {
             setFollowingUsers(response.data.following);
         });
 
-       
+
         axios.get("https://uni-networking-app.onrender.com/api/v1/post/userAll", {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
@@ -240,9 +240,11 @@ const ProfilePage = () => {
                 {/* Posts Section */}
                 <div className="mt-8">
                     <h3 className="text-xl font-bold mb-6">Your Posts</h3>
-                    <div className="space-y-6 bg-gray-900 p-2 rounded-lg">
+                    <div className="space-y-6">
                         {posts.map((post) => (
-                            <Post  post={post} />
+                            <div className="bg-gray-700 p-4 rounded-lg shadow-md">
+                                <Post post={post} />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -293,7 +295,7 @@ const ProfilePage = () => {
                                     <img
                                         src={`https://gfgstatscard.vercel.app/${profile.geekforgeeks}`}
                                         alt="GeeksforGeeks Stats"
-                                        className="w-full h-50 object-cover" 
+                                        className="w-full h-50 object-cover"
                                     />
                                 </div>
                             )}
@@ -305,7 +307,7 @@ const ProfilePage = () => {
                                     <img
                                         src={`https://codeforces-readme-stats.vercel.app/api/card?username=${profile.codeforces}`}
                                         alt="Codeforces Stats"
-                                        className="w-full h-50 object-cover" 
+                                        className="w-full h-50 object-cover"
                                     />
                                 </div>
                             )}
@@ -318,12 +320,12 @@ const ProfilePage = () => {
                                         <img
                                             src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&card_width=300`}
                                             alt="GitHub Stats"
-                                            className="w-full object-contain border-none" 
+                                            className="w-full object-contain border-none"
                                         />
                                         <img
                                             src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&card_width=400`}
                                             alt="Top Languages"
-                                            className="w-full object-contain border-none" 
+                                            className="w-full object-contain border-none"
                                         />
                                     </div>
                                 </div>
