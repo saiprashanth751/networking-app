@@ -4,7 +4,6 @@ import { Post } from '../components/Post';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 
-
 interface ProfileBody {
     bio?: string;
     graduationYear?: string;
@@ -30,7 +29,7 @@ interface FollowingBody {
 }
 
 const ProfilePage = () => {
-    const { id } = useParams(); 
+    const { id } = useParams();
     const [profile, setProfile] = useState<ProfileBody | null>(null);
     const [user, setUser] = useState<UserBody | null>(null);
     const [posts, setPosts] = useState([]);
@@ -39,13 +38,57 @@ const ProfilePage = () => {
     const [leetCodeStats, setLeetCodeStats] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [isFollowing, setIsFollowing] = useState(false);
     const navigate = useNavigate();
 
+    // Fetch follow status
+    const fetchFollowStatus = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(
+                `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+            setIsFollowing(response.data.following);
+        } catch (error) {
+            console.error("Failed to fetch follow status:", error);
+        }
+    };
+
+    // Toggle follow/unfollow
+    const toggleFollow = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!isFollowing) {
+                
+                await axios.post(
+                    `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
+                    {},
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+            } else {
+                // Unfollow the user
+                await axios.delete(
+                    `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+            }
+            setIsFollowing(!isFollowing);
+        } catch (error) {
+            console.error("Failed to toggle follow status:", error);
+        }
+    };
 
     const fetchLeetCodeStats = async (username: string) => {
         try {
             const response = await axios.get(`https://leetcard.jacoblin.cool/${username}`);
-            return response.data; 
+            return response.data;
         } catch (error) {
             console.error("Failed to fetch LeetCode stats:", error);
             return null;
@@ -59,14 +102,13 @@ const ProfilePage = () => {
         setLoading(true);
         setError("");
 
-        // Fetch profile data
         axios.get(`https://uni-networking-app.onrender.com/api/v1/user/nativeProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(async (response) => {
             const profileData = response.data.profile;
             setProfile(profileData);
 
-            // Fetch platform stats
+            
             if (profileData.leetcode) {
                 const leetcodeStats = await fetchLeetCodeStats(profileData.leetcode);
                 setLeetCodeStats(leetcodeStats);
@@ -78,7 +120,7 @@ const ProfilePage = () => {
             setLoading(false);
         });
 
-        // Fetch user data, posts, followers, etc.
+        
         axios.get(`https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
@@ -96,8 +138,10 @@ const ProfilePage = () => {
         }).then((response) => {
             setPosts(response.data.posts);
         });
-    }, [id, navigate]);
 
+        // Fetch follow status
+        fetchFollowStatus();
+    }, [id, navigate]);
 
     const profileUrl = profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
@@ -121,6 +165,17 @@ const ProfilePage = () => {
                                 className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
                             >
                                 Go to Dashboard
+                            </button>
+                            {/* Follow/Unfollow Button */}
+                            <button
+                                onClick={toggleFollow}
+                                className={`${
+                                    isFollowing
+                                        ? "bg-red-500 hover:bg-red-600"
+                                        : "bg-blue-500 hover:bg-blue-600"
+                                } text-white py-2 px-4 rounded-lg`}
+                            >
+                                {isFollowing ? "Unfollow" : "Follow"}
                             </button>
                         </div>
                     </div>
@@ -209,7 +264,7 @@ const ProfilePage = () => {
                             <div
                                 className="w-full overflow-hidden"
                                 style={{
-                                    aspectRatio: '500 / 200', // Increased height
+                                    aspectRatio: '500 / 200',
                                     height: 'auto'
                                 }}
                             >
@@ -229,7 +284,7 @@ const ProfilePage = () => {
                             <img
                                 src={`https://gfgstatscard.vercel.app/${profile.geekforgeeks}`}
                                 alt="GeeksforGeeks Stats"
-                                className="w-full h-50 object-cover" // Fixed height
+                                className="w-full h-50 object-cover"
                             />
                         </div>
                     )}
@@ -241,7 +296,7 @@ const ProfilePage = () => {
                             <img
                                 src={`https://codeforces-readme-stats.vercel.app/api/card?username=${profile.codeforces}`}
                                 alt="Codeforces Stats"
-                                className="w-full h-50 object-cover" // Fixed height
+                                className="w-full h-50 object-cover"
                             />
                         </div>
                     )}
@@ -254,12 +309,12 @@ const ProfilePage = () => {
                                 <img
                                     src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&card_width=300`}
                                     alt="GitHub Stats"
-                                    className="w-full object-contain border-none" // Fixed height
+                                    className="w-full object-contain border-none"
                                 />
                                 <img
                                     src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&card_width=400`}
                                     alt="Top Languages"
-                                    className="w-full object-contain border-none" // Fixed height
+                                    className="w-full object-contain border-none"
                                 />
                             </div>
                         </div>
