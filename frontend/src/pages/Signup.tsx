@@ -81,7 +81,7 @@ export default function Signup() {
                                 type={"email"}
                             />
                             <InputBox
-                                label="Password (Minimun 8 characters)"
+                                label="Password (Minimum 8 characters)"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 type={"password"}
