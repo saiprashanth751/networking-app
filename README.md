@@ -12,7 +12,7 @@ Bridging the gap between students, ideas, and opportunities.
 4. [Architecture](#architecture)
 5. [Getting Started](#getting-started)
 
----
+----
 
 ## Project Overview
 
