@@ -1,33 +1,43 @@
 import express from "express";
 import userRouter from "./routes/user";
-import projectRouter from "./routes/project";
 import followRouter from "./routes/follow";
 import authRouter from "./routes/auth";
 import postRouter from "./routes/post";
 import messageRouter from "./routes/message";
 import { PrismaClient } from "@prisma/client";
+import path from "path";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
 import http from "http";
 import cors from "cors";
 import { authMiddleware } from "./middleware/authMiddleware";
+import { v2 as cloudinary } from 'cloudinary';
+
 
 const app = express();
-app.use(express.json());
-
-// CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://networking-app-navy.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+app.use(express.json());
+
+
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const prisma = new PrismaClient();
 
-// Routes
+// Routes;
+app.use('/uploads', express.static(path.join(__dirname, './uploads')));
 app.use("/api/v1/user", userRouter);
-app.use("/api/v1/project", projectRouter);
 app.use("/api/v1/follow", followRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/post", postRouter);
@@ -39,7 +49,7 @@ const server = http.createServer(app);
 // Socket.IO setup with authentication
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://networking-app-navy.vercel.app",
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -49,6 +59,7 @@ const io = new Server(server, {
 io.use((socket, next) => {
   // Extract token from handshake auth
   const token = socket.handshake.auth.token;
+  console.log("token " + token)
   if (!token) {
     return next(new Error("Invalid User / User not logged in"));
   }
@@ -65,6 +76,7 @@ io.use((socket, next) => {
   });
 });
 
+// Socket.IO connection handler
 io.on("connection", (socket) => {
   console.log("New User Connected:", socket.id);
 
@@ -75,6 +87,9 @@ io.on("connection", (socket) => {
     socket.disconnect();
     return;
   }
+
+  // Log the senderId
+  console.log(`Sender ID: ${senderId}`);
 
   // Update user status to online
   prisma.user
@@ -89,29 +104,29 @@ io.on("connection", (socket) => {
       console.error("Error updating user status to online:", error);
     });
 
-  // Join room event
+
   socket.on("joinRoom", ({ receiverId }) => {
     if (!receiverId) {
       console.error("Receiver ID not provided.");
       return;
     }
 
-    // Validate that receiverId is not the same as senderId
+
+    console.log(`Receiver ID passed to joinRoom: ${receiverId}`);
+
+
     if (receiverId === senderId) {
       console.error("Receiver ID cannot be the same as Sender ID.");
       return;
     }
 
-    // Log the receiverId being passed
-    console.log(`Receiver ID passed to joinRoom: ${receiverId}`);
 
-    // Create room name (sorted combination of senderId and receiverId)
     const room = [senderId, receiverId].sort().join("_");
     socket.join(room);
     socket.data.userId = senderId;
     console.log(`User ${senderId} joined room ${room}`);
 
-    // Log all users in the room
+
     io.in(room)
       .fetchSockets()
       .then((sockets) => {
@@ -119,34 +134,34 @@ io.on("connection", (socket) => {
       });
   });
 
-  // Send message event
+
   socket.on("sendMessage", async ({ receiverId, content }) => {
     if (!receiverId || !content) {
       console.error("Receiver ID or content not provided.");
       return;
     }
 
-    // Validate that receiverId is not the same as senderId
+
     if (receiverId === senderId) {
       console.error("Receiver ID cannot be the same as Sender ID.");
       return;
     }
 
     try {
-      // Save message to the database
+
       const message = await prisma.message.create({
         data: { senderId, receiverId, content, read: false },
       });
       console.log("Message saved to database:", message);
 
-      // Create room name (sorted combination of senderId and receiverId)
+
       const room = [senderId, receiverId].sort().join("_");
 
-      // Emit the message to the room (excluding the sender)
+
       socket.to(room).emit("receiveMessage", message);
       console.log(`Message sent to room ${room}:`, message);
 
-      // Log all users in the room
+
       io.in(room)
         .fetchSockets()
         .then((sockets) => {
@@ -174,7 +189,7 @@ io.on("connection", (socket) => {
       }
     }
   });
-});;
+});
 
 // Error middleware
 app.use(errorMiddleware);

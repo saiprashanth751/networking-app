@@ -63,21 +63,28 @@ export const getStatus = asyncHandler(async (req:AuthRequest, res: Response) => 
     })
 })
 
-export const getFollowers = asyncHandler(async (req: AuthRequest, res:Response) => {
-    const userId = req.id as string
-    const followers = await prisma.follow.findMany({
-        where:{
-            followingId: userId,
-        }
-    })
+export const getFollowers = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.id as string;
 
+    const followers = await prisma.follow.findMany({
+        where: {
+            followingId: userId,
+        },
+        include: {
+            follower: {
+                select: {
+                    id: true,
+                    firstName: true,
+                },
+            },
+        },
+    });
 
     return res.status(200).json({
-        followers,
-        count: followers.length
-    })
-})
-
+        followers: followers.map((follow) => follow.follower), 
+        count: followers.length,
+    });
+});
 export const getNativeFollowers = asyncHandler(async (req: AuthRequest, res:Response) => {
     const userId = req.query.id as string
     const followers = await prisma.follow.findMany({
@@ -93,20 +100,28 @@ export const getNativeFollowers = asyncHandler(async (req: AuthRequest, res:Resp
     })
 })
 
-export const getFollowing = asyncHandler(async(req:AuthRequest, res:Response) => {
-    const userId = req.id as string
+export const getFollowing = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.id as string;
+
     const followingUsers = await prisma.follow.findMany({
         where: {
             followerId: userId,
-        }
-    })
-    
-    return res.status(200).json({
-        followingUsers,
-        count: followingUsers.length
-    })
+        },
+        include: {
+            following: { 
+                select: {
+                    id: true,
+                    firstName: true,
+                },
+            },
+        },
+    });
 
-})
+    return res.status(200).json({
+        following: followingUsers.map((follow) => follow.following),
+        count: followingUsers.length,
+    });
+});
 
 export const getNativeFollowing = asyncHandler(async(req:AuthRequest, res:Response) => {
     const userId = req.query.id as string
