@@ -18,7 +18,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 
     try {
         const data = await apiInstance.sendTransacEmail(sendSmtpEmail)
-        console.log("Email sent successfully", data.messageId)
+        console.log("Email sent successfully", data.body.messageId)
     } catch (error) {
         console.error("Error sending email:", error)
         throw new Error("Failed to send verification email")
