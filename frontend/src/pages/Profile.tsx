@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Post } from '../components/Post';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import dotenv from 'dotenv';
+dotenv.config();
 
 interface ProfileBody {
     bio?: string;
@@ -46,7 +48,7 @@ const ProfilePage = () => {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
+                `${process.env.BASE_API_URL}/follow/?id=${id}`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
                 }
@@ -71,7 +73,7 @@ const ProfilePage = () => {
                 );
             } else {
                 await axios.delete(
-                    `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
+                    `${process.env.BASE_API_URL}/follow/?id=${id}`,
                     {
                         headers: { Authorization: `Bearer ${token}` },
                     }
@@ -100,7 +102,7 @@ const ProfilePage = () => {
         setLoading(true);
         setError("");
 
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/nativeProfile/?id=${id}`, {
+        axios.get(`${process.env.BASE_API_URL}/user/nativeProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(async (response) => {
             const profileData = response.data.profile;
@@ -117,19 +119,19 @@ const ProfilePage = () => {
             setLoading(false);
         });
 
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/user/userProfile/?id=${id}`, {
+        axios.get(`${process.env.BASE_API_URL}/user/userProfile/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
 
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/userFollowing/?id=${id}`, {
+        axios.get(`${process.env.BASE_API_URL}/follow/userFollowing/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setFollowing(response.data));
 
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/follow/userFollowers/?id=${id}`, {
+        axios.get(`${process.env.BASE_API_URL}/follow/userFollowers/?id=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setFollowers(response.data));
 
-        axios.get(`https://uni-networking-app.onrender.com/api/v1/post/${id}`, {
+        axios.get(`${process.env.BASE_API_URL}/post/${id}`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setPosts(response.data.posts);

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
 import { Link } from "react-router-dom";
+import dotenv from 'dotenv';
+dotenv.config();
 import axios from "axios";
 
 export function User({ user }: { user: any }) {
@@ -8,7 +10,7 @@ export function User({ user }: { user: any }) {
 
   useEffect(() => {
     axios
-      .get(`https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`, {
+      .get(`${process.env.BASE_API_URL}/follow/?id=${user.id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -44,7 +46,7 @@ export function User({ user }: { user: any }) {
             onClick={async () => {
               if (!follow) {
                 await axios.post(
-                  `https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
+                  `${process.env.BASE_API_URL}/follow/?id=${user.id}`,
                   {},
                   {
                     headers: {
@@ -55,7 +57,7 @@ export function User({ user }: { user: any }) {
                 setFollow(true);
               } else {
                 await axios.delete(
-                  `https://uni-networking-app.onrender.com/api/v1/follow/?id=${user.id}`,
+                  `${process.env.BASE_API_URL}/follow/?id=${user.id}`,
                   {
                     headers: {
                       Authorization: `Bearer ${localStorage.getItem("token")}`,
