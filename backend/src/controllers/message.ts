@@ -2,9 +2,7 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { Request, Response } from "express";
 import { MessageBody } from "../types/types";
 import CustomError from "../utils/customError";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient()
+import prisma from "../../prisma/prisma_client";
 
 interface AuthRequest extends Request { 
     id?: string

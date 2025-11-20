@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import prisma from "../../prisma/prisma_client";
 import { Request, Response } from "express"
 import { asyncHandler } from "../middleware/asyncHandler"
 import jwt from "jsonwebtoken"
@@ -7,7 +7,6 @@ import bcrypt from "bcrypt"
 import { sendVerificationEmail } from "../utils/emailService"
 import { profileCreation, profileUpdation, signinBody, signupBody } from "../types/types"
 
-const prisma = new PrismaClient()
 
 export const userSignup = asyncHandler(async (req:Request, res:Response) => {
     const {success} = signupBody.safeParse(req.body);

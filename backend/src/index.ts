@@ -4,7 +4,7 @@ import followRouter from "./routes/follow";
 import authRouter from "./routes/auth";
 import postRouter from "./routes/post";
 import messageRouter from "./routes/message";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prisma/prisma_client";
 import path from "path";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
@@ -32,8 +32,6 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-const prisma = new PrismaClient();
 
 // Routes;
 app.use('/uploads', express.static(path.join(__dirname, './uploads')));
