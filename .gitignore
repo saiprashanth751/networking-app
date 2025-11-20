@@ -1,4 +1,29 @@
-backend\node_modules
-backend\dist
-backend\.env
-frontend\node_modules
+# Node modules
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+backend/dist/
+
+# Environment variables
+backend/.env
+backend/.env.local
+backend/.env.production
+backend/.env.development
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+
+# TypeScript build cache
+backend/.tsbuildinfo
+
+# IDE junk
+.vscode/
+.idea/

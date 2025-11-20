@@ -16,5 +16,4 @@
 
     "types": ["node"]
   }, 
-  "include": ["src", "prisma.config.ts", "prisma/**/*.ts"]
 }
