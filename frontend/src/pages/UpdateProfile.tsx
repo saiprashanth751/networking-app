@@ -4,6 +4,8 @@ import { Heading } from "../components/Heading";
 import { Button } from "../components/Button";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import dotenv from 'dotenv';
+dotenv.config();
 
 export default function UpdateProfile() {
     const [bio, setBio] = useState("");
@@ -25,7 +27,7 @@ export default function UpdateProfile() {
         }
 
         // Fetch existing profile data
-        axios.get("https://uni-networking-app.onrender.com/api/v1/user/profile", {
+        axios.get(`${process.env.BASE_API_URL}/user/profile`, {
             headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
             const profileData = response.data.profile;
@@ -61,7 +63,7 @@ export default function UpdateProfile() {
             if (profilePic) formData.append("profilePic", profilePic); 
 
            
-            await axios.put("https://uni-networking-app.onrender.com/api/v1/user/profile", formData, {
+            await axios.put(`${process.env.BASE_API_URL}/user/profile`, formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "multipart/form-data", 

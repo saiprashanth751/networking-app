@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { FaFilter, FaUser } from 'react-icons/fa';
 import SimpleBar from 'simplebar-react';
 import 'simplebar-react/dist/simplebar.min.css';
+import dotenv from 'dotenv';
+dotenv.config();
 
 interface ProfileBody {
     bio?: string;
@@ -32,7 +34,7 @@ export default function Dashboard() {
 
     const fetchProfileAndUsers = async (token: string) => {
         try {
-            const profileResponse = await axios.get('https://uni-networking-app.onrender.com/api/v1/user/profile', {
+            const profileResponse = await axios.get(`${process.env.BASE_API_URL}/user/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -42,7 +44,7 @@ export default function Dashboard() {
             setProfile(profileResponse.data.profile);
 
             const usersResponse = await axios.get(
-                `https://uni-networking-app.onrender.com/api/v1/user/bulk/?minor=${profileResponse.data.profile.minor}`,
+                `${process.env.BASE_API_URL}/user/bulk/?minor=${profileResponse.data.profile.minor}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -51,7 +53,7 @@ export default function Dashboard() {
             }
 
             const followedUsersResponse = await axios.get(
-                'https://uni-networking-app.onrender.com/api/v1/follow/following',
+                `${process.env.BASE_API_URL}/follow/following`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -73,7 +75,7 @@ export default function Dashboard() {
 
     const fetchPosts = async () => {
         try {
-            const postsResponse = await axios.get('https://uni-networking-app.onrender.com/api/v1/post/all');
+            const postsResponse = await axios.get(`${process.env.BASE_API_URL}/post/all`);
             setPosts(postsResponse.data.posts);
             setFilteredPosts(postsResponse.data.posts);
         } catch (error) {

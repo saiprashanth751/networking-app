@@ -5,6 +5,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { FollowList } from '../components/FollowList';
 import MessageBox from './MessageBox';
+import dotenv from 'dotenv';
+dotenv.config();
 
 interface ProfileBody {
     bio?: string;
@@ -60,7 +62,7 @@ const ProfilePage = () => {
     const fetchUserDetails = async (userId: string) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`https://uni-networking-app.onrender.com/api/v1/user/${userId}`, {
+            const response = await axios.get(`${process.env.BASE_API_URL}/user/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return response.data.user;
@@ -83,7 +85,7 @@ const ProfilePage = () => {
         setError("");
 
 
-        axios.get('https://uni-networking-app.onrender.com/api/v1/user/profile', {
+        axios.get(`${process.env.BASE_API_URL}/user/profile`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(async (response) => {
             const profileData = response.data.profile;
@@ -102,19 +104,19 @@ const ProfilePage = () => {
         });
 
 
-        axios.get('https://uni-networking-app.onrender.com/api/v1/user', {
+        axios.get(`${process.env.BASE_API_URL}/user`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then(response => setUser(response.data.user));
 
         // Fetch followers and following
-        axios.get('https://uni-networking-app.onrender.com/api/v1/follow/followers', {
+        axios.get(`${process.env.BASE_API_URL}/follow/followers`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setFollowers(response.data);
             setFollowerUsers(response.data.followers);
         });
 
-        axios.get('https://uni-networking-app.onrender.com/api/v1/follow/following', {
+        axios.get(`${process.env.BASE_API_URL}/follow/following`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setFollowing(response.data);
@@ -122,7 +124,7 @@ const ProfilePage = () => {
         });
 
 
-        axios.get("https://uni-networking-app.onrender.com/api/v1/post/userAll", {
+        axios.get(`${process.env.BASE_API_URL}/post/userAll`, {
             headers: { Authorization: `Bearer ${token}` }
         }).then((response) => {
             setPosts(response.data.posts);
