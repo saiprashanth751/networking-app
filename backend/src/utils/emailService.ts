@@ -1,28 +1,30 @@
-import nodemailer from "nodemailer"
+import { Resend } from "resend"
 import dotenv from "dotenv"
 
 dotenv.config()
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-})
+const resend = new Resend(process.env.RESEND_API_KEY)
 
-export const sendVerificationEmail = async (email:string, token:string) => {
-    const url = `${process.env.BASE_URL}/api/v1/auth/verify/${token}`;
+export const sendVerificationEmail = async (email: string, token: string) => {
+    const url = `${process.env.BASE_URL}/api/v1/auth/verify/${token}`
     console.log(url)
     
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Verify Your Email",
-        html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`
-    };
-    console.log("Sending Verification Email")
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully", info.messageId)
+    try {
+        const { data, error } = await resend.emails.send({
+            from: "onboarding@resend.dev", // Update this to your verified domain
+            to: email,
+            subject: "Verify Your Email",
+            html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`
+        })
 
-};
+        if (error) {
+            console.error("Error sending email:", error)
+            throw new Error("Failed to send verification email")
+        }
+
+        console.log("Email sent successfully", data?.id)
+    } catch (error) {
+        console.error("Email service error:", error)
+        throw error
+    }
+}
