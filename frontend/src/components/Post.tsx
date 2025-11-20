@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {Link} from "react-router-dom"
 import axios from 'axios';
-import dotenv from 'dotenv';
-dotenv.config();
+
+
 
 interface PostProps {
     post: {
@@ -35,7 +35,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
-            axios.get(`${process.env.BASE_API_URL}/user`, {
+            axios.get(`${import.meta.env.VITE_BASE_API_URL}/user`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 }
@@ -54,7 +54,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
                 try {
                     const token = localStorage.getItem('token');
                     const response = await axios.get(
-                        `${process.env.BASE_API_URL}/follow/?id=${post.user.id}`,
+                        `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${post.user.id}`,
                         {
                             headers: { Authorization: `Bearer ${token}` },
                         }
@@ -75,7 +75,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
             if (!isFollowing) {
              
                 await axios.post(
-                    `${process.env.BASE_API_URL}/follow/?id=${post.user.id}`,
+                    `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${post.user.id}`,
                     {},
                     {
                         headers: { Authorization: `Bearer ${token}` },
@@ -84,7 +84,7 @@ export function Post({ post, showFollowButton = false }: PostProps) {
             } else {
                 
                 await axios.delete(
-                    `${process.env.BASE_API_URL}/follow/?id=${post.user.id}`,
+                    `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${post.user.id}`,
                     {
                         headers: { Authorization: `Bearer ${token}` },
                     }

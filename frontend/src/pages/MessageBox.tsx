@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import dotenv from 'dotenv';
-dotenv.config();
+
 
 interface Message {
   id: string;
@@ -50,14 +49,14 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
 
 
         const messagesResponse = await axios.get(
-          `${process.env.BASE_API_URL}/message/${receiverId}`,
+          `${import.meta.env.VITE_BASE_API_URL}/message/${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(messagesResponse.data.messages);
 
 
         const userResponse = await axios.get(
-          `${process.env.BASE_API_URL}/user/userProfile/?id=${receiverId}`,
+          `${import.meta.env.VITE_BASE_API_URL}/user/userProfile/?id=${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setReceiver(userResponse.data.user);
@@ -73,7 +72,7 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
     const token = localStorage.getItem("token");
     if (!token || !receiverId) return;
 
-    const newSocket = io(`${process.env.API_URL}`, {
+    const newSocket = io(`${import.meta.env.VITE_API_URL}`, {
       withCredentials: true,
       transports: ["websocket", "polling"],
       auth: { token },

@@ -2,8 +2,6 @@ import { useState } from 'react';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const labelsList = [
     "Achievements",
@@ -80,7 +78,7 @@ export function CreatePost({ onCreate }: { onCreate: () => void }) {
         photos.forEach((photo) => formData.append('photos', photo));
 
         try {
-            await axios.post(`${process.env.BASE_API_URL}/post/create`, formData, {
+            await axios.post(`${import.meta.env.BASE_API_URL}/post/create`, formData, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'multipart/form-data',

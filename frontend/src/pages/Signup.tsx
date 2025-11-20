@@ -8,8 +8,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import dotenv from 'dotenv';
-dotenv.config();
 
 export default function Signup() {
     const [firstName, setFirstName] = useState("");
@@ -29,7 +27,7 @@ export default function Signup() {
 
         try {
             const response = await axios.post(
-                `${process.env.BASE_API_URL}/user/signup`,
+                `${import.meta.env.VITE_BASE_API_URL}/user/signup`,
                 { firstName, lastName, email, password }
             );
 

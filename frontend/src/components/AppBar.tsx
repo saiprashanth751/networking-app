@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
-import dotenv from 'dotenv';
-dotenv.config();
+
+
 import axios from 'axios';
 
 export function AppBar() {
@@ -19,7 +19,7 @@ export function AppBar() {
 
         setIsLoading(true);
         try {
-            const response = await axios.get(`${process.env.BASE_API_URL}/user/search?name=${searchQuery}`, {
+            const response = await axios.get(`${import.meta.env.BASE_API_URL}/user/search?name=${searchQuery}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("token")}`
                 }

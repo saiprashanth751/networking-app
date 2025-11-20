@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
 import { Link } from "react-router-dom";
-import dotenv from 'dotenv';
-dotenv.config();
+
 import axios from "axios";
 
 export function User({ user }: { user: any }) {
@@ -10,7 +9,7 @@ export function User({ user }: { user: any }) {
 
   useEffect(() => {
     axios
-      .get(`${process.env.BASE_API_URL}/follow/?id=${user.id}`, {
+      .get(`${import.meta.env.VITE_BASE_API_URL}/follow/?id=${user.id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -46,7 +45,7 @@ export function User({ user }: { user: any }) {
             onClick={async () => {
               if (!follow) {
                 await axios.post(
-                  `${process.env.BASE_API_URL}/follow/?id=${user.id}`,
+                  `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${user.id}`,
                   {},
                   {
                     headers: {
@@ -57,7 +56,7 @@ export function User({ user }: { user: any }) {
                 setFollow(true);
               } else {
                 await axios.delete(
-                  `${process.env.BASE_API_URL}/follow/?id=${user.id}`,
+                  `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${user.id}`,
                   {
                     headers: {
                       Authorization: `Bearer ${localStorage.getItem("token")}`,

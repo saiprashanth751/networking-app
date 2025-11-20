@@ -9,8 +9,8 @@ import { motion } from 'framer-motion';
 import { FaFilter, FaUser } from 'react-icons/fa';
 import SimpleBar from 'simplebar-react';
 import 'simplebar-react/dist/simplebar.min.css';
-import dotenv from 'dotenv';
-dotenv.config();
+
+
 
 interface ProfileBody {
     bio?: string;
@@ -34,7 +34,7 @@ export default function Dashboard() {
 
     const fetchProfileAndUsers = async (token: string) => {
         try {
-            const profileResponse = await axios.get(`${process.env.BASE_API_URL}/user/profile`, {
+            const profileResponse = await axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -44,7 +44,7 @@ export default function Dashboard() {
             setProfile(profileResponse.data.profile);
 
             const usersResponse = await axios.get(
-                `${process.env.BASE_API_URL}/user/bulk/?minor=${profileResponse.data.profile.minor}`,
+                `${import.meta.env.VITE_BASE_API_URL}/user/bulk/?minor=${profileResponse.data.profile.minor}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -53,7 +53,7 @@ export default function Dashboard() {
             }
 
             const followedUsersResponse = await axios.get(
-                `${process.env.BASE_API_URL}/follow/following`,
+                `${import.meta.env.VITE_BASE_API_URL}/follow/following`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -75,7 +75,7 @@ export default function Dashboard() {
 
     const fetchPosts = async () => {
         try {
-            const postsResponse = await axios.get(`${process.env.BASE_API_URL}/post/all`);
+            const postsResponse = await axios.get(`${import.meta.env.VITE_BASE_API_URL}/post/all`);
             setPosts(postsResponse.data.posts);
             setFilteredPosts(postsResponse.data.posts);
         } catch (error) {
