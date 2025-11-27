@@ -17,7 +17,7 @@ import { v2 as cloudinary } from 'cloudinary';
 const app = express();
 app.use(
   cors({
-    origin: "https://networking-app-navy.vercel.app",
+    origin: process.env.ORIGIN_URL,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -47,7 +47,7 @@ const server = http.createServer(app);
 // Socket.IO setup with authentication
 const io = new Server(server, {
   cors: {
-    origin: "https://networking-app-navy.vercel.app",
+    origin: process.env.ORIGIN_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },

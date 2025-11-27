@@ -1,26 +1,28 @@
-import * as brevo from '@getbrevo/brevo'
+import nodemailer from "nodemailer"
 import dotenv from "dotenv"
 
 dotenv.config()
 
-const apiInstance = new brevo.TransactionalEmailsApi()
-apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY!)
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+})
 
-export const sendVerificationEmail = async (email: string, token: string) => {
-    const url = `${process.env.BASE_URL}/api/v1/auth/verify/${token}`
+export const sendVerificationEmail = async (email:string, token:string) => {
+    const url = `${process.env.BASE_URL}/api/v1/auth/verify/${token}`;
     console.log(url)
     
-    const sendSmtpEmail = new brevo.SendSmtpEmail()
-    sendSmtpEmail.subject = "Verify Your Email"
-    sendSmtpEmail.htmlContent = `<p>Click <a href="${url}">here</a> to verify your email.</p>`
-    sendSmtpEmail.sender = { name: "Uni Network", email: "saiprashanth751@gmail.com" }
-    sendSmtpEmail.to = [{ email: email }]
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Verify Your Email",
+        html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`
+    };
+    console.log("Sending Verification Email")
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully", info.messageId)
 
-    try {
-        const data = await apiInstance.sendTransacEmail(sendSmtpEmail)
-        console.log("Email sent successfully", data.body.messageId)
-    } catch (error) {
-        console.error("Error sending email:", error)
-        throw new Error("Failed to send verification email")
-    }
-}
+};
