@@ -6,7 +6,8 @@ import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 
 export const useFollowStatus = (
   userId: string,
-  options?: UseQueryOptions<FollowStatus, Error>
+  // options?: UseQueryOptions<FollowStatus, Error>
+  options?: Omit<UseQueryOptions<FollowStatus, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.follow.status(userId),
@@ -17,7 +18,7 @@ export const useFollowStatus = (
   });
 };
 
-export const useFollowers = (options?: UseQueryOptions<FollowersResponse, Error>) => {
+export const useFollowers = (options?: Omit<UseQueryOptions<FollowersResponse, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.follow.followers(),
     queryFn: followService.getFollowers,
@@ -25,7 +26,7 @@ export const useFollowers = (options?: UseQueryOptions<FollowersResponse, Error>
   });
 };
 
-export const useFollowing = (options?: UseQueryOptions<FollowingResponse, Error>) => {
+export const useFollowing = (options?: Omit<UseQueryOptions<FollowingResponse, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.follow.following(),
     queryFn: followService.getFollowing,
@@ -35,7 +36,7 @@ export const useFollowing = (options?: UseQueryOptions<FollowingResponse, Error>
 
 export const useFollowersByUserId = (
   userId: string,
-  options?: UseQueryOptions<FollowersResponse, Error>
+  options?: Omit<UseQueryOptions<FollowersResponse, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.follow.followers(userId),
@@ -47,7 +48,7 @@ export const useFollowersByUserId = (
 
 export const useFollowingByUserId = (
   userId: string,
-  options?: UseQueryOptions<FollowingResponse, Error>
+  options?: Omit<UseQueryOptions<FollowingResponse, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.follow.following(userId),

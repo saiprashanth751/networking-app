@@ -1,26 +1,20 @@
-import { useEffect, useState } from "react";
 import { Button } from "./Button";
 import { Link } from "react-router-dom";
-
-import axios from "axios";
+import { useFollowStatus } from "@/hooks/queries/follow";
+import { useToggleFollow } from "@/hooks/mutations/follow";
 
 export function User({ user }: { user: any }) {
-  const [follow, setFollow] = useState(false);
+  // ✅ Fetch follow status using React Query
+  const { data: followStatus } = useFollowStatus(user.id);
 
-  useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_BASE_API_URL}/follow/?id=${user.id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      .then((response) => {
-        setFollow(response.data.following);
-      });
-  }, []);
+  // ✅ Toggle follow mutation
+  const { toggleFollow, isLoading: isToggling } = useToggleFollow(
+    user.id,
+    followStatus?.following || false
+  );
 
-
-  const profileUrl = user?.profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+  const profileUrl = user?.profile?.profilePic || 
+    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
   return (
     <div className="flex items-center justify-between bg-gray-800 p-2 rounded-lg shadow-md w-full max-w-xl m-auto text-white">
@@ -33,7 +27,12 @@ export function User({ user }: { user: any }) {
             className="w-12 h-12 flex-none rounded-full bg-gray-700 object-cover"
           />
           <div>
-            <p className="text-sm font-semibold text-white">{user.firstName}</p>
+            <p className="text-sm font-semibold text-white">
+              {user.firstName} {user.lastName}
+            </p>
+            {user.department && (
+              <p className="text-xs text-gray-400">{user.department}</p>
+            )}
           </div>
         </div>
       </Link>
@@ -42,31 +41,9 @@ export function User({ user }: { user: any }) {
       <div className="hidden sm:flex flex-col items-end">
         <div className="flex items-center gap-x-2 mt-1 px-2">
           <Button
-            onClick={async () => {
-              if (!follow) {
-                await axios.post(
-                  `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${user.id}`,
-                  {},
-                  {
-                    headers: {
-                      Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                  }
-                );
-                setFollow(true);
-              } else {
-                await axios.delete(
-                  `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${user.id}`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                  }
-                );
-                setFollow(false);
-              }
-            }}
-            label={follow ? "Unfollow" : "Follow"}
+            onClick={toggleFollow}
+            label={isToggling ? "..." : (followStatus?.following ? "Unfollow" : "Follow")}
+            disabled={isToggling}
           />
         </div>
       </div>

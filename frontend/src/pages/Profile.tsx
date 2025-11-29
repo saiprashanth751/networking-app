@@ -1,88 +1,57 @@
 import { Link as LinkIcon, GraduationCap, Book } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Post } from '../components/Post';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
-interface ProfileBody {
-    bio?: string;
-    graduationYear?: string;
-    department?: string;
-    minor?: string;
-    linkedin?: string;
-    github?: string;
-    leetcode?: string;
-    codeforces?: string;
-    geekforgeeks?: string;
-    profilePic?: string;
-}
-
-interface UserBody {
-    firstName?: string;
-    lastName?: string;
-}
-
-interface FollowingBody {
-    following?: string[];
-    followers?: string[];
-    count?: number;
-}
+// Import React Query hooks
+import { useProfile } from '@/hooks/queries/profile';
+import { useUser } from '@/hooks/queries/user';
+import { useUserPosts } from '@/hooks/queries/post';
+import { useFollowStatus, useFollowersByUserId, useFollowingByUserId } from '@/hooks/queries/follow';
+import { useToggleFollow } from '@/hooks/mutations/follow';
 
 const ProfilePage = () => {
-    const { id } = useParams();
-    const [profile, setProfile] = useState<ProfileBody | null>(null);
-    const [user, setUser] = useState<UserBody | null>(null);
-    const [posts, setPosts] = useState([]);
-    const [following, setFollowing] = useState<FollowingBody | null>(null);
-    const [followers, setFollowers] = useState<FollowingBody | null>(null);
-    const [leetCodeStats, setLeetCodeStats] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [isFollowing, setIsFollowing] = useState(false);
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [leetCodeStats, setLeetCodeStats] = useState<string | null>(null);
 
-    
-    const fetchFollowStatus = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(
-                `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${id}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-            setIsFollowing(response.data.following);
-        } catch (error) {
-            console.error("Failed to fetch follow status:", error);
-        }
-    };
+    // Fetch profile data
+    const { 
+        data: profileData, 
+        isLoading: profileLoading, 
+        isError: profileError 
+    } = useProfile(id || '', { enabled: !!id });
 
-    
-    const toggleFollow = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!isFollowing) {
-                await axios.post(
-                    `https://uni-networking-app.onrender.com/api/v1/follow/?id=${id}`,
-                    {},
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
-                );
-            } else {
-                await axios.delete(
-                    `${import.meta.env.VITE_BASE_API_URL}/follow/?id=${id}`,
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
-                );
-            }
-            setIsFollowing(!isFollowing);
-        } catch (error) {
-            console.error("Failed to toggle follow status:", error);
-        }
-    };
+    // Fetch user data
+    const { 
+        data: userData, 
+        isLoading: userLoading 
+    } = useUser(id || '', { enabled: !!id });
 
+    // Fetch user's posts
+    const { 
+        data: postsData, 
+        isLoading: postsLoading 
+    } = useUserPosts(id || '', { enabled: !!id });
+
+    // Fetch follow status
+    const { 
+        data: followStatus, 
+        isLoading: followStatusLoading 
+    } = useFollowStatus(id || '', { enabled: !!id });
+
+    // Fetch followers and following counts
+    const { data: followersData } = useFollowersByUserId(id || '', { enabled: !!id });
+    const { data: followingData } = useFollowingByUserId(id || '', { enabled: !!id });
+
+    // Toggle follow mutation
+    const { toggleFollow, isLoading: isToggling } = useToggleFollow(
+        id || '', 
+        followStatus?.following || false
+    );
+
+    // Fetch LeetCode stats (external API - not covered by React Query in your setup)
     const fetchLeetCodeStats = async (username: string) => {
         try {
             const response = await axios.get(`https://leetcard.jacoblin.cool/${username}`);
@@ -93,62 +62,61 @@ const ProfilePage = () => {
         }
     };
 
+    // Fetch LeetCode stats when profile loads
+    useEffect(() => {
+        if (profileData?.profile?.leetcode) {
+            fetchLeetCodeStats(profileData.profile.leetcode).then(setLeetCodeStats);
+        }
+    }, [profileData?.profile?.leetcode]);
+
+    // Check authentication
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) navigate('/signin');
+        if (!token) {
+            navigate('/signin');
+        }
+    }, [navigate]);
 
-        setLoading(true);
-        setError("");
+    // Extract data with fallbacks
+    const profile = profileData?.profile;
+    const user = userData?.user;
+    const posts = postsData?.posts || [];
+    const isFollowing = followStatus?.following || false;
 
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/nativeProfile/?id=${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(async (response) => {
-            const profileData = response.data.profile;
-            setProfile(profileData);
+    // Combined loading state
+    const isLoading = profileLoading || userLoading || postsLoading || followStatusLoading;
 
-            if (profileData.leetcode) {
-                const leetcodeStats = await fetchLeetCodeStats(profileData.leetcode);
-                setLeetCodeStats(leetcodeStats);
-            }
-        }).catch((error) => {
-            console.error("Failed to fetch profile data:", error);
-            setError("Failed to fetch profile data. Please try again.");
-        }).finally(() => {
-            setLoading(false);
-        });
+    // Error handling
+    if (profileError) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen">
+                <img src="/error-icon.svg" alt="Error" className="w-16 h-16 mb-4" />
+                <p className="text-red-500 text-lg">
+                    Failed to load profile. Please try again later.
+                </p>
+            </div>
+        );
+    }
 
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/userProfile/?id=${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(response => setUser(response.data.user));
-
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/follow/userFollowing/?id=${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(response => setFollowing(response.data));
-
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/follow/userFollowers/?id=${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(response => setFollowers(response.data));
-
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/post/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then((response) => {
-            setPosts(response.data.posts);
-        });
-
-        
-        fetchFollowStatus();
-    }, [id, navigate]);
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <p className="ml-4 text-gray-700">Loading profile...</p>
+            </div>
+        );
+    }
 
     const profileUrl = profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     return (
         <div className="bg-gray-900 text-white min-h-screen flex p-8 space-x-8">
-            
+            {/* Left Section - Profile Info & Posts */}
             <div className="w-2/3 bg-gray-800 rounded-lg p-6 overflow-auto">
-                
+                {/* Profile Header */}
                 <div className="mb-8">
                     <div className="flex items-start justify-between">
-                        
+                        {/* Profile Picture & Name */}
                         <div className="flex items-center space-x-4">
                             <img
                                 src={profileUrl}
@@ -163,7 +131,7 @@ const ProfilePage = () => {
                             </div>
                         </div>
 
-                        
+                        {/* Action Buttons */}
                         <div className="flex gap-4">
                             <button
                                 onClick={() => navigate("/dashboard")}
@@ -171,35 +139,36 @@ const ProfilePage = () => {
                             >
                                 Go to Dashboard
                             </button>
-                           
                             <button
                                 onClick={toggleFollow}
-                                className={`${isFollowing
+                                disabled={isToggling}
+                                className={`${
+                                    isFollowing
                                         ? "bg-red-500 hover:bg-red-600"
                                         : "bg-blue-500 hover:bg-blue-600"
-                                    } text-white py-2 px-4 rounded-lg`}
+                                } text-white py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                {isFollowing ? "Unfollow" : "Follow"}
+                                {isToggling ? "..." : (isFollowing ? "Unfollow" : "Follow")}
                             </button>
                         </div>
                     </div>
 
-                    
+                    {/* Followers & Following Count */}
                     <div className="flex justify-start items-center text-gray-400 gap-40 mt-2">
                         <div>
-                            <p className="text-lg font-bold text-center">{followers?.count}</p>
+                            <p className="text-lg font-bold text-center">{followersData?.count || 0}</p>
                             <p className="text-xs">Followers</p>
                         </div>
                         <div>
-                            <p className="text-lg font-bold text-center">{following?.count}</p>
+                            <p className="text-lg font-bold text-center">{followingData?.count || 0}</p>
                             <p className="text-xs">Following</p>
                         </div>
                     </div>
 
-                    
+                    {/* Bio */}
                     <p className="mt-7 text-gray-300">{profile?.bio}</p>
 
-                    
+                    {/* Profile Details */}
                     <div className="mt-6 space-y-4">
                         <div className="flex items-center text-gray-400">
                             <GraduationCap className="w-5 h-5 mr-2" />
@@ -209,59 +178,58 @@ const ProfilePage = () => {
                             <Book className="w-5 h-5 mr-2" />
                             <p>Minor in {profile?.minor}</p>
                         </div>
-                        <div className="flex items-center text-gray-400">
-                            <LinkIcon className="w-5 h-5 mr-2" />
-                            <a
-                                href={profile?.linkedin}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-blue-500"
-                            >
-                                LinkedIn
-                            </a>
-                        </div>
-                        <div className="flex items-center text-gray-400">
-                            <LinkIcon className="w-5 h-5 mr-2" />
-                            <a
-                                href={profile?.github}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-blue-500"
-                            >
-                                GitHub
-                            </a>
-                        </div>
+                        {profile?.linkedin && (
+                            <div className="flex items-center text-gray-400">
+                                <LinkIcon className="w-5 h-5 mr-2" />
+                                <a
+                                    href={profile.linkedin}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-blue-500"
+                                >
+                                    LinkedIn
+                                </a>
+                            </div>
+                        )}
+                        {profile?.github && (
+                            <div className="flex items-center text-gray-400">
+                                <LinkIcon className="w-5 h-5 mr-2" />
+                                <a
+                                    href={profile.github}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-blue-500"
+                                >
+                                    GitHub
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                
+                {/* User Posts */}
                 <div className="mt-8">
-                    <h3 className="text-xl font-bold mb-6">Your Posts</h3>
-                    <div className="space-y-6">
-                        {posts.map((post) => (
-                            <div className="bg-gray-700 p-4 rounded-lg shadow-md">
-                                <Post post={post} />
-                            </div>
-                        ))}
-                    </div>
+                    <h3 className="text-xl font-bold mb-6">Posts</h3>
+                    {posts.length === 0 ? (
+                        <p className="text-gray-400 text-center py-8">No posts yet</p>
+                    ) : (
+                        <div className="space-y-6">
+                            {posts.map((post) => (
+                                <div key={post.id} className="bg-gray-700 p-4 rounded-lg shadow-md">
+                                    <Post post={post} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            
+            {/* Right Section - Platform Stats */}
             <div className="w-1/3 bg-gray-800 rounded-lg p-6 h-screen sticky top-0 overflow-y-auto">
                 <h3 className="text-xl font-bold mt-6 mb-4">Platform Stats</h3>
-                {loading && (
-                    <div className="flex items-center justify-center h-40">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
-                )}
-
-                {error && (
-                    <p className="text-red-500 text-sm text-center mt-4">{error}</p>
-                )}
 
                 <div className="space-y-6">
-                    
+                    {/* LeetCode Stats */}
                     {profile?.leetcode && leetCodeStats && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">LeetCode</h4>
@@ -281,7 +249,7 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    
+                    {/* GeeksforGeeks Stats */}
                     {profile?.geekforgeeks && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">GeeksforGeeks</h4>
@@ -293,7 +261,7 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    
+                    {/* Codeforces Stats */}
                     {profile?.codeforces && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">Codeforces</h4>
@@ -305,11 +273,11 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    
+                    {/* GitHub Stats */}
                     {profile?.github && (
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h4 className="font-bold mb-2">GitHub</h4>
-                            <div className="space-y-4 ">
+                            <div className="space-y-4">
                                 <img
                                     src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&card_width=300`}
                                     alt="GitHub Stats"

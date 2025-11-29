@@ -4,9 +4,9 @@ import { Select } from "../components/DepartSelect";
 import { MinorSelect } from "../components/MinorSelect";
 import { Heading } from "../components/Heading";
 import { Button } from "../components/Button";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
+import { useCurrentProfile } from "@/hooks/queries/profile";
+import { useCreateProfile } from "@/hooks/mutations/profile";
 
 export default function CreateProfile() {
     const [bio, setBio] = useState("");
@@ -19,70 +19,42 @@ export default function CreateProfile() {
     const [codeforces, setCodeforces] = useState("");
     const [geekforgeeks, setGeekforgeeks] = useState("");
     const [profilePic, setProfilePic] = useState<File | null>(null);
-    const [isLoading, setIsLoading] = useState(true); 
     const navigate = useNavigate();
 
- 
+    // ✅ Check if profile already exists
+    const { data: profileData, isLoading } = useCurrentProfile({
+        retry: false, // Don't retry if profile doesn't exist
+    });
+
+    // ✅ Use mutation hook
+    const createProfileMutation = useCreateProfile();
+
+    // If profile exists, redirect to dashboard
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/signin");
-            return;
-        }
-
-        setIsLoading(true);
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/profile`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        })
-        .then((response) => {
-            const profileData = response.data.profile;
-            if (profileData) {
-                navigate("/dashboard"); 
-            }
-        })
-        .catch((error) => {
-            console.error("Failed to fetch profile:", error);
-        })
-        .finally(() => {
-            setIsLoading(false); 
-        });
-    }, [navigate]);
-
-    const handleCreateProfile = async () => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/signin");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("bio", bio);
-        formData.append("graduationYear", graduation.toString());
-        formData.append("department", selectedDepartment?.name || "");
-        formData.append("minor", selectedMinor?.name || "");
-        formData.append("linkedin", linkedin);
-        formData.append("github", github);
-        formData.append("leetcode", leetcode);
-        formData.append("codeforces", codeforces);
-        formData.append("geekforgeeks", geekforgeeks);
-
-        if (profilePic) {
-            formData.append("profilePic", profilePic);
-        }
-
-        try {
-            await axios.post(`${import.meta.env.VITE_BASE_API_URL}/user/profile`, formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+        if (profileData?.profile) {
             navigate("/dashboard");
-        } catch (error) {
-            console.error("Failed to create profile:", error);
         }
+    }, [profileData, navigate]);
+
+    const handleCreateProfile = () => {
+        if (!bio.trim() || !graduation || !selectedDepartment || !selectedMinor) {
+            // Add validation toast if needed
+            return;
+        }
+
+        // ✅ Mutation automatically navigates on success (see hooks/mutations/profile.ts)
+        createProfileMutation.mutate({
+            bio,
+            graduationYear: graduation,
+            department: selectedDepartment.name,
+            minor: selectedMinor.name,
+            linkedin,
+            github,
+            leetcode,
+            codeforces,
+            geekforgeeks,
+            profilePic: profilePic || undefined,
+        });
     };
 
     if (isLoading) {
@@ -113,14 +85,14 @@ export default function CreateProfile() {
                         onChange={(e) => setBio(e.target.value)} 
                         label="Bio" 
                         value={bio}
-                        type={"text"}
+                        type="text"
                     />
 
                     <InputBox 
                         onChange={(e) => setGraduation(e.target.value)} 
                         label="Graduation Year"
                         value={graduation}
-                        type={"text"}
+                        type="text"
                     />
 
                     <Select 
@@ -134,48 +106,52 @@ export default function CreateProfile() {
                         selected={selectedMinor} 
                         setSelected={setSelectedMinor} 
                     />
+                    
                     <InputBox 
                         onChange={(e) => setLinkedin(e.target.value)} 
                         label="LinkedIn Profile"
                         value={linkedin}
-                        type={"text"}
+                        type="text"
                     />
 
-                    <div className="font-semibold text-md my-1"><span className="font-bold">Note:</span> Atleast 2 profiles are recommended.</div>
+                    <div className="font-semibold text-md my-1">
+                        <span className="font-bold">Note:</span> At least 2 profiles are recommended.
+                    </div>
                     
                     <InputBox 
                         onChange={(e) => setGithub(e.target.value)} 
                         label="GitHub Username (optional)" 
                         value={github}
-                        type={"text"}
+                        type="text"
                     />
 
                     <InputBox 
                         onChange={(e) => setLeetcode(e.target.value)} 
                         label="LeetCode Username (optional)" 
                         value={leetcode}
-                        type={"text"}
+                        type="text"
                     />
 
                     <InputBox 
                         onChange={(e) => setCodeforces(e.target.value)} 
                         label="Codeforces Username (optional)" 
                         value={codeforces}
-                        type={"text"}
+                        type="text"
                     />
 
                     <InputBox 
                         onChange={(e) => setGeekforgeeks(e.target.value)} 
                         label="GeeksforGeeks Username (optional)"
                         value={geekforgeeks}
-                        type={"text"} 
+                        type="text" 
                     />
                 </div>
 
                 <div className="mt-6 flex justify-center">
                     <Button 
                         onClick={handleCreateProfile}
-                        label="Create Profile"
+                        label={createProfileMutation.isPending ? "Creating..." : "Create Profile"}
+                        disabled={createProfileMutation.isPending}
                     />
                 </div>
             </div>

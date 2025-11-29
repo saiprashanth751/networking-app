@@ -6,47 +6,32 @@ import { useNavigate } from 'react-router-dom';
 import { FollowList } from '../components/FollowList';
 import MessageBox from './MessageBox';
 
-
-interface ProfileBody {
-    bio?: string;
-    graduationYear?: string;
-    department?: string;
-    minor?: string;
-    linkedin?: string;
-    github?: string;
-    leetcode?: string;
-    codeforces?: string;
-    geekforgeeks?: string;
-    profilePic?: string;
-}
-
-interface UserBody {
-    id: string;
-    firstName?: string;
-    lastName?: string;
-}
-
-interface FollowingBody {
-    following?: Array<{ id: string; followingId: string }>;
-    followers?: Array<{ id: string; followerId: string }>;
-    count?: number;
-}
+// ✅ Import React Query hooks
+import { useCurrentProfile } from '@/hooks/queries/profile';
+import { useCurrentUser } from '@/hooks/queries/user';
+import { useCurrentUserPosts } from '@/hooks/queries/post';
+import { useFollowers, useFollowing } from '@/hooks/queries/follow';
 
 const ProfilePage = () => {
-    const [profile, setProfile] = useState<ProfileBody | null>(null);
-    const [user, setUser] = useState<UserBody | null>(null);
-    const [posts, setPosts] = useState([]);
-    const [following, setFollowing] = useState<FollowingBody | null>(null);
-    const [followers, setFollowers] = useState<FollowingBody | null>(null);
-    const [leetCodeStats, setLeetCodeStats] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-    const [error, setError] = useState("");
-    const [followerUsers, setFollowerUsers] = useState<UserBody[]>([]);
-    const [followingUsers, setFollowingUsers] = useState<UserBody[]>([]);
     const navigate = useNavigate();
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [leetCodeStats, setLeetCodeStats] = useState<string | null>(null);
 
+    // ✅ Fetch all data using React Query
+    const { data: profileData, isLoading: profileLoading, isError: profileError } = useCurrentProfile();
+    const { data: userData, isLoading: userLoading } = useCurrentUser();
+    const { data: postsData, isLoading: postsLoading } = useCurrentUserPosts();
+    const { data: followersData, isLoading: followersLoading } = useFollowers();
+    const { data: followingData, isLoading: followingLoading } = useFollowing();
 
+    // Extract data with fallbacks
+    const profile = profileData?.profile;
+    const user = userData?.user;
+    const posts = postsData?.posts || [];
+    const followerUsers = followersData?.followers || [];
+    const followingUsers = followingData?.followingUsers || [];
+
+    // Fetch LeetCode stats (external API - keep as is)
     const fetchLeetCodeStats = async (username: string) => {
         try {
             const response = await axios.get(`https://leetcard.jacoblin.cool/${username}`);
@@ -57,82 +42,46 @@ const ProfilePage = () => {
         }
     };
 
-
-    const fetchUserDetails = async (userId: string) => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            return response.data.user;
-        } catch (error) {
-            console.error("Failed to fetch user details:", error);
-            return null;
-        }
-    };
-
-    const fetchAllUserDetails = async (userIds: string[]) => {
-        const users = await Promise.all(userIds.map((id) => fetchUserDetails(id)));
-        return users.filter((user) => user !== null);
-    };
-
+    // Fetch LeetCode stats when profile loads
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) navigate('/signin');
+        if (profile?.leetcode) {
+            fetchLeetCodeStats(profile.leetcode).then(setLeetCodeStats);
+        }
+    }, [profile?.leetcode]);
 
-        setLoading(true);
-        setError("");
+    // Combined loading state
+    const isLoading = profileLoading || userLoading || postsLoading || followersLoading || followingLoading;
 
+    // Error handling
+    if (profileError) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900">
+                <div className="text-center">
+                    <p className="text-red-500 text-lg mb-4">Failed to load profile</p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/profile`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(async (response) => {
-            const profileData = response.data.profile;
-            setProfile(profileData);
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-gray-900">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                    <p className="text-gray-300">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
 
-
-            if (profileData.leetcode) {
-                const leetcodeStats = await fetchLeetCodeStats(profileData.leetcode);
-                setLeetCodeStats(leetcodeStats);
-            }
-        }).catch((error) => {
-            console.error("Failed to fetch profile data:", error);
-            setError("Failed to fetch profile data. Please try again.");
-        }).finally(() => {
-            setLoading(false);
-        });
-
-
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/user`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then(response => setUser(response.data.user));
-
-        // Fetch followers and following
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/follow/followers`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then((response) => {
-            setFollowers(response.data);
-            setFollowerUsers(response.data.followers);
-        });
-
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/follow/following`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then((response) => {
-            setFollowing(response.data);
-            setFollowingUsers(response.data.following);
-        });
-
-
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/post/userAll`, {
-            headers: { Authorization: `Bearer ${token}` }
-        }).then((response) => {
-            setPosts(response.data.posts);
-        });
-    }, [navigate]);
-
-
-
-    const profilePicUrl = profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+    const profilePicUrl = profile?.profilePic || 
+        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     return (
         <div className="bg-gray-900 text-white min-h-screen flex flex-col lg:flex-row p-8 space-y-8 lg:space-y-0 lg:space-x-8">
@@ -176,11 +125,15 @@ const ProfilePage = () => {
                         <div className="w-1/2 pr-8">
                             <div className="flex justify-start items-center text-gray-400 gap-40 mt-2">
                                 <div>
-                                    <p className="text-lg font-bold text-center">{followers?.count}</p>
+                                    <p className="text-lg font-bold text-center">
+                                        {followersData?.count || 0}
+                                    </p>
                                     <p className="text-xs">Followers</p>
                                 </div>
                                 <div>
-                                    <p className="text-lg font-bold text-center">{following?.count}</p>
+                                    <p className="text-lg font-bold text-center">
+                                        {followingData?.count || 0}
+                                    </p>
                                     <p className="text-xs">Following</p>
                                 </div>
                             </div>
@@ -195,28 +148,32 @@ const ProfilePage = () => {
                                     <Book className="w-5 h-5 mr-2" />
                                     <p>Minor in {profile?.minor}</p>
                                 </div>
-                                <div className="flex items-center text-gray-400">
-                                    <LinkIcon className="w-5 h-5 mr-2" />
-                                    <a
-                                        href={profile?.linkedin}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-blue-500"
-                                    >
-                                        LinkedIn
-                                    </a>
-                                </div>
-                                <div className="flex items-center text-gray-400">
-                                    <LinkIcon className="w-5 h-5 mr-2" />
-                                    <a
-                                        href={profile?.github}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-blue-500"
-                                    >
-                                        GitHub
-                                    </a>
-                                </div>
+                                {profile?.linkedin && (
+                                    <div className="flex items-center text-gray-400">
+                                        <LinkIcon className="w-5 h-5 mr-2" />
+                                        <a
+                                            href={profile.linkedin}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="hover:text-blue-500"
+                                        >
+                                            LinkedIn
+                                        </a>
+                                    </div>
+                                )}
+                                {profile?.github && (
+                                    <div className="flex items-center text-gray-400">
+                                        <LinkIcon className="w-5 h-5 mr-2" />
+                                        <a
+                                            href={profile.github}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="hover:text-blue-500"
+                                        >
+                                            GitHub
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -225,13 +182,19 @@ const ProfilePage = () => {
                             <div className="flex flex-col space-y-6">
                                 <FollowList
                                     title="Followers"
-                                    users={followerUsers.map((user) => ({ id: user.id, firstName: user.firstName || "" }))}
-                                    onMessageClick={(userId: any) => setSelectedUserId(userId)} // Pass the callback
+                                    users={followerUsers.map((user: any) => ({ 
+                                        id: user.id, 
+                                        firstName: user.firstName || "" 
+                                    }))}
+                                    onMessageClick={(userId: string) => setSelectedUserId(userId)}
                                 />
                                 <FollowList
                                     title="Following"
-                                    users={followingUsers.map((user) => ({ id: user.id, firstName: user.firstName || "" }))}
-                                    onMessageClick={(userId: any) => setSelectedUserId(userId)} // Pass the callback
+                                    users={followingUsers.map((user: any) => ({ 
+                                        id: user.id, 
+                                        firstName: user.firstName || "" 
+                                    }))}
+                                    onMessageClick={(userId: string) => setSelectedUserId(userId)}
                                 />
                             </div>
                         </div>
@@ -241,44 +204,39 @@ const ProfilePage = () => {
                 {/* Posts Section */}
                 <div className="mt-8">
                     <h3 className="text-xl font-bold mb-6">Your Posts</h3>
-                    <div className="space-y-6">
-                        {posts.map((post) => (
-                            <div className="bg-gray-700 p-4 rounded-lg shadow-md">
-                                <Post post={post} />
-                            </div>
-                        ))}
-                    </div>
+                    {posts.length === 0 ? (
+                        <p className="text-gray-400 text-center py-8">No posts yet</p>
+                    ) : (
+                        <div className="space-y-6">
+                            {posts.map((post) => (
+                                <div key={post.id} className="bg-gray-700 p-4 rounded-lg shadow-md">
+                                    <Post post={post} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Right Section (Platform Stats or MessageBox) */}
             <div className="w-full lg:w-1/3 bg-gray-800 rounded-lg p-6 h-screen sticky top-0 overflow-y-auto">
                 {selectedUserId ? (
-                    <MessageBox receiverId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+                    <MessageBox 
+                        receiverId={selectedUserId} 
+                        onClose={() => setSelectedUserId(null)} 
+                    />
                 ) : (
                     <>
                         <h3 className="text-xl font-bold mb-6">Platform Stats</h3>
-                        {loading && (
-                            <div className="flex items-center justify-center h-40">
-                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                            </div>
-                        )}
-
-                        {error && (
-                            <p className="text-red-500 text-sm text-center mt-4">{error}</p>
-                        )}
 
                         <div className="space-y-6">
-                            {/* LeetCode Stat Card */}
+                            {/* LeetCode Stats */}
                             {profile?.leetcode && leetCodeStats && (
                                 <div className="bg-gray-700 p-4 rounded-lg">
                                     <h4 className="font-bold mb-2">LeetCode</h4>
                                     <div
                                         className="w-full overflow-hidden"
-                                        style={{
-                                            aspectRatio: '500 / 200',
-                                            height: 'auto'
-                                        }}
+                                        style={{ aspectRatio: '500 / 200', height: 'auto' }}
                                     >
                                         <img
                                             src={`data:image/svg+xml;utf8,${encodeURIComponent(leetCodeStats)}`}
@@ -289,7 +247,7 @@ const ProfilePage = () => {
                                 </div>
                             )}
 
-                            {/* GeeksforGeeks Stat Card */}
+                            {/* GeeksforGeeks Stats */}
                             {profile?.geekforgeeks && (
                                 <div className="bg-gray-700 p-4 rounded-lg">
                                     <h4 className="font-bold mb-2">GeeksforGeeks</h4>
@@ -301,7 +259,7 @@ const ProfilePage = () => {
                                 </div>
                             )}
 
-                            {/* Codeforces Stat Card */}
+                            {/* Codeforces Stats */}
                             {profile?.codeforces && (
                                 <div className="bg-gray-700 p-4 rounded-lg">
                                     <h4 className="font-bold mb-2">Codeforces</h4>
@@ -313,7 +271,7 @@ const ProfilePage = () => {
                                 </div>
                             )}
 
-                            {/* GitHub Stat Card */}
+                            {/* GitHub Stats */}
                             {profile?.github && (
                                 <div className="bg-gray-700 p-4 rounded-lg">
                                     <h4 className="font-bold mb-2">GitHub</h4>

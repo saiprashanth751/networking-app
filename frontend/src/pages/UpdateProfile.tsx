@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { InputBox } from "../components/InputBox";
 import { Heading } from "../components/Heading";
 import { Button } from "../components/Button";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-
+import { useCurrentProfile } from "@/hooks/queries/profile";
+import { useUpdateProfile } from "@/hooks/mutations/profile";
 
 export default function UpdateProfile() {
     const [bio, setBio] = useState("");
@@ -13,72 +12,64 @@ export default function UpdateProfile() {
     const [leetcode, setLeetcode] = useState("");
     const [codeforces, setCodeforces] = useState("");
     const [gfg, setGFG] = useState("");
-    const [profilePic, setProfilePic] = useState<File | null>(null); 
-    const [currentProfilePic, setCurrentProfilePic] = useState(""); 
-    const [error, setError] = useState("");
-    const navigate = useNavigate();
+    const [profilePic, setProfilePic] = useState<File | null>(null);
 
+    // ✅ Fetch current profile data
+    const { data: profileData, isLoading, isError } = useCurrentProfile();
+
+    // ✅ Use mutation hook
+    const updateProfileMutation = useUpdateProfile();
+
+    // Populate form with existing data
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/signin");
-            return;
+        if (profileData?.profile) {
+            const profile = profileData.profile;
+            setBio(profile.bio || "");
+            setLinkedin(profile.linkedin || "");
+            setGithub(profile.github || "");
+            setLeetcode(profile.leetcode || "");
+            setCodeforces(profile.codeforces || "");
+            setGFG(profile.geekforgeeks || "");
         }
+    }, [profileData]);
 
-        // Fetch existing profile data
-        axios.get(`${import.meta.env.VITE_BASE_API_URL}/user/profile`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).then((response) => {
-            const profileData = response.data.profile;
-            
-            setBio(profileData.bio || "");
-            setLinkedin(profileData.linkedin || "");
-            setGithub(profileData.github || "");
-            setLeetcode(profileData.leetcode || "");
-            setCodeforces(profileData.codeforces || "");
-            setGFG(profileData.geekforgeeks || "");
-            setCurrentProfilePic(profileData.profilePic || null); 
-        }).catch((error) => {
-            console.error("Failed to fetch profile data:", error);
-            setError("Failed to fetch profile data. Please try again.");
-        });
-    }, [navigate]);
+    const handleUpdateProfile = () => {
+        // Build update object with only changed fields
+        const updates: any = {};
+        
+        if (bio.trim() !== "") updates.bio = bio;
+        if (linkedin.trim() !== "") updates.linkedin = linkedin;
+        if (github.trim() !== "") updates.github = github;
+        if (leetcode.trim() !== "") updates.leetcode = leetcode;
+        if (codeforces.trim() !== "") updates.codeforces = codeforces;
+        if (gfg.trim() !== "") updates.geekforgeeks = gfg;
+        if (profilePic) updates.profilePic = profilePic;
 
-    const handleUpdateProfile = async () => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            navigate("/signin");
-            return;
-        }
-        try {
-            // New Concept : Form uploads. Revise Later
-            const formData = new FormData();
-            if (bio.trim() !== "") formData.append("bio", bio);
-            if (linkedin.trim() !== "") formData.append("linkedin", linkedin);
-            if (github.trim() !== "") formData.append("github", github);
-            if (leetcode.trim() !== "") formData.append("leetcode", leetcode);
-            if (codeforces.trim() !== "") formData.append("codeforces", codeforces);
-            if (gfg.trim() !== "") formData.append("geekforgeeks", gfg);
-            if (profilePic) formData.append("profilePic", profilePic); 
-
-           
-            await axios.put(`${import.meta.env.VITE_BASE_API_URL}/user/profile`, formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "multipart/form-data", 
-                },
-            });
-
-            navigate("/userprofile");
-        } catch (error) {
-            console.error("Failed to update profile:", error);
-            setError("Failed to update profile. Please try again.");
-        }
+        // ✅ Mutation handles success/navigation automatically
+        updateProfileMutation.mutate(updates);
     };
 
-    
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-200">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+        );
+    }
 
-    const profilePicUrl = currentProfilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+    if (isError) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-200">
+                <div className="text-center">
+                    <p className="text-red-500 mb-4">Failed to load profile data</p>
+                    <Button onClick={() => window.location.reload()} label="Retry" />
+                </div>
+            </div>
+        );
+    }
+
+    const profile = profileData?.profile;
+    const profilePicUrl = profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4">
@@ -94,7 +85,7 @@ export default function UpdateProfile() {
                         onChange={(e) => setProfilePic(e.target.files?.[0] || null)}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
-                    {currentProfilePic && (
+                    {profile?.profilePic && (
                         <div className="mt-2">
                             <p className="text-sm text-gray-500">Current Profile Picture:</p>
                             <img
@@ -111,48 +102,45 @@ export default function UpdateProfile() {
                         onChange={(e) => setBio(e.target.value)} 
                         label="Bio" 
                         value={bio}
-                        type={"text"} 
+                        type="text" 
                     />
                     <InputBox 
                         onChange={(e) => setLinkedin(e.target.value)} 
                         label="LinkedIn Profile" 
                         value={linkedin}
-                        type={"text"} 
+                        type="text" 
                     />
                     <InputBox 
                         onChange={(e) => setGithub(e.target.value)} 
                         label="GitHub Profile" 
                         value={github}
-                        type={"text"} 
+                        type="text" 
                     />
                     <InputBox 
                         onChange={(e) => setLeetcode(e.target.value)} 
                         label="LeetCode Profile" 
                         value={leetcode}
-                        type={"text"} 
+                        type="text" 
                     />
                     <InputBox 
                         onChange={(e) => setCodeforces(e.target.value)} 
                         label="Codeforces Profile" 
                         value={codeforces}
-                        type={"text"} 
+                        type="text" 
                     />
                     <InputBox 
                         onChange={(e) => setGFG(e.target.value)} 
                         label="GeeksforGeeks Profile" 
                         value={gfg}
-                        type={"text"} 
+                        type="text" 
                     />
                 </div>
-
-                {error && (
-                    <p className="text-red-500 text-sm text-center mt-4">{error}</p>
-                )}
 
                 <div className="mt-6 flex justify-center">
                     <Button 
                         onClick={handleUpdateProfile}
-                        label="Update Profile"
+                        label={updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
+                        disabled={updateProfileMutation.isPending}
                     />
                 </div>
             </div>

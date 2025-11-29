@@ -5,7 +5,7 @@ import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 
 export const useConversation = (
   userId: string,
-  options?: UseQueryOptions<{ messages: Message[] }, Error>
+  options?: Omit<UseQueryOptions<{ messages: Message[] }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.messages.conversation(userId),

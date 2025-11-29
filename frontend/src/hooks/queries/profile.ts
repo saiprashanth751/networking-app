@@ -4,7 +4,7 @@ import { Profile } from "@/types/types";
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 
 
-export const useCurrentProfile = (options?: UseQueryOptions<{ profile: Profile }, Error>) => {
+export const useCurrentProfile = (options?: Omit<UseQueryOptions<{ profile: Profile }, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.user.profile(),
     queryFn: profileService.getCurrentProfile,
@@ -14,7 +14,8 @@ export const useCurrentProfile = (options?: UseQueryOptions<{ profile: Profile }
 
 export const useProfile = (
   userId: string,
-  options?: UseQueryOptions<{ profile: Profile }, Error>
+  // options?: UseQueryOptions<{ profile: Profile }, Error>
+  options?: Omit<UseQueryOptions<{ profile: Profile }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.user.profile(userId),

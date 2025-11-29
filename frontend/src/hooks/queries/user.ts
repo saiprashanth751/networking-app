@@ -3,7 +3,7 @@ import { queryKeys } from '@/lib/queryClient';
 import { User } from '@/types/types';
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 
-export const useCurrentUser = (options?: UseQueryOptions<{ user: User }, Error>) => {
+export const useCurrentUser = (options?: Omit<UseQueryOptions<{ user: User }, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.user.current(),
     queryFn: userService.getCurrentUser,
@@ -11,7 +11,7 @@ export const useCurrentUser = (options?: UseQueryOptions<{ user: User }, Error>)
   });
 };
 
-export const useUser = (userId: string, options?: UseQueryOptions<{ user: User }, Error>) => {
+export const useUser = (userId: string, options?: Omit<UseQueryOptions<{ user: User }, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.user.profile(userId),
     queryFn: () => userService.getUserProfile(userId),
@@ -22,7 +22,7 @@ export const useUser = (userId: string, options?: UseQueryOptions<{ user: User }
 
 export const useSearchUsers = (
   searchQuery: string,
-  options?: UseQueryOptions<{ users: User[] }, Error>
+  options?: Omit<UseQueryOptions<{ users: User[] }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.user.search(searchQuery),
@@ -35,7 +35,7 @@ export const useSearchUsers = (
 
 export const useUsersByMinor = (
   minor: string,
-  options?: UseQueryOptions<{ users: User[] }, Error>
+  options?: Omit<UseQueryOptions<{ users: User[] }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.user.bulk(minor),

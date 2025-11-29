@@ -4,7 +4,7 @@ import { Post } from "@/types/types";
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 
 
-export const useAllPosts = (options?: UseQueryOptions<{ posts: Post[] }, Error>) => {
+export const useAllPosts = (options?: Omit<UseQueryOptions<{ posts: Post[] }, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.posts.list(),
     queryFn: postService.getAllPosts,
@@ -15,7 +15,7 @@ export const useAllPosts = (options?: UseQueryOptions<{ posts: Post[] }, Error>)
 
 export const useUserPosts = (
   userId: string,
-  options?: UseQueryOptions<{ posts: Post[] }, Error>
+  options?: Omit<UseQueryOptions<{ posts: Post[] }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.posts.byUser(userId),
@@ -25,7 +25,7 @@ export const useUserPosts = (
   });
 };
 
-export const useCurrentUserPosts = (options?: UseQueryOptions<{ posts: Post[] }, Error>) => {
+export const useCurrentUserPosts = (options?: Omit<UseQueryOptions<{ posts: Post[] }, Error>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: queryKeys.posts.currentUser(),
     queryFn: postService.getCurrentUserPosts,
