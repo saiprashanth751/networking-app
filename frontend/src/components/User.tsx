@@ -7,13 +7,14 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User as UserIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { User as UserIcon, Loader2 } from "lucide-react";
 
 export function User({ user }: { user: any }) {
-  // ✅ Fetch follow status using React Query
+  // Fetch follow status using React Query
   const { data: followStatus } = useFollowStatus(user.id);
 
-  // ✅ Toggle follow mutation
+  // Toggle follow mutation
   const { toggleFollow, isLoading: isToggling } = useToggleFollow(
     user.id,
     followStatus?.following || false
@@ -28,44 +29,74 @@ export function User({ user }: { user: any }) {
   };
 
   return (
-    <Card className="bg-gray-800 border-gray-700 text-white hover:bg-gray-750 transition-colors">
+    <Card className="group border-border bg-card hover:shadow-md hover:border-primary/50 transition-all duration-200">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          {/* Left Section: Profile Image & Info */}
+        <div className="flex items-start gap-3">
+          {/* Profile Image */}
           <Link 
             to={`/profile/${user.id}`}
-            className="flex items-center gap-x-4 flex-1 min-w-0"
+            className="flex-shrink-0"
           >
-            <Avatar className="h-12 w-12 flex-none border-2 border-gray-700">
+            <Avatar className="h-12 w-12 border-2 border-border group-hover:border-primary transition-colors">
               <AvatarImage 
                 src={profileUrl} 
                 alt={`${user.firstName} ${user.lastName}`}
                 className="object-cover"
               />
-              <AvatarFallback className="bg-gray-700 text-gray-300">
+              <AvatarFallback className="bg-muted text-muted-foreground">
                 {getUserInitials() || <UserIcon className="h-5 w-5" />}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white truncate">
-                {user.firstName} {user.lastName}
-              </p>
-              {user.department && (
-                <p className="text-xs text-gray-400 truncate">{user.department}</p>
-              )}
-            </div>
           </Link>
 
-          {/* Right Section: Follow Button */}
-          <div className="ml-4">
+          {/* User Info */}
+          <div className="flex-1 min-w-0">
+            <Link 
+              to={`/profile/${user.id}`}
+              className="block group/link"
+            >
+              <h4 className="text-sm font-semibold text-foreground truncate group-hover/link:text-primary transition-colors">
+                {user.firstName} {user.lastName}
+              </h4>
+            </Link>
+            
+            {user.department && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                {user.department}
+              </p>
+            )}
+
+            {user.profile?.bio && (
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
+                {user.profile.bio}
+              </p>
+            )}
+
+            {/* Follow Status Badge */}
+            {followStatus?.following && (
+              <Badge 
+                variant="outline" 
+                className="mt-2 text-xs border-primary/30 text-primary"
+              >
+                Following
+              </Badge>
+            )}
+          </div>
+
+          {/* Follow Button */}
+          <div className="flex-shrink-0">
             <Button
               onClick={toggleFollow}
               disabled={isToggling}
-              variant={followStatus?.following ? "destructive" : "default"}
+              variant={followStatus?.following ? "outline" : "default"}
               size="sm"
-              className="whitespace-nowrap"
+              className="h-8 min-w-[80px]"
             >
-              {isToggling ? "..." : (followStatus?.following ? "Unfollow" : "Follow")}
+              {isToggling ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                followStatus?.following ? "Unfollow" : "Follow"
+              )}
             </Button>
           </div>
         </div>

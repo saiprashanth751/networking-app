@@ -57,6 +57,7 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
   
   h1, h2, h3, h4, h5, h6, p {
@@ -65,6 +66,10 @@
 }
 
 @layer base {
+  .text-display {
+    @apply text-5xl font-bold leading-tight tracking-tight;
+  }
+  
   h1, .h1 {
     @apply text-4xl font-bold leading-tight tracking-tight;
   }
@@ -93,41 +98,78 @@
     @apply text-base leading-relaxed;
   }
   
-  .text-small {
+  .text-body-sm {
     @apply text-sm leading-relaxed;
+  }
+  
+  .text-small {
+    @apply text-sm leading-normal;
   }
   
   .text-tiny {
     @apply text-xs leading-normal;
   }
+  
+  .text-caption {
+    @apply text-xs text-muted-foreground leading-tight;
+  }
 }
 
 @layer utilities {
+  .container-sm {
+    @apply max-w-3xl mx-auto px-4;
+  }
+  
+  .container-md {
+    @apply max-w-5xl mx-auto px-4;
+  }
+  
+  .container-lg {
+    @apply max-w-7xl mx-auto px-6;
+  }
+  
   .section-spacing {
     @apply py-12 md:py-16 lg:py-20;
   }
   
-  .container-sm {
-    @apply max-w-3xl mx-auto;
+  .section-spacing-sm {
+    @apply py-8 md:py-12 lg:py-16;
   }
   
-  .container-md {
-    @apply max-w-5xl mx-auto;
+  .card-padding {
+    @apply p-6;
   }
   
-  .container-lg {
-    @apply max-w-7xl mx-auto;
+  .card-padding-sm {
+    @apply p-4;
+  }
+  
+  .stack-spacing {
+    @apply space-y-6;
+  }
+  
+  .stack-spacing-sm {
+    @apply space-y-4;
+  }
+  
+  .stack-spacing-xs {
+    @apply space-y-2;
   }
 }
 
 @layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+  }
+  
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-muted;
+    @apply bg-transparent;
   }
   
   .scrollbar-thin::-webkit-scrollbar-thumb {
@@ -137,9 +179,21 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/40;
   }
+  
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
 }
 
 @layer utilities {
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .transition-slow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
   .animate-in {
     animation: animate-in 0.3s ease-in-out;
   }
@@ -155,8 +209,17 @@
     }
   }
   
-  .transition-smooth {
-    @apply transition-all duration-200 ease-in-out;
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+  
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
 }
 
@@ -172,11 +235,25 @@
   .shadow-strong {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
+  
+  .shadow-elevation {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
 }
 
 @layer base {
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -184,5 +261,6 @@
   * {
     background: white !important;
     color: black !important;
+    box-shadow: none !important;
   }
 }
