@@ -1,6 +1,11 @@
-import { Link as LinkIcon, GraduationCap, Book } from 'lucide-react';
+import { Link as LinkIcon, GraduationCap, Book, User, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Post } from '../components/Post';
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
@@ -86,212 +91,319 @@ const ProfilePage = () => {
     // Combined loading state
     const isLoading = profileLoading || userLoading || postsLoading || followStatusLoading;
 
+    // Get user initials for avatar fallback
+    const getUserInitials = () => {
+        return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
+    };
+
     // Error handling
     if (profileError) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen">
-                <img src="/error-icon.svg" alt="Error" className="w-16 h-16 mb-4" />
-                <p className="text-red-500 text-lg">
-                    Failed to load profile. Please try again later.
-                </p>
-            </div>
+            <Card className="max-w-2xl mx-auto mt-8 bg-gray-800 border-red-500">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                    <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+                        <User className="h-8 w-8 text-red-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">Profile Not Found</h3>
+                    <p className="text-gray-400 text-center mb-6">
+                        Failed to load profile. Please try again later.
+                    </p>
+                    <Button onClick={() => navigate('/dashboard')}>
+                        Return to Dashboard
+                    </Button>
+                </CardContent>
+            </Card>
         );
     }
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                <p className="ml-4 text-gray-700">Loading profile...</p>
+            <div className="bg-gray-900 text-white min-h-screen flex p-8 space-x-8">
+                {/* Left Section Skeleton */}
+                <div className="w-2/3 space-y-6">
+                    <Card className="bg-gray-800">
+                        <CardContent className="p-6">
+                            <div className="flex items-start justify-between mb-6">
+                                <div className="flex items-center space-x-4">
+                                    <Skeleton className="w-32 h-32 rounded-full" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-8 w-48" />
+                                        <Skeleton className="h-4 w-32" />
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Skeleton className="h-10 w-32" />
+                                    <Skeleton className="h-10 w-32" />
+                                </div>
+                            </div>
+                            <div className="flex gap-8 mt-4">
+                                <Skeleton className="h-12 w-20" />
+                                <Skeleton className="h-12 w-20" />
+                            </div>
+                            <Skeleton className="h-4 w-full mt-6" />
+                            <Skeleton className="h-4 w-3/4 mt-2" />
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-gray-800">
+                        <CardContent className="p-6">
+                            <Skeleton className="h-6 w-24 mb-4" />
+                            {[1, 2, 3].map((i) => (
+                                <Skeleton key={i} className="h-40 w-full mb-4" />
+                            ))}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Right Section Skeleton */}
+                <div className="w-1/3">
+                    <Card className="bg-gray-800 sticky top-0">
+                        <CardContent className="p-6">
+                            <Skeleton className="h-6 w-32 mb-6" />
+                            {[1, 2, 3].map((i) => (
+                                <Skeleton key={i} className="h-48 w-full mb-4" />
+                            ))}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         );
     }
 
-    const profileUrl = profile?.profilePic || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-
     return (
         <div className="bg-gray-900 text-white min-h-screen flex p-8 space-x-8">
             {/* Left Section - Profile Info & Posts */}
-            <div className="w-2/3 bg-gray-800 rounded-lg p-6 overflow-auto">
-                {/* Profile Header */}
-                <div className="mb-8">
-                    <div className="flex items-start justify-between">
-                        {/* Profile Picture & Name */}
-                        <div className="flex items-center space-x-4">
-                            <img
-                                src={profileUrl}
-                                alt="Profile"
-                                className="w-32 h-32 rounded-full border-4 border-gray-800"
-                            />
-                            <div>
-                                <h2 className="text-2xl font-bold">
-                                    {user?.firstName} {user?.lastName}
-                                </h2>
-                                <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
-                            </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-4">
-                            <button
-                                onClick={() => navigate("/dashboard")}
-                                className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
-                            >
-                                Go to Dashboard
-                            </button>
-                            <button
-                                onClick={toggleFollow}
-                                disabled={isToggling}
-                                className={`${
-                                    isFollowing
-                                        ? "bg-red-500 hover:bg-red-600"
-                                        : "bg-blue-500 hover:bg-blue-600"
-                                } text-white py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed`}
-                            >
-                                {isToggling ? "..." : (isFollowing ? "Unfollow" : "Follow")}
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Followers & Following Count */}
-                    <div className="flex justify-start items-center text-gray-400 gap-40 mt-2">
-                        <div>
-                            <p className="text-lg font-bold text-center">{followersData?.count || 0}</p>
-                            <p className="text-xs">Followers</p>
-                        </div>
-                        <div>
-                            <p className="text-lg font-bold text-center">{followingData?.count || 0}</p>
-                            <p className="text-xs">Following</p>
-                        </div>
-                    </div>
-
-                    {/* Bio */}
-                    <p className="mt-7 text-gray-300">{profile?.bio}</p>
-
-                    {/* Profile Details */}
-                    <div className="mt-6 space-y-4">
-                        <div className="flex items-center text-gray-400">
-                            <GraduationCap className="w-5 h-5 mr-2" />
-                            <p>{profile?.department} ({profile?.graduationYear})</p>
-                        </div>
-                        <div className="flex items-center text-gray-400">
-                            <Book className="w-5 h-5 mr-2" />
-                            <p>Minor in {profile?.minor}</p>
-                        </div>
-                        {profile?.linkedin && (
-                            <div className="flex items-center text-gray-400">
-                                <LinkIcon className="w-5 h-5 mr-2" />
-                                <a
-                                    href={profile.linkedin}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-blue-500"
-                                >
-                                    LinkedIn
-                                </a>
-                            </div>
-                        )}
-                        {profile?.github && (
-                            <div className="flex items-center text-gray-400">
-                                <LinkIcon className="w-5 h-5 mr-2" />
-                                <a
-                                    href={profile.github}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-blue-500"
-                                >
-                                    GitHub
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* User Posts */}
-                <div className="mt-8">
-                    <h3 className="text-xl font-bold mb-6">Posts</h3>
-                    {posts.length === 0 ? (
-                        <p className="text-gray-400 text-center py-8">No posts yet</p>
-                    ) : (
-                        <div className="space-y-6">
-                            {posts.map((post) => (
-                                <div key={post.id} className="bg-gray-700 p-4 rounded-lg shadow-md">
-                                    <Post post={post} />
+            <div className="w-2/3 space-y-6">
+                {/* Profile Card */}
+                <Card className="bg-gray-800 border-gray-700">
+                    <CardContent className="p-6">
+                        {/* Profile Header */}
+                        <div className="flex items-start justify-between mb-6">
+                            {/* Profile Picture & Name */}
+                            <div className="flex items-center space-x-4">
+                                <Avatar className="w-32 h-32 border-4 border-gray-900">
+                                    <AvatarImage 
+                                        src={profile?.profilePic} 
+                                        alt={`${user?.firstName} ${user?.lastName}`}
+                                        className="object-cover"
+                                    />
+                                    <AvatarFallback className="bg-gray-700 text-3xl font-semibold">
+                                        {getUserInitials() || <User className="h-12 w-12" />}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <h2 className="text-2xl font-bold">
+                                        {user?.firstName} {user?.lastName}
+                                    </h2>
+                                    <p className="text-gray-400">@{user?.firstName?.toLowerCase()}</p>
+                                    
+                                    {/* Department Badge */}
+                                    {profile?.department && (
+                                        <Badge variant="secondary" className="mt-2 bg-gray-700 text-gray-300">
+                                            {profile.department}
+                                        </Badge>
+                                    )}
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => navigate("/dashboard")}
+                                    variant="outline"
+                                    className="border-gray-600 hover:bg-gray-700"
+                                >
+                                    Dashboard
+                                </Button>
+                                <Button
+                                    onClick={toggleFollow}
+                                    disabled={isToggling}
+                                    variant={isFollowing ? "destructive" : "default"}
+                                >
+                                    {isToggling ? (
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    ) : null}
+                                    {isToggling ? "Processing" : (isFollowing ? "Unfollow" : "Follow")}
+                                </Button>
+                            </div>
                         </div>
-                    )}
-                </div>
+
+                        {/* Follow Stats */}
+                        <div className="flex items-center gap-8 mt-2">
+                            <div className="text-center">
+                                <p className="text-2xl font-bold">{followersData?.count || 0}</p>
+                                <p className="text-sm text-gray-400">Followers</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold">{followingData?.count || 0}</p>
+                                <p className="text-sm text-gray-400">Following</p>
+                            </div>
+                        </div>
+
+                        {/* Bio */}
+                        {profile?.bio && (
+                            <p className="mt-6 text-gray-300 whitespace-pre-line leading-relaxed">
+                                {profile.bio}
+                            </p>
+                        )}
+
+                        {/* Profile Details */}
+                        <div className="mt-6 space-y-3">
+                            {profile?.department && profile?.graduationYear && (
+                                <div className="flex items-center text-gray-400">
+                                    <GraduationCap className="w-5 h-5 mr-3" />
+                                    <span>{profile.department} • Class of {profile.graduationYear}</span>
+                                </div>
+                            )}
+                            {profile?.minor && (
+                                <div className="flex items-center text-gray-400">
+                                    <Book className="w-5 h-5 mr-3" />
+                                    <span>Minor in {profile.minor}</span>
+                                </div>
+                            )}
+                            {profile?.linkedin && (
+                                <div className="flex items-center text-gray-400">
+                                    <LinkIcon className="w-5 h-5 mr-3" />
+                                    <a
+                                        href={profile.linkedin}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:text-blue-400 transition-colors"
+                                    >
+                                        LinkedIn Profile
+                                    </a>
+                                </div>
+                            )}
+                            {profile?.github && (
+                                <div className="flex items-center text-gray-400">
+                                    <LinkIcon className="w-5 h-5 mr-3" />
+                                    <a
+                                        href={`https://github.com/${profile.github}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:text-blue-400 transition-colors"
+                                    >
+                                        GitHub: @{profile.github}
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Posts Section */}
+                <Card className="bg-gray-800 border-gray-700">
+                    <CardHeader>
+                        <CardTitle className="text-xl">Posts</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {posts.length === 0 ? (
+                            <div className="text-center py-8">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-700 mb-4">
+                                    <Book className="h-8 w-8 text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-300 mb-2">No posts yet</h3>
+                                <p className="text-gray-400">This user hasn't shared any posts.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {posts.map((post) => (
+                                    <div key={post.id}>
+                                        <Post post={post} showFollowButton={false} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Right Section - Platform Stats */}
-            <div className="w-1/3 bg-gray-800 rounded-lg p-6 h-screen sticky top-0 overflow-y-auto">
-                <h3 className="text-xl font-bold mt-6 mb-4">Platform Stats</h3>
+            <div className="w-1/3">
+                <Card className="bg-gray-800 border-gray-700 h-[calc(100vh-4rem)] sticky top-8">
+                    <CardHeader>
+                        <CardTitle className="text-xl">Platform Stats</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-12rem)] pr-2">
+                            {/* LeetCode Stats */}
+                            {profile?.leetcode && leetCodeStats && (
+                                <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                                        <span className="text-orange-400">LeetCode</span>
+                                        <Badge variant="outline" className="text-xs">
+                                            @{profile.leetcode}
+                                        </Badge>
+                                    </h4>
+                                    <div className="w-full overflow-hidden rounded">
+                                        <img
+                                            src={`data:image/svg+xml;utf8,${encodeURIComponent(leetCodeStats)}`}
+                                            alt="LeetCode Stats"
+                                            className="w-full object-contain"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                <div className="space-y-6">
-                    {/* LeetCode Stats */}
-                    {profile?.leetcode && leetCodeStats && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                            <h4 className="font-bold mb-2">LeetCode</h4>
-                            <div
-                                className="w-full overflow-hidden"
-                                style={{
-                                    aspectRatio: '500 / 200',
-                                    height: 'auto'
-                                }}
-                            >
-                                <img
-                                    src={`data:image/svg+xml;utf8,${encodeURIComponent(leetCodeStats)}`}
-                                    alt="LeetCode Stats"
-                                    className="object-contain rounded-lg"
-                                />
-                            </div>
-                        </div>
-                    )}
+                            {/* GeeksforGeeks Stats */}
+                            {profile?.geekforgeeks && (
+                                <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                                        <span className="text-green-400">GeeksforGeeks</span>
+                                        <Badge variant="outline" className="text-xs">
+                                            @{profile.geekforgeeks}
+                                        </Badge>
+                                    </h4>
+                                    <img
+                                        src={`https://gfgstatscard.vercel.app/${profile.geekforgeeks}`}
+                                        alt="GeeksforGeeks Stats"
+                                        className="w-full object-contain rounded"
+                                    />
+                                </div>
+                            )}
 
-                    {/* GeeksforGeeks Stats */}
-                    {profile?.geekforgeeks && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                            <h4 className="font-bold mb-2">GeeksforGeeks</h4>
-                            <img
-                                src={`https://gfgstatscard.vercel.app/${profile.geekforgeeks}`}
-                                alt="GeeksforGeeks Stats"
-                                className="w-full h-50 object-cover"
-                            />
-                        </div>
-                    )}
+                            {/* Codeforces Stats */}
+                            {profile?.codeforces && (
+                                <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                                        <span className="text-blue-400">Codeforces</span>
+                                        <Badge variant="outline" className="text-xs">
+                                            @{profile.codeforces}
+                                        </Badge>
+                                    </h4>
+                                    <img
+                                        src={`https://codeforces-readme-stats.vercel.app/api/card?username=${profile.codeforces}`}
+                                        alt="Codeforces Stats"
+                                        className="w-full object-contain rounded"
+                                    />
+                                </div>
+                            )}
 
-                    {/* Codeforces Stats */}
-                    {profile?.codeforces && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                            <h4 className="font-bold mb-2">Codeforces</h4>
-                            <img
-                                src={`https://codeforces-readme-stats.vercel.app/api/card?username=${profile.codeforces}`}
-                                alt="Codeforces Stats"
-                                className="w-full h-50 object-cover"
-                            />
+                            {/* GitHub Stats */}
+                            {profile?.github && (
+                                <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                                        <span className="text-gray-300">GitHub</span>
+                                        <Badge variant="outline" className="text-xs">
+                                            @{profile.github}
+                                        </Badge>
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <img
+                                            src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&hide_border=true`}
+                                            alt="GitHub Stats"
+                                            className="w-full rounded"
+                                        />
+                                        <img
+                                            src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&hide_border=true`}
+                                            alt="Top Languages"
+                                            className="w-full rounded"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )}
-
-                    {/* GitHub Stats */}
-                    {profile?.github && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                            <h4 className="font-bold mb-2">GitHub</h4>
-                            <div className="space-y-4">
-                                <img
-                                    src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&card_width=300`}
-                                    alt="GitHub Stats"
-                                    className="w-full object-contain border-none"
-                                />
-                                <img
-                                    src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&card_width=400`}
-                                    alt="Top Languages"
-                                    className="w-full object-contain border-none"
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

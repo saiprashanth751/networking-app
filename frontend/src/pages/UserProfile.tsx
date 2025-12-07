@@ -4,6 +4,7 @@ import { Post } from '../components/Post';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { FollowList } from '../components/FollowList';
+import { Button } from "@/components/ui/button";
 import MessageBox from './MessageBox';
 
 // ✅ Import React Query hooks
@@ -58,12 +59,12 @@ const ProfilePage = () => {
             <div className="flex flex-col items-center justify-center h-screen bg-gray-900">
                 <div className="text-center">
                     <p className="text-red-500 text-lg mb-4">Failed to load profile</p>
-                    <button 
+                    <Button 
                         onClick={() => window.location.reload()}
                         className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
                     >
                         Retry
-                    </button>
+                    </Button>
                 </div>
             </div>
         );
@@ -104,19 +105,19 @@ const ProfilePage = () => {
                             </div>
                         </div>
                         <div className="flex gap-4">
-                            <button
+                            <Button
                                 onClick={() => navigate("/dashboard")}
                                 className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg flex items-center"
                             >
                                 <ArrowLeft className="w-5 h-5 mr-2" />
                                 Dashboard
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => navigate("/updateProfile")}
                                 className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
                             >
                                 Edit Profile
-                            </button>
+                            </Button>
                         </div>
                     </div>
 

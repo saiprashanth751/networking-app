@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { useCreatePost } from '@/hooks/mutations/post';
 import { CreatePostInput, PostLabel } from '@/types/types';
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
-const labelsList : PostLabel[] = [
+const labelsList: PostLabel[] = [
     "Achievements",
     "Study Resources",
     "Collaboration Requests",
@@ -14,29 +19,18 @@ const labelsList : PostLabel[] = [
     "Contribution",
 ]
 
-function Label({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                selected ? "bg-blue-500 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-        >
-            {label}
-        </button>
-    );
-}
-
 function LabelSelector({ selectedLabels, onLabelClick }: { selectedLabels: PostLabel[]; onLabelClick: (label: PostLabel) => void }) {
     return (
         <div className="flex flex-wrap gap-2 mb-4">
             {labelsList.map((label) => (
-                <Label
+                <Badge
                     key={label}
-                    label={label}
-                    selected={selectedLabels.includes(label)}
+                    variant={selectedLabels.includes(label) ? "default" : "outline"}
+                    className="cursor-pointer px-3 py-1 text-sm hover:bg-primary/80 transition-colors"
                     onClick={() => onLabelClick(label)}
-                />
+                >
+                    {label}
+                </Badge>
             ))}
         </div>
     );
@@ -48,9 +42,9 @@ export function CreatePost() {
     const [description, setDescription] = useState('');
     const [labels, setLabels] = useState<PostLabel[]>([]);
     const [photos, setPhotos] = useState<File[]>([]);
-    const [links, setLinks] = useState<string[]>([]);
+    const [links, setLinks] = useState<string[]>(['']); // Start with one empty link
 
-    //  Use the mutation hook
+    // Use the mutation hook
     const createPostMutation = useCreatePost();
 
     const handleLabelClick = (label: PostLabel) => {
@@ -58,6 +52,23 @@ export function CreatePost() {
             setLabels(labels.filter((l) => l !== label));
         } else {
             setLabels([...labels, label]);
+        }
+    };
+
+    const handleLinkChange = (index: number, value: string) => {
+        const newLinks = [...links];
+        newLinks[index] = value;
+        setLinks(newLinks);
+    };
+
+    const addLinkField = () => {
+        setLinks([...links, '']);
+    };
+
+    const removeLinkField = (index: number) => {
+        if (links.length > 1) {
+            const newLinks = links.filter((_, i) => i !== index);
+            setLinks(newLinks);
         }
     };
 
@@ -76,7 +87,7 @@ export function CreatePost() {
             photos, // File array
         };
 
-        // ✅ Use mutation - it handles success/error automatically
+        // Use mutation - it handles success/error automatically
         createPostMutation.mutate(postData, {
             onSuccess: () => {
                 // Reset form after successful post
@@ -85,7 +96,7 @@ export function CreatePost() {
                 setDescription('');
                 setLabels([]);
                 setPhotos([]);
-                setLinks([]);
+                setLinks(['']);
             },
             // Error handling is already done globally in queryClient.ts
             // But you can add custom error handling here if needed
@@ -95,84 +106,124 @@ export function CreatePost() {
     return (
         <div className="bg-gray-900 text-white p-4 rounded-lg shadow-md mb-6">
             {!isFormVisible ? (
-                <input
+                <Input
                     type="text"
                     placeholder="What's on your mind?"
                     onClick={() => setIsFormVisible(true)}
-                    className="w-full p-2 mb-4 border border-gray-700 rounded bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="cursor-pointer"
                 />
             ) : (
-                <div className="transition-all duration-300 ease-in-out">
-                    <h3 className="text-xl font-bold mb-4">Create Post</h3>
-                    
-                    <input
-                        type="text"
-                        placeholder="Title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full p-2 mb-4 border border-gray-700 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    
-                    <textarea
-                        placeholder="Description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full p-2 mb-4 border border-gray-700 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={4}
-                    />
-                    
-                    <LabelSelector selectedLabels={labels} onLabelClick={handleLabelClick} />
-                    
-                    <div className="mb-4">
-                        <label className="block mb-2 text-sm font-medium">Photos (optional)</label>
-                        <input
+                <div className="transition-all duration-300 ease-in-out space-y-4">
+                    <h3 className="text-xl font-bold">Create Post</h3>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="title">Title</Label>
+                        <Input
+                            id="title"
+                            type="text"
+                            placeholder="Enter post title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="bg-gray-800 border-gray-700 text-white"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                            id="description"
+                            placeholder="What would you like to share?"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="bg-gray-800 border-gray-700 text-white resize-none"
+                            rows={4}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Labels (optional)</Label>
+                        <LabelSelector selectedLabels={labels} onLabelClick={handleLabelClick} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="photos">Photos (optional)</Label>
+                        <Input
+                            id="photos"
                             type="file"
                             multiple
                             accept="image/*"
                             onChange={(e) => setPhotos(Array.from(e.target.files || []))}
-                            className="w-full p-2 border border-gray-700 rounded bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="bg-gray-800 border-gray-700 text-white file:text-white file:bg-gray-700 file:border-0 file:mr-4"
                         />
                         {photos.length > 0 && (
-                            <p className="text-sm text-gray-400 mt-1">
+                            <p className="text-sm text-gray-400">
                                 {photos.length} file{photos.length > 1 ? 's' : ''} selected
                             </p>
                         )}
                     </div>
-                    
-                    <div className="mb-4">
-                        <label className="block mb-2 text-sm font-medium">Links (optional)</label>
-                        <input
-                            type="text"
-                            placeholder="Add links separated by commas"
-                            value={links.join(', ')}
-                            onChange={(e) => setLinks(e.target.value.split(',').map(link => link.trim()))}
-                            className="w-full p-2 border border-gray-700 rounded bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label>Links (optional)</Label>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={addLinkField}
+                                className="text-xs"
+                            >
+                                Add Link
+                            </Button>
+                        </div>
+                        <div className="space-y-2">
+                            {links.map((link, index) => (
+                                <div key={index} className="flex gap-2">
+                                    <Input
+                                        type="url"
+                                        placeholder="https://example.com"
+                                        value={link}
+                                        onChange={(e) => handleLinkChange(index, e.target.value)}
+                                        className="bg-gray-800 border-gray-700 text-white"
+                                    />
+                                    {links.length > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeLinkField(index)}
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                                        >
+                                            Remove
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    
-                    <div className="flex justify-end gap-2">
-                        <button
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
                             onClick={() => {
                                 setIsFormVisible(false);
-                                // Reset form on cancel
                                 setTitle('');
                                 setDescription('');
                                 setLabels([]);
                                 setPhotos([]);
-                                setLinks([]);
+                                setLinks(['']);
                             }}
                             disabled={createPostMutation.isPending}
-                            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            type="button"
                             onClick={handleSubmit}
                             disabled={createPostMutation.isPending}
-                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
                         >
                             {createPostMutation.isPending ? 'Posting...' : 'Post'}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}

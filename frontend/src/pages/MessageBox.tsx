@@ -2,7 +2,27 @@ import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Send,
+  X,
+  User,
+  Wifi,
+  WifiOff,
+  Clock,
+  Paperclip,
+  MessageSquare,
+} from "lucide-react";
 
 interface Message {
   id: string;
@@ -16,6 +36,9 @@ interface User {
   id: string;
   firstName: string;
   lastName: string;
+  profile?: {
+    profilePic?: string;
+  };
 }
 
 interface MessageBoxProps {
@@ -30,6 +53,14 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [receiver, setReceiver] = useState<User | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Format timestamp
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   useEffect(() => {
     const fetchMessagesAndUser = async () => {
       try {
@@ -39,7 +70,6 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           return;
         }
 
-
         const decoded = jwtDecode<{ id: string }>(token);
         if (decoded?.id) {
           setCurrentUserId(decoded.id);
@@ -47,13 +77,11 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
           console.error("Failed to decode token or missing user ID");
         }
 
-
         const messagesResponse = await axios.get(
           `${import.meta.env.VITE_BASE_API_URL}/message/${receiverId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(messagesResponse.data.messages);
-
 
         const userResponse = await axios.get(
           `${import.meta.env.VITE_BASE_API_URL}/user/userProfile/?id=${receiverId}`,
@@ -89,6 +117,12 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
       setMessages((prev) => [...prev, message]);
     });
 
+    newSocket.on("typing", ({ userId, isTyping: typingStatus }) => {
+      if (userId === receiverId) {
+        setIsTyping(typingStatus);
+      }
+    });
+
     newSocket.on("connect_error", (error) => {
       console.error("WebSocket error:", error);
       setIsConnected(false);
@@ -104,6 +138,16 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
     };
   }, [receiverId]);
 
+  const handleTyping = () => {
+    if (socket && receiverId) {
+      socket.emit("typing", { receiverId, isTyping: true });
+      const timeout = setTimeout(() => {
+        socket.emit("typing", { receiverId, isTyping: false });
+      }, 1000);
+      return () => clearTimeout(timeout);
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !socket || !receiverId || !currentUserId) return;
 
@@ -118,77 +162,158 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
 
       setMessages((prev) => [...prev, tempMessage]);
       setNewMessage("");
+      socket.emit("typing", { receiverId, isTyping: false });
       socket.emit("sendMessage", { receiverId, content: newMessage });
     } catch (error) {
       console.error("Error sending message:", error);
     }
   };
 
-  if (!currentUserId) return <div>Loading...</div>;
+  const getInitials = (user: User | null) => {
+    if (!user) return "?";
+    return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  if (!currentUserId) {
+    return (
+      <Card className="bg-gray-800 border-gray-700 text-white h-full">
+        <CardContent className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Clock className="h-12 w-12 mx-auto mb-3 animate-spin text-gray-400" />
+            <p className="text-gray-300">Loading chat...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-4 bg-gray-800 p-4 rounded-lg shadow-md">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Chat</h1>
-          {/* Display receiver's name */}
-          {receiver && (
-            <p className="text-lg text-gray-300 mt-2">
-              Chatting with:{" "}
-              <span className="font-semibold text-blue-400">
-                {receiver.firstName} {receiver.lastName}
-              </span>
-            </p>
-          )}
-        </div>
-        <button
-          onClick={onClose}
-          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
-        >
-          Close
-        </button>
-      </div>
-
-      <div className="flex-1 border border-gray-300 rounded-lg p-4 overflow-y-auto bg-gray-50">
-        {messages.length > 0 ? (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"
-                } mb-4`}
-            >
-              <div
-                className={`max-w-[70%] p-3 rounded-lg ${msg.senderId === currentUserId
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-black"
-                  }`}
-              >
-                {msg.content}
+    <Card className="bg-gray-800 border-gray-700 text-white h-full flex flex-col">
+      {/* Header */}
+      <CardHeader className="pb-4 border-b border-gray-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border-2 border-gray-600">
+              <AvatarImage 
+                src={receiver?.profile?.profilePic} 
+                alt={`${receiver?.firstName} ${receiver?.lastName}`}
+              />
+              <AvatarFallback className="bg-gray-700 text-gray-300">
+                {getInitials(receiver)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-lg font-semibold">
+                {receiver?.firstName} {receiver?.lastName}
+              </h2>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={isConnected ? "default" : "destructive"}
+                  className="text-xs"
+                >
+                  {isConnected ? (
+                    <Wifi className="h-3 w-3 mr-1" />
+                  ) : (
+                    <WifiOff className="h-3 w-3 mr-1" />
+                  )}
+                  {isConnected ? "Connected" : "Disconnected"}
+                </Badge>
+                {isTyping && (
+                  <Badge variant="outline" className="text-xs text-gray-300">
+                    typing...
+                  </Badge>
+                )}
               </div>
             </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-500">No messages yet</p>
-        )}
-      </div>
+          </div>
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className="text-gray-400 hover:text-white hover:bg-gray-700"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      </CardHeader>
 
-      <div className="mt-4 flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-black"
-          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-        />
-        <button
-          onClick={sendMessage}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-          disabled={!isConnected}
-        >
-          {isConnected ? "Send" : "Connecting..."}
-        </button>
-      </div>
-    </div>
+      {/* Messages */}
+      <CardContent className="flex-1 p-0">
+        <ScrollArea className="h-[400px] p-4">
+          {messages.length > 0 ? (
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}
+                >
+                  <div className="max-w-[70%]">
+                    <Card
+                      className={`${msg.senderId === currentUserId
+                          ? "bg-blue-600 border-blue-500"
+                          : "bg-gray-700 border-gray-600"
+                        } border`}
+                    >
+                      <CardContent className="p-3">
+                        <p className="text-white">{msg.content}</p>
+                        <div className="flex justify-end mt-1">
+                          <span className={`text-xs ${msg.senderId === currentUserId ? "text-blue-200" : "text-gray-400"}`}>
+                            {formatTime(msg.timestamp)}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-700 mb-4">
+                <MessageSquare className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-300 mb-2">
+                No messages yet
+              </h3>
+              <p className="text-gray-400 text-sm">
+                Start a conversation with {receiver?.firstName}
+              </p>
+            </div>
+          )}
+        </ScrollArea>
+      </CardContent>
+
+      {/* Input Area */}
+      <CardFooter className="pt-4 border-t border-gray-700">
+        <div className="flex w-full gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-gray-400 hover:text-white"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+          <Input
+            type="text"
+            value={newMessage}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              handleTyping();
+            }}
+            placeholder="Type your message..."
+            className="flex-1 bg-gray-700 border-gray-600 text-white focus:border-blue-500"
+            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+          />
+          <Button
+            onClick={sendMessage}
+            disabled={!isConnected || !newMessage.trim()}
+            size="icon"
+            className="shrink-0"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

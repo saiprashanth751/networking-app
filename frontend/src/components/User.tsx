@@ -1,7 +1,14 @@
-import { Button } from "./Button";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useFollowStatus } from "@/hooks/queries/follow";
 import { useToggleFollow } from "@/hooks/mutations/follow";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User as UserIcon } from "lucide-react";
 
 export function User({ user }: { user: any }) {
   // ✅ Fetch follow status using React Query
@@ -13,40 +20,57 @@ export function User({ user }: { user: any }) {
     followStatus?.following || false
   );
 
-  const profileUrl = user?.profile?.profilePic || 
+  const profileUrl = user?.profile?.profilePic ||
     "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
+  };
+
   return (
-    <div className="flex items-center justify-between bg-gray-800 p-2 rounded-lg shadow-md w-full max-w-xl m-auto text-white">
-      {/* Left Section: Profile Image & Info */}
-      <Link to={`/profile/${user.id}`}>
-        <div className="flex items-center gap-x-4">
-          <img
-            alt="Profile"
-            src={profileUrl}
-            className="w-12 h-12 flex-none rounded-full bg-gray-700 object-cover"
-          />
-          <div>
-            <p className="text-sm font-semibold text-white">
-              {user.firstName} {user.lastName}
-            </p>
-            {user.department && (
-              <p className="text-xs text-gray-400">{user.department}</p>
-            )}
+    <Card className="bg-gray-800 border-gray-700 text-white hover:bg-gray-750 transition-colors">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          {/* Left Section: Profile Image & Info */}
+          <Link 
+            to={`/profile/${user.id}`}
+            className="flex items-center gap-x-4 flex-1 min-w-0"
+          >
+            <Avatar className="h-12 w-12 flex-none border-2 border-gray-700">
+              <AvatarImage 
+                src={profileUrl} 
+                alt={`${user.firstName} ${user.lastName}`}
+                className="object-cover"
+              />
+              <AvatarFallback className="bg-gray-700 text-gray-300">
+                {getUserInitials() || <UserIcon className="h-5 w-5" />}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              {user.department && (
+                <p className="text-xs text-gray-400 truncate">{user.department}</p>
+              )}
+            </div>
+          </Link>
+
+          {/* Right Section: Follow Button */}
+          <div className="ml-4">
+            <Button
+              onClick={toggleFollow}
+              disabled={isToggling}
+              variant={followStatus?.following ? "destructive" : "default"}
+              size="sm"
+              className="whitespace-nowrap"
+            >
+              {isToggling ? "..." : (followStatus?.following ? "Unfollow" : "Follow")}
+            </Button>
           </div>
         </div>
-      </Link>
-
-      {/* Right Section: Follow Button */}
-      <div className="hidden sm:flex flex-col items-end">
-        <div className="flex items-center gap-x-2 mt-1 px-2">
-          <Button
-            onClick={toggleFollow}
-            label={isToggling ? "..." : (followStatus?.following ? "Unfollow" : "Follow")}
-            disabled={isToggling}
-          />
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -3,6 +3,16 @@ import { PostLabel } from '@/types/types';
 import { useCurrentUser } from "@/hooks/queries/user";
 import { useFollowStatus } from "@/hooks/queries/follow";
 import { useToggleFollow } from "@/hooks/mutations/follow";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, ExternalLink, Heart, MessageCircle, Share2 } from "lucide-react";
 
 interface PostProps {
     post: {
@@ -27,7 +37,7 @@ interface PostProps {
 }
 
 export function Post({ post, showFollowButton = false }: PostProps) {
-    const profileUrl = post?.user?.profile?.profilePic || 
+    const profileUrl = post?.user?.profile?.profilePic ||
         "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
     // ✅ Get current logged-in user
@@ -37,8 +47,8 @@ export function Post({ post, showFollowButton = false }: PostProps) {
     // ✅ Get follow status for this post's author
     const { data: followStatus } = useFollowStatus(
         post.user.id,
-        { 
-            enabled: showFollowButton && !!loggedInUserId && post.user.id !== loggedInUserId 
+        {
+            enabled: showFollowButton && !!loggedInUserId && post.user.id !== loggedInUserId
         }
     );
 
@@ -49,116 +59,175 @@ export function Post({ post, showFollowButton = false }: PostProps) {
     );
 
     // Determine if we should show the follow button
-    const shouldShowFollowButton = showFollowButton && 
-        loggedInUserId && 
-        post.user.id && 
+    const shouldShowFollowButton = showFollowButton &&
+        loggedInUserId &&
+        post.user.id &&
         post.user.id !== loggedInUserId;
 
+    // Get user initials for avatar fallback
+    const getUserInitials = () => {
+        return `${post?.user?.firstName?.[0] || ''}${post?.user?.lastName?.[0] || ''}`.toUpperCase();
+    };
+
+    // Format date nicely
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+        if (diffInHours < 1) {
+            return `${Math.floor(diffInHours * 60)}m ago`;
+        } else if (diffInHours < 24) {
+            return `${Math.floor(diffInHours)}h ago`;
+        } else if (diffInHours < 168) {
+            return `${Math.floor(diffInHours / 24)}d ago`;
+        } else {
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+    };
+
     return (
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
-            {/* User Info */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                    <img
-                        src={profileUrl}
-                        alt="Profile"
-                        className="w-10 h-10 rounded-full"
-                    />
-                    <Link to={`/profile/${post?.user?.id}`}>
+        <Card className="bg-gray-800 border-gray-700 text-white mb-6">
+            <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <Avatar className="h-12 w-12 border-2 border-gray-700">
+                            <AvatarImage 
+                                src={profileUrl} 
+                                alt={`${post?.user?.firstName} ${post?.user?.lastName}`}
+                            />
+                            <AvatarFallback className="bg-gray-700 text-gray-300">
+                                {getUserInitials()}
+                            </AvatarFallback>
+                        </Avatar>
                         <div>
-                            <p className="font-semibold text-white">
-                                {post?.user?.firstName} {post?.user?.lastName}
-                            </p>
-                            <p className="text-sm text-gray-400">{post?.user?.department}</p>
+                            <Link to={`/profile/${post?.user?.id}`} className="hover:opacity-80 transition-opacity">
+                                <p className="font-semibold text-lg">
+                                    {post?.user?.firstName} {post?.user?.lastName}
+                                </p>
+                            </Link>
+                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                                {post?.user?.department && (
+                                    <>
+                                        <span>{post?.user?.department}</span>
+                                        <span>•</span>
+                                    </>
+                                )}
+                                <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{formatDate(post?.createdAt)}</span>
+                                </div>
+                            </div>
                         </div>
-                    </Link>
-                </div>
-                <div className="flex items-center space-x-4">
-                    <p className="text-sm text-gray-400">
-                        {new Date(post?.createdAt).toLocaleString()}
-                    </p>
-                    {/* ✅ Simplified follow button with React Query */}
+                    </div>
+                    
+                    {/* Follow Button */}
                     {shouldShowFollowButton && (
-                        <button
+                        <Button
                             onClick={toggleFollow}
                             disabled={isToggling}
-                            className={`${
-                                followStatus?.following
-                                    ? "bg-red-500 hover:bg-red-600"
-                                    : "bg-blue-500 hover:bg-blue-600"
-                            } text-white py-1 px-3 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+                            variant={followStatus?.following ? "destructive" : "default"}
+                            size="sm"
+                            className="ml-4"
                         >
                             {isToggling ? "..." : (followStatus?.following ? "Unfollow" : "Follow")}
-                        </button>
+                        </Button>
                     )}
                 </div>
-            </div>
+            </CardHeader>
 
-            {/* Labels */}
-            {post?.labels?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                    {post.labels.map((label: string, index: number) => (
-                        <span key={index} className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full">
-                            {label}
-                        </span>
-                    ))}
+            <CardContent className="space-y-4">
+                {/* Labels */}
+                {post?.labels?.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {post.labels.map((label: string, index: number) => (
+                            <Badge 
+                                key={index} 
+                                variant="secondary"
+                                className="bg-blue-900/30 text-blue-300 hover:bg-blue-900/40 border-blue-700"
+                            >
+                                {label}
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+
+                {/* Title and Description */}
+                <div className="space-y-3">
+                    <h3 className="text-xl font-bold text-gray-100">{post?.title}</h3>
+                    <p className="text-gray-300 whitespace-pre-line leading-relaxed">{post?.description}</p>
                 </div>
-            )}
 
-            {/* Post Content */}
-            <p className="mt-4 text-gray-300 font-bold">{post?.title}</p>
-            <p className="mt-2 text-gray-300">{post?.description}</p>
+                {/* Links */}
+                {post?.links?.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                        {post.links.map((link: string, index: number) => (
+                            <a
+                                key={index}
+                                href={link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 hover:underline transition-colors group"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                                <span className="truncate text-sm">{link}</span>
+                            </a>
+                        ))}
+                    </div>
+                )}
 
-            {/* Links */}
-            {post?.links?.length > 0 && (
-                <div className="mt-4 space-y-2">
-                    {post.links.map((link: string, index: number) => (
-                        <a
-                            key={index}
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 break-words block"
-                        >
-                            🔗 {link}
-                        </a>
-                    ))}
+                {/* Photos */}
+                {post?.photos?.length > 0 && (
+                    <div className={`grid gap-3 pt-4 ${post.photos.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                        {post.photos.map((photo: string, index: number) => (
+                            <div key={index} className="relative rounded-lg overflow-hidden border border-gray-700">
+                                <img
+                                    src={photo}
+                                    alt={`Post photo ${index + 1}`}
+                                    className="w-full h-auto object-cover"
+                                    onError={(e) => {
+                                        console.error(`Failed to load image: ${photo}`, e);
+                                        (e.target as HTMLImageElement).src = "/default-placeholder.png";
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+
+            <CardFooter className="pt-2 border-t border-gray-700">
+                <div className="flex items-center justify-between w-full">
+                    <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
+                    >
+                        <Heart className="h-4 w-4" />
+                        <span>Like</span>
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
+                    >
+                        <MessageCircle className="h-4 w-4" />
+                        <span>Comment</span>
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700/50"
+                    >
+                        <Share2 className="h-4 w-4" />
+                        <span>Share</span>
+                    </Button>
                 </div>
-            )}
-
-            {/* Photos */}
-            {post?.photos?.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    {post.photos.map((photo: string, index: number) => (
-                        <img
-                            key={index}
-                            src={photo}
-                            alt={`Post photo ${index + 1}`}
-                            className="w-full h-auto rounded-lg"
-                            onError={(e) => {
-                                console.error(`Failed to load image: ${photo}`, e);
-                                (e.target as HTMLImageElement).src = "/default-placeholder.png";
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Engagement Buttons */}
-            <div className="flex items-center justify-between mt-6">
-                <button className="flex items-center space-x-2 text-gray-400 hover:text-blue-500 transition-colors">
-                    <span>👍</span>
-                    <span>Like</span>
-                </button>
-                <button className="flex items-center space-x-2 text-gray-400 hover:text-blue-500 transition-colors">
-                    <span>💬</span>
-                    <span>Comment</span>
-                </button>
-                <button className="flex items-center space-x-2 text-gray-400 hover:text-blue-500 transition-colors">
-                    <span>🔗</span>
-                    <span>Share</span>
-                </button>
-            </div>
-        </div>
+            </CardFooter>
+        </Card>
     );
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { InputBox } from "../components/InputBox";
 import { Heading } from "../components/Heading";
-import { Button } from "../components/Button";
+import { Button } from "../components/ui/button";
 import { useCurrentProfile } from "@/hooks/queries/profile";
 import { useUpdateProfile } from "@/hooks/mutations/profile";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export default function UpdateProfile() {
     const [bio, setBio] = useState("");
@@ -36,7 +37,7 @@ export default function UpdateProfile() {
     const handleUpdateProfile = () => {
         // Build update object with only changed fields
         const updates: any = {};
-        
+
         if (bio.trim() !== "") updates.bio = bio;
         if (linkedin.trim() !== "") updates.linkedin = linkedin;
         if (github.trim() !== "") updates.github = github;
@@ -62,7 +63,7 @@ export default function UpdateProfile() {
             <div className="min-h-screen flex items-center justify-center bg-gray-200">
                 <div className="text-center">
                     <p className="text-red-500 mb-4">Failed to load profile data</p>
-                    <Button onClick={() => window.location.reload()} label="Retry" />
+                    <Button onClick={() => window.location.reload()}>Retry</Button>
                 </div>
             </div>
         );
@@ -85,6 +86,15 @@ export default function UpdateProfile() {
                         onChange={(e) => setProfilePic(e.target.files?.[0] || null)}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
+                    <div className="space-y-2">
+                        <Label htmlFor="profile">Profile Picture</Label>
+                        <Input
+                            id="profile"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setProfilePic(e.target.files?.[0] || null)}
+                        ></Input>
+                    </div>
                     {profile?.profilePic && (
                         <div className="mt-2">
                             <p className="text-sm text-gray-500">Current Profile Picture:</p>
@@ -98,50 +108,86 @@ export default function UpdateProfile() {
                 </div>
 
                 <div className="space-y-4">
-                    <InputBox 
-                        onChange={(e) => setBio(e.target.value)} 
-                        label="Bio" 
-                        value={bio}
-                        type="text" 
-                    />
-                    <InputBox 
-                        onChange={(e) => setLinkedin(e.target.value)} 
-                        label="LinkedIn Profile" 
-                        value={linkedin}
-                        type="text" 
-                    />
-                    <InputBox 
-                        onChange={(e) => setGithub(e.target.value)} 
-                        label="GitHub Profile" 
-                        value={github}
-                        type="text" 
-                    />
-                    <InputBox 
-                        onChange={(e) => setLeetcode(e.target.value)} 
-                        label="LeetCode Profile" 
-                        value={leetcode}
-                        type="text" 
-                    />
-                    <InputBox 
-                        onChange={(e) => setCodeforces(e.target.value)} 
-                        label="Codeforces Profile" 
-                        value={codeforces}
-                        type="text" 
-                    />
-                    <InputBox 
-                        onChange={(e) => setGFG(e.target.value)} 
-                        label="GeeksforGeeks Profile" 
-                        value={gfg}
-                        type="text" 
-                    />
+
+
+                    <div className="space-y-2">
+                        <Label htmlFor="bio">Bio</Label>
+                        <Input
+                            id="bio"
+                            type="text"
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
+                        ></Input>
+                    </div>
+
+
+
+                    <div className="space-y-2">
+                        <Label htmlFor="linkedin">LinkedIn Profile</Label>
+                        <Input
+                            id="linkedin"
+                            type="text"
+                            value={linkedin}
+                            onChange={(e) => setLinkedin(e.target.value)}
+                        ></Input>
+                    </div>
+
+
+
+                    <div className="space-y-2">
+                        <Label htmlFor="github">GitHub Profile</Label>
+                        <Input
+                            id="github"
+                            type="text"
+                            value={github}
+                            onChange={(e) => setGithub(e.target.value)}
+                        ></Input>
+                    </div>
+
+
+
+                    <div className="space-y-2">
+                        <Label htmlFor="leetcode">LeetCode Profile</Label>
+                        <Input
+                            id="leetcode"
+                            type="text"
+                            value={leetcode}
+                            onChange={(e) => setLeetcode(e.target.value)}
+                        ></Input>
+                    </div>
+
+
+
+                    <div className="space-y-2">
+                        <Label htmlFor="codeforces">Codeforces Profile</Label>
+                        <Input
+                            id="codeforces"
+                            type="text"
+                            value={codeforces}
+                            onChange={(e) => setCodeforces(e.target.value)}
+                        ></Input>
+                    </div>
+
+
+
+                    <div className="space-y-2">
+                        <Label htmlFor="gfg">GeeksforGeeks Profile</Label>
+                        <Input
+                            id="gfg"
+                            type="text"
+                            value={gfg}
+                            onChange={(e) => setGFG(e.target.value)}
+                        ></Input>
+                    </div>
                 </div>
 
                 <div className="mt-6 flex justify-center">
-                    <Button 
+                    <Button
                         onClick={handleUpdateProfile}
-                        label={updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
                         disabled={updateProfileMutation.isPending}
-                    />
+                    >
+                        {updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
+                    </Button>
                 </div>
             </div>
         </div>
