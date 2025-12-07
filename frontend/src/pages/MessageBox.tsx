@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
@@ -13,16 +13,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   Send,
   X,
   User,
   Wifi,
   WifiOff,
-  Clock,
+  Loader2,
   Paperclip,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -32,7 +35,7 @@ interface Message {
   timestamp: string;
 }
 
-interface User {
+interface UserType {
   id: string;
   firstName: string;
   lastName: string;
@@ -52,17 +55,34 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [receiver, setReceiver] = useState<User | null>(null);
+  const [receiver, setReceiver] = useState<UserType | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Format timestamp
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
   };
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   useEffect(() => {
     const fetchMessagesAndUser = async () => {
+      setIsLoading(true);
       try {
         const token = localStorage.getItem("token");
         if (!token) {
@@ -90,6 +110,8 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
         setReceiver(userResponse.data.user);
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -169,18 +191,31 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
     }
   };
 
-  const getInitials = (user: User | null) => {
+  const getInitials = (user: UserType | null) => {
     if (!user) return "?";
     return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
   };
 
+  if (isLoading) {
+    return (
+      <Card className="border-border bg-card h-full flex flex-col">
+        <CardContent className="flex items-center justify-center flex-1">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 mx-auto mb-3 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading chat...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!currentUserId) {
     return (
-      <Card className="bg-gray-800 border-gray-700 text-white h-full">
-        <CardContent className="flex items-center justify-center h-64">
+      <Card className="border-border bg-card h-full flex flex-col">
+        <CardContent className="flex items-center justify-center flex-1">
           <div className="text-center">
-            <Clock className="h-12 w-12 mx-auto mb-3 animate-spin text-gray-400" />
-            <p className="text-gray-300">Loading chat...</p>
+            <User className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+            <p className="text-sm text-muted-foreground">Unable to load user</p>
           </div>
         </CardContent>
       </Card>
@@ -188,108 +223,146 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
   }
 
   return (
-    <Card className="bg-gray-800 border-gray-700 text-white h-full flex flex-col">
+    <Card className="border-border bg-card h-full flex flex-col shadow-lg">
       {/* Header */}
-      <CardHeader className="pb-4 border-b border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-gray-600">
-              <AvatarImage 
-                src={receiver?.profile?.profilePic} 
-                alt={`${receiver?.firstName} ${receiver?.lastName}`}
-              />
-              <AvatarFallback className="bg-gray-700 text-gray-300">
-                {getInitials(receiver)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-lg font-semibold">
-                {receiver?.firstName} {receiver?.lastName}
-              </h2>
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant={isConnected ? "default" : "destructive"}
-                  className="text-xs"
-                >
-                  {isConnected ? (
-                    <Wifi className="h-3 w-3 mr-1" />
-                  ) : (
-                    <WifiOff className="h-3 w-3 mr-1" />
-                  )}
-                  {isConnected ? "Connected" : "Disconnected"}
-                </Badge>
-                {isTyping && (
-                  <Badge variant="outline" className="text-xs text-gray-300">
-                    typing...
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
+      <CardHeader className="pb-3 border-b">
+        <div className="flex items-center gap-3">
+          {/* Back Button - Mobile */}
           <Button
             onClick={onClose}
             variant="ghost"
             size="icon"
-            className="text-gray-400 hover:text-white hover:bg-gray-700"
+            className="sm:hidden shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
+          {/* User Info */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Avatar className="h-10 w-10 border-2 border-border">
+              <AvatarImage 
+                src={receiver?.profile?.profilePic} 
+                alt={`${receiver?.firstName} ${receiver?.lastName}`}
+              />
+              <AvatarFallback className="bg-muted text-muted-foreground">
+                {getInitials(receiver)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold truncate">
+                {receiver?.firstName} {receiver?.lastName}
+              </h3>
+              <div className="flex items-center gap-2 text-xs">
+                <Badge
+                  variant={isConnected ? "default" : "destructive"}
+                  className="h-5 px-1.5"
+                >
+                  {isConnected ? (
+                    <Wifi className="h-3 w-3" />
+                  ) : (
+                    <WifiOff className="h-3 w-3" />
+                  )}
+                </Badge>
+                {isTyping && (
+                  <span className="text-muted-foreground animate-pulse">
+                    typing...
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Close Button - Desktop */}
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className="hidden sm:flex shrink-0"
           >
             <X className="h-5 w-5" />
           </Button>
         </div>
       </CardHeader>
 
-      {/* Messages */}
-      <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-[400px] p-4">
-          {messages.length > 0 ? (
-            <div className="space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}
-                >
-                  <div className="max-w-[70%]">
-                    <Card
-                      className={`${msg.senderId === currentUserId
-                          ? "bg-blue-600 border-blue-500"
-                          : "bg-gray-700 border-gray-600"
-                        } border`}
-                    >
-                      <CardContent className="p-3">
-                        <p className="text-white">{msg.content}</p>
-                        <div className="flex justify-end mt-1">
-                          <span className={`text-xs ${msg.senderId === currentUserId ? "text-blue-200" : "text-gray-400"}`}>
+      {/* Messages Area */}
+      <CardContent className="flex-1 p-0 overflow-hidden">
+        <ScrollArea className="h-full px-4">
+          <div className="py-4 space-y-4">
+            {messages.length > 0 ? (
+              <>
+                {messages.map((msg, index) => {
+                  const isOwnMessage = msg.senderId === currentUserId;
+                  const showTimestamp = index === 0 || 
+                    new Date(messages[index - 1].timestamp).getTime() - new Date(msg.timestamp).getTime() > 300000;
+
+                  return (
+                    <div key={msg.id}>
+                      {showTimestamp && (
+                        <div className="flex justify-center my-4">
+                          <Badge variant="outline" className="text-xs">
                             {formatTime(msg.timestamp)}
-                          </span>
+                          </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
+                      )}
+                      <div
+                        className={cn(
+                          "flex gap-2 items-end",
+                          isOwnMessage ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        {!isOwnMessage && (
+                          <Avatar className="h-6 w-6 border">
+                            <AvatarImage src={receiver?.profile?.profilePic} />
+                            <AvatarFallback className="text-[10px]">
+                              {getInitials(receiver)}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div
+                          className={cn(
+                            "max-w-[70%] rounded-2xl px-4 py-2 break-words",
+                            isOwnMessage
+                              ? "bg-primary text-primary-foreground rounded-br-sm"
+                              : "bg-muted text-foreground rounded-bl-sm"
+                          )}
+                        >
+                          <p className="text-sm leading-relaxed">{msg.content}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={scrollRef} />
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground" />
                   </div>
+                  <h4 className="text-base font-medium mb-2">
+                    No messages yet
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Start a conversation with {receiver?.firstName}
+                  </p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-700 mb-4">
-                <MessageSquare className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-300 mb-2">
-                No messages yet
-              </h3>
-              <p className="text-gray-400 text-sm">
-                Start a conversation with {receiver?.firstName}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </ScrollArea>
       </CardContent>
 
+      <Separator />
+
       {/* Input Area */}
-      <CardFooter className="pt-4 border-t border-gray-700">
+      <CardFooter className="p-4">
         <div className="flex w-full gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-400 hover:text-white"
+            className="shrink-0"
+            disabled
           >
             <Paperclip className="h-5 w-5" />
           </Button>
@@ -300,9 +373,10 @@ export default function MessageBox({ receiverId, onClose }: MessageBoxProps) {
               setNewMessage(e.target.value);
               handleTyping();
             }}
-            placeholder="Type your message..."
-            className="flex-1 bg-gray-700 border-gray-600 text-white focus:border-blue-500"
-            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+            placeholder="Type a message..."
+            className="flex-1"
+            onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            disabled={!isConnected}
           />
           <Button
             onClick={sendMessage}
