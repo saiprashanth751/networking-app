@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Image, Link2, X, Sparkles } from "lucide-react";
 import { useCurrentProfile } from '@/hooks/queries/profile';
+import { SPACING, Small, Caption } from "@/components/layout";
 
 const labelsList: PostLabel[] = [
     "Achievements",
@@ -33,7 +34,7 @@ function LabelSelector({
     onLabelClick: (label: PostLabel) => void 
 }) {
     return (
-        <div className="flex flex-wrap gap-2">
+        <div className={`flex flex-wrap ${SPACING.inline.sm}`}>
             {labelsList.map((label) => (
                 <Badge
                     key={label}
@@ -138,11 +139,11 @@ export function CreatePost() {
 
     return (
         <Card className="border-border bg-card shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
+            <CardContent className={SPACING.container.sm}>
                 {!isFormVisible ? (
-                    /* Collapsed State - LinkedIn Style */
-                    <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-border">
+                    /* Collapsed State - Mobile First */
+                    <div className={`flex items-center ${SPACING.inline.sm}`}>
+                        <Avatar className="h-10 w-10 border-2 border-border shrink-0">
                             <AvatarImage 
                                 src={currentProfile?.profilePic} 
                                 alt={currentUser?.firstName}
@@ -155,15 +156,15 @@ export function CreatePost() {
                             onClick={() => setIsFormVisible(true)}
                             className="flex-1 text-left px-4 py-2.5 rounded-full border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all text-sm font-medium"
                         >
-                            Share something with your network...
+                            Share something...
                         </button>
                     </div>
                 ) : (
                     /* Expanded State - Full Form */
-                    <div className="space-y-4 animate-in">
+                    <div className={`${SPACING.stack.md} animate-in`}>
                         {/* Header */}
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border-2 border-border">
+                        <div className={`flex items-center ${SPACING.inline.sm}`}>
+                            <Avatar className="h-10 w-10 border-2 border-border shrink-0">
                                 <AvatarImage 
                                     src={currentProfile?.profilePic} 
                                     alt={currentUser?.firstName}
@@ -172,20 +173,18 @@ export function CreatePost() {
                                     {getUserInitials()}
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-semibold text-foreground">
+                            <div className="flex-1 min-w-0">
+                                <Small className="font-semibold">
                                     {currentUser?.firstName} {currentUser?.lastName}
-                                </h4>
-                                <p className="text-xs text-muted-foreground">
-                                    Create a post
-                                </p>
+                                </Small>
+                                <Caption>Create a post</Caption>
                             </div>
                         </div>
 
                         <Separator />
 
                         {/* Title Input */}
-                        <div className="space-y-2">
+                        <div className={SPACING.stack.sm}>
                             <Label htmlFor="title" className="text-sm font-medium">
                                 Title
                             </Label>
@@ -200,7 +199,7 @@ export function CreatePost() {
                         </div>
 
                         {/* Description Textarea */}
-                        <div className="space-y-2">
+                        <div className={SPACING.stack.sm}>
                             <Label htmlFor="description" className="text-sm font-medium">
                                 Description
                             </Label>
@@ -209,13 +208,13 @@ export function CreatePost() {
                                 placeholder="Share your thoughts, ideas, or updates..."
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="border-border resize-none min-h-[120px] focus-visible:ring-2"
+                                className="border-border resize-none min-h-[100px] md:min-h-[120px] focus-visible:ring-2"
                                 rows={5}
                             />
                         </div>
 
                         {/* Labels */}
-                        <div className="space-y-2">
+                        <div className={SPACING.stack.sm}>
                             <Label className="text-sm font-medium flex items-center gap-2">
                                 <Sparkles className="h-4 w-4 text-primary" />
                                 Categories (optional)
@@ -227,7 +226,7 @@ export function CreatePost() {
                         </div>
 
                         {/* Photo Upload */}
-                        <div className="space-y-2">
+                        <div className={SPACING.stack.sm}>
                             <Label htmlFor="photos" className="text-sm font-medium flex items-center gap-2">
                                 <Image className="h-4 w-4 text-primary" />
                                 Photos (optional)
@@ -241,7 +240,7 @@ export function CreatePost() {
                                 className="border-border file:mr-4 file:px-4 file:py-2 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
                             />
                             {photos.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-2">
+                                <div className={`flex flex-wrap ${SPACING.inline.sm} mt-2`}>
                                     {photos.map((photo, index) => (
                                         <div 
                                             key={index}
@@ -270,7 +269,7 @@ export function CreatePost() {
                         </div>
 
                         {/* Links */}
-                        <div className="space-y-2">
+                        <div className={SPACING.stack.sm}>
                             <div className="flex items-center justify-between">
                                 <Label className="text-sm font-medium flex items-center gap-2">
                                     <Link2 className="h-4 w-4 text-primary" />
@@ -286,9 +285,9 @@ export function CreatePost() {
                                     + Add Link
                                 </Button>
                             </div>
-                            <div className="space-y-2">
+                            <div className={SPACING.stack.sm}>
                                 {links.map((link, index) => (
-                                    <div key={index} className="flex gap-2">
+                                    <div key={index} className={`flex ${SPACING.inline.sm}`}>
                                         <Input
                                             type="url"
                                             placeholder="https://example.com"
@@ -314,8 +313,8 @@ export function CreatePost() {
 
                         <Separator />
 
-                        {/* Action Buttons */}
-                        <div className="flex justify-end gap-2">
+                        {/* Action Buttons - Mobile Optimized */}
+                        <div className={`flex flex-col-reverse sm:flex-row justify-end ${SPACING.inline.sm}`}>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -328,6 +327,7 @@ export function CreatePost() {
                                     setLinks(['']);
                                 }}
                                 disabled={createPostMutation.isPending}
+                                className="w-full sm:w-auto"
                             >
                                 Cancel
                             </Button>
@@ -335,6 +335,7 @@ export function CreatePost() {
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={createPostMutation.isPending}
+                                className="w-full sm:w-auto"
                             >
                                 {createPostMutation.isPending ? 'Posting...' : 'Post'}
                             </Button>

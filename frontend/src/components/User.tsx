@@ -9,6 +9,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { User as UserIcon, Loader2 } from "lucide-react";
+import { SPACING, Small, Caption } from "@/components/layout";
 
 export function User({ user }: { user: any }) {
   // Fetch follow status using React Query
@@ -30,8 +31,8 @@ export function User({ user }: { user: any }) {
 
   return (
     <Card className="group border-border bg-card hover:shadow-md hover:border-primary/50 transition-all duration-200">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className={SPACING.container.sm}>
+        <div className={`flex items-start ${SPACING.inline.sm}`}>
           {/* Profile Image */}
           <Link 
             to={`/profile/${user.id}`}
@@ -55,24 +56,24 @@ export function User({ user }: { user: any }) {
               to={`/profile/${user.id}`}
               className="block group/link"
             >
-              <h4 className="text-sm font-semibold text-foreground truncate group-hover/link:text-primary transition-colors">
+              <Small className="font-semibold truncate block group-hover/link:text-primary transition-colors">
                 {user.firstName} {user.lastName}
-              </h4>
+              </Small>
             </Link>
             
             {user.department && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <Caption className="truncate block mt-0.5">
                 {user.department}
-              </p>
+              </Caption>
             )}
 
             {user.profile?.bio && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
+              <Caption className="line-clamp-2 mt-1.5 leading-relaxed">
                 {user.profile.bio}
-              </p>
+              </Caption>
             )}
 
-            {/* Follow Status Badge */}
+            {/* Follow Status Badge - Mobile Friendly */}
             {followStatus?.following && (
               <Badge 
                 variant="outline" 
@@ -83,14 +84,14 @@ export function User({ user }: { user: any }) {
             )}
           </div>
 
-          {/* Follow Button */}
+          {/* Follow Button - Always Visible on Desktop, Compact on Mobile */}
           <div className="flex-shrink-0">
             <Button
               onClick={toggleFollow}
               disabled={isToggling}
               variant={followStatus?.following ? "outline" : "default"}
               size="sm"
-              className="h-8 min-w-[80px]"
+              className="h-8 min-w-[70px] md:min-w-[80px]"
             >
               {isToggling ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

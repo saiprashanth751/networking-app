@@ -8,44 +8,51 @@ import { sendVerificationEmail } from "../utils/emailService"
 import { profileCreation, profileUpdation, signinBody, signupBody } from "../types/types"
 
 
-export const userSignup = asyncHandler(async (req:Request, res:Response) => {
-    const {success} = signupBody.safeParse(req.body);
-    if(!success){
-        throw new CustomError("Invalid input", 403)
+export const userSignup = asyncHandler(async (req: Request, res: Response) => {
+    const { success } = signupBody.safeParse(req.body);
+    if (!success) {
+        throw new CustomError("Invalid input", 403);
     }
 
-    const {firstName, lastName, email, password} = req.body
+    const { firstName, lastName, email, password } = req.body;
+
     const existingUser = await prisma.user.findUnique({
-        where: {
-            email
-        }
-    })
-    
-    if(existingUser){
-        throw new CustomError("User already exists", 409)
+        where: { email }
+    });
+
+    if (existingUser) {
+        throw new CustomError("User already exists", 409);
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const user = await prisma.user.create({
-        data: {
-            firstName,
-            lastName,
-            email,
-            password: hashedPassword
+
+    try {
+        const user = await prisma.user.create({
+            data: {
+                firstName,
+                lastName,
+                email,
+                password: hashedPassword
+            }
+        });
+
+        if (!process.env.JWT_SECRET) {
+            throw new CustomError("JWT_SECRET is not defined", 500);
         }
-    })
-    if (!process.env.JWT_SECRET) {
-        throw new CustomError("JWT_SECRET is not defined", 500);
+
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
+        await sendVerificationEmail(email, token);
+
+        return res.status(201).json({
+            message: "User created successfully",
+            token
+        });
+
+    } catch (error) {
+        console.error("Signup error:", error);
+        throw error;
     }
-    const token = jwt.sign({id: user.id}, process.env.JWT_SECRET);
-
-    await sendVerificationEmail(email, token)
-
-    return res.status(200).json({
-        message: "User created successfully",
-        token
-    })
-})
+});
 
 export const userSignin = asyncHandler(async (req:Request, res:Response) => {
     const {success} = signinBody.safeParse(req.body);

@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, 
   Search, 
@@ -30,6 +29,7 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from "@/hooks/queries/user";
 import { useCurrentProfile } from '@/hooks/queries/profile';
+import { SPACING, Small, Caption } from '@/components/layout';
 
 export function AppBar() {
     const navigate = useNavigate();
@@ -90,19 +90,19 @@ export function AppBar() {
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6 lg:px-8 gap-3 md:gap-4">
                 {/* Logo */}
-                <div 
-                    className="flex items-center gap-2 cursor-pointer transition-smooth hover:opacity-80"
+                <button 
+                    className="flex items-center gap-2 shrink-0 transition-opacity hover:opacity-80"
                     onClick={() => navigate('/dashboard')}
                 >
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                         <span className="text-lg font-bold text-primary-foreground">C</span>
                     </div>
                     <span className="hidden sm:inline text-xl font-bold tracking-tight">Connect</span>
-                </div>
+                </button>
 
-                {/* Search Bar */}
+                {/* Search Bar - Mobile First */}
                 <div className="flex-1 max-w-md">
                     <Popover open={isOpen} onOpenChange={setIsOpen}>
                         <PopoverTrigger asChild>
@@ -110,55 +110,55 @@ export function AppBar() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     type="text"
-                                    placeholder="Search users..."
+                                    placeholder="Search..."
                                     value={searchQuery}
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value);
                                         handleSearch(); 
                                     }}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    className="pl-9 h-10 bg-muted/50 border-0 focus-visible:ring-2 focus-visible:ring-ring transition-smooth"
+                                    className="pl-9 h-10 bg-muted/50 border-0 focus-visible:ring-2 focus-visible:ring-ring transition-all"
                                 />
                             </div>
                         </PopoverTrigger>
                         <PopoverContent 
-                            className="w-[400px] p-0"
+                            className="w-[calc(100vw-2rem)] sm:w-[400px] p-0"
                             align="start"
                             sideOffset={8}
                         >
                             {isLoading ? (
-                                <div className="flex items-center justify-center p-6">
+                                <div className={`flex items-center justify-center ${SPACING.container.md}`}>
                                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-                                    <span className="text-sm text-muted-foreground">Searching...</span>
+                                    <Small className="text-muted-foreground">Searching...</Small>
                                 </div>
                             ) : searchResults.length > 0 ? (
                                 <div className="max-h-[400px] overflow-y-auto scrollbar-thin">
-                                    <div className="p-2 space-y-1">
+                                    <div className={`p-2 ${SPACING.stack.xs}`}>
                                         {searchResults.map((user) => (
                                             <button
                                                 key={user.id}
                                                 className={cn(
-                                                    "w-full p-3 rounded-lg transition-smooth",
+                                                    "w-full p-3 rounded-lg transition-all",
                                                     "flex items-center gap-3",
                                                     "hover:bg-accent text-left",
                                                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 )}
                                                 onClick={() => handleResultClick(user.id)}
                                             >
-                                                <Avatar className="h-10 w-10 border-2 border-border">
+                                                <Avatar className="h-10 w-10 border-2 border-border shrink-0">
                                                     <AvatarImage src={user.profile?.profilePic} />
                                                     <AvatarFallback className="text-xs bg-muted">
                                                         {getUserInitials(user)}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="font-medium truncate">
+                                                    <Small className="font-medium truncate block">
                                                         {user.firstName} {user.lastName}
-                                                    </div>
+                                                    </Small>
                                                     {user.department && (
-                                                        <div className="text-xs text-muted-foreground truncate">
+                                                        <Caption className="truncate block">
                                                             {user.department}
-                                                        </div>
+                                                        </Caption>
                                                     )}
                                                 </div>
                                             </button>
@@ -166,33 +166,25 @@ export function AppBar() {
                                     </div>
                                 </div>
                             ) : searchQuery ? (
-                                <div className="p-8 text-center">
-                                    <UserIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                                    <p className="text-sm font-medium text-foreground mb-1">
-                                        No users found
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Try searching with a different name
-                                    </p>
+                                <div className={`p-8 text-center ${SPACING.stack.sm}`}>
+                                    <UserIcon className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+                                    <Small className="font-medium">No users found</Small>
+                                    <Caption>Try searching with a different name</Caption>
                                 </div>
                             ) : (
-                                <div className="p-8 text-center">
-                                    <Search className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                                    <p className="text-sm font-medium text-foreground mb-1">
-                                        Search for users
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Start typing to find people
-                                    </p>
+                                <div className={`p-8 text-center ${SPACING.stack.sm}`}>
+                                    <Search className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+                                    {/* <Small className="font-medium">Search for users</Small> */}
+                                    <Caption>Start typing to find people</Caption>
                                 </div>
                             )}
                         </PopoverContent>
                     </Popover>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                    {/* Notifications - Placeholder for now */}
+                {/* Actions - Mobile Optimized */}
+                <div className={`flex items-center ${SPACING.inline.xs}`}>
+                    {/* Notifications */}
                     <Button
                         variant="ghost"
                         size="icon"
@@ -202,22 +194,18 @@ export function AppBar() {
                         }}
                     >
                         <Bell className="h-5 w-5" />
-                        {/* Notification badge - uncomment when ready */}
-                        {/* <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                            3
-                        </Badge> */}
                     </Button>
 
-                    {/* Mobile Menu */}
+                    {/* Mobile Menu Trigger */}
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="sm:hidden h-10 w-10"
+                        className="md:hidden h-10 w-10"
                     >
                         <Menu className="h-5 w-5" />
                     </Button>
 
-                    {/* User Menu */}
+                    {/* User Menu - Desktop */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button 
@@ -233,20 +221,20 @@ export function AppBar() {
                                         {currentUser ? getUserInitials(currentUser) : 'U'}
                                     </AvatarFallback>
                                 </Avatar>
-                                <span className="hidden sm:inline text-sm font-medium">
+                                <span className="hidden md:inline text-sm font-medium">
                                     {currentUser?.firstName}
                                 </span>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>
-                                <div className="flex flex-col space-y-1">
-                                    <p className="text-sm font-medium leading-none">
+                                <div className={SPACING.stack.xs}>
+                                    <Small className="font-medium leading-none">
                                         {currentUser?.firstName} {currentUser?.lastName}
-                                    </p>
-                                    <p className="text-xs leading-none text-muted-foreground">
+                                    </Small>
+                                    {/* <Caption className="leading-none">
                                         {currentUser?.email}
-                                    </p>
+                                    </Caption> */}
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />

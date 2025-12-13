@@ -1,431 +1,501 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useCurrentProfile } from "@/hooks/queries/profile";
+import { useUpdateProfile } from "@/hooks/mutations/profile";
 import { 
-  Briefcase, 
-  GraduationCap,
+  User, 
+  GraduationCap, 
   Link as LinkIcon,
+  Upload,
   Loader2,
+  Save,
+  AlertCircle,
   ArrowLeft,
-  Settings,
-  ExternalLink,
-  MessageSquare,
 } from "lucide-react";
-import { Post } from '../components/Post';
-import { PageLayout } from '@/components/layout';
-import { FollowListCompact } from '../components/FollowList';
-import MessageBox from './MessageBox';
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Import React Query hooks
-import { useCurrentProfile } from '@/hooks/queries/profile';
-import { useCurrentUser } from '@/hooks/queries/user';
-import { useCurrentUserPosts } from '@/hooks/queries/post';
-import { useFollowers, useFollowing } from '@/hooks/queries/follow';
+const departments = [
+  "Computer Science and Engineering",
+  "Electronics and Communication Engineering",
+  "Mechanical Engineering",
+  "Chemical Engineering",
+  "Mechatronics Engineering",
+  "Civil Engineering",
+];
 
-const UserProfilePage = () => {
+const minors = [
+  "Full Stack Web Development",
+  "Data Science",
+  "Machine Learning",
+  "Artificial Intelligence",
+  "Software Methodology",
+  "Cyber Security",
+];
+
+export default function UpdateProfile() {
     const navigate = useNavigate();
-    const [leetCodeStats, setLeetCodeStats] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState("posts");
-    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    
+    // Form state
+    const [bio, setBio] = useState("");
+    const [graduationYear, setGraduationYear] = useState("");
+    const [department, setDepartment] = useState("");
+    const [minor, setMinor] = useState("");
+    const [linkedin, setLinkedin] = useState("");
+    const [github, setGithub] = useState("");
+    const [leetcode, setLeetcode] = useState("");
+    const [codeforces, setCodeforces] = useState("");
+    const [geekforgeeks, setGeekforgeeks] = useState("");
+    const [profilePic, setProfilePic] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>("");
 
-    // Fetch all data
-    const { data: profileData, isLoading: profileLoading, isError: profileError } = useCurrentProfile();
-    const { data: userData, isLoading: userLoading } = useCurrentUser();
-    const { data: postsData, isLoading: postsLoading } = useCurrentUserPosts();
-    const { data: followersData, isLoading: followersLoading } = useFollowers();
-    const { data: followingData, isLoading: followingLoading } = useFollowing();
+    // Query and mutation
+    const { 
+      data: profileData, 
+      isLoading, 
+      isError,
+      error: profileError 
+    } = useCurrentProfile();
+    
+    const updateProfileMutation = useUpdateProfile();
 
-    const profile = profileData?.profile;
-    const user = userData?.user;
-    const posts = postsData?.posts || [];
-    const followerUsers = followersData?.followers || [];
-    const followingUsers = followingData?.followingUsers || [];
-    const isLoading = profileLoading || userLoading || postsLoading || followersLoading || followingLoading;
-
-    // Fetch LeetCode stats
-    const fetchLeetCodeStats = async (username: string) => {
-        try {
-            const response = await axios.get(`https://leetcard.jacoblin.cool/${username}`);
-            return response.data;
-        } catch (error) {
-            console.error("Failed to fetch LeetCode stats:", error);
-            return null;
-        }
-    };
-
+    // Populate form with existing data
     useEffect(() => {
-        if (profile?.leetcode) {
-            fetchLeetCodeStats(profile.leetcode).then(setLeetCodeStats);
+        if (profileData?.profile) {
+            const profile = profileData.profile;
+            setBio(profile.bio || "");
+            setGraduationYear(profile.graduationYear || "");
+            setDepartment(profile.department || "");
+            setMinor(profile.minor || "");
+            setLinkedin(profile.linkedin || "");
+            setGithub(profile.github || "");
+            setLeetcode(profile.leetcode || "");
+            setCodeforces(profile.codeforces || "");
+            setGeekforgeeks(profile.geekforgeeks || "");
+            setPreviewUrl(profile.profilePic || "");
         }
-    }, [profile?.leetcode]);
+    }, [profileData]);
 
-    const getUserInitials = () => {
-        if (!user) return "U";
-        return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+    // Handle profile picture preview
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                alert("File size should be less than 5MB");
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                alert("Please upload an image file");
+                return;
+            }
+            
+            setProfilePic(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
-    if (profileError) {
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        // Build update payload
+        const updates: any = {};
+        
+        // Only include changed fields
+        if (bio.trim() !== (profileData?.profile?.bio || "")) updates.bio = bio.trim();
+        if (graduationYear !== (profileData?.profile?.graduationYear || "")) updates.graduationYear = graduationYear;
+        if (department !== (profileData?.profile?.department || "")) updates.department = department;
+        if (minor !== (profileData?.profile?.minor || "")) updates.minor = minor;
+        if (linkedin !== (profileData?.profile?.linkedin || "")) updates.linkedin = linkedin;
+        if (github !== (profileData?.profile?.github || "")) updates.github = github;
+        if (leetcode !== (profileData?.profile?.leetcode || "")) updates.leetcode = leetcode;
+        if (codeforces !== (profileData?.profile?.codeforces || "")) updates.codeforces = codeforces;
+        if (geekforgeeks !== (profileData?.profile?.geekforgeeks || "")) updates.geekforgeeks = geekforgeeks;
+        if (profilePic) updates.profilePic = profilePic;
+
+        // Don't make API call if nothing changed
+        if (Object.keys(updates).length === 0) {
+            alert("No changes detected");
+            return;
+        }
+
+        updateProfileMutation.mutate(updates, {
+            onSuccess: () => {
+                setTimeout(() => {
+                    navigate('/userprofile');
+                }, 1500);
+            }
+        });
+    };
+
+    // Form validation - only require academic fields
+    const isFormValid =  String(graduationYear).trim() && department && minor;
+    const hasChanges = () => {
+        if (!profileData?.profile) return true;
+        const profile = profileData.profile;
+        return bio.trim() !== (profile.bio || "") ||
+               graduationYear !== (profile.graduationYear || "") ||
+               department !== (profile.department || "") ||
+               minor !== (profile.minor || "") ||
+               linkedin !== (profile.linkedin || "") ||
+               github !== (profile.github || "") ||
+               leetcode !== (profile.leetcode || "") ||
+               codeforces !== (profile.codeforces || "") ||
+               geekforgeeks !== (profile.geekforgeeks || "") ||
+               profilePic !== null;
+    };
+
+    // Loading state
+    if (isLoading) {
         return (
-            <PageLayout>
-                <Card className="max-w-2xl mx-auto mt-8">
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                        <h3 className="text-xl font-semibold mb-2">Failed to Load Profile</h3>
-                        <p className="text-muted-foreground text-center mb-6">
-                            We couldn't load your profile. Please try again.
-                        </p>
-                        <Button onClick={() => window.location.reload()}>
-                            Retry
-                        </Button>
-                    </CardContent>
-                </Card>
-            </PageLayout>
+            <div className="min-h-screen bg-background p-4 md:p-8">
+                <div className="max-w-4xl mx-auto space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-8 w-48" />
+                            <Skeleton className="h-4 w-64" />
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <Skeleton className="h-64 w-full" />
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         );
     }
 
-    if (isLoading) {
+    // Error state
+    if (isError) {
         return (
-            <PageLayout>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="text-center">
-                        <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Loading your profile...</p>
-                    </div>
+            <div className="min-h-screen bg-background p-4 md:p-8">
+                <div className="max-w-4xl mx-auto">
+                    <Card className="border-destructive">
+                        <CardContent className="p-8">
+                            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                                <AlertCircle className="h-16 w-16 text-destructive" />
+                                <div>
+                                    <h2 className="text-2xl font-bold text-foreground">
+                                        Failed to Load Profile
+                                    </h2>
+                                    <p className="text-muted-foreground mt-2">
+                                        {profileError?.message || "We couldn't load your profile data. Please try again."}
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 mt-4">
+                                    <Button onClick={() => navigate(-1)} variant="outline">
+                                        <ArrowLeft className="h-4 w-4 mr-2" />
+                                        Go Back
+                                    </Button>
+                                    <Button onClick={() => window.location.reload()}>
+                                        Retry
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-            </PageLayout>
+            </div>
         );
     }
 
     return (
-        <PageLayout containerSize="lg">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Content - 2/3 width */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Back Button */}
+        <div className="min-h-screen bg-background p-4 md:p-8">
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="mb-6">
                     <Button
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate('/userprofile')}
                         variant="ghost"
-                        size="sm"
-                        className="gap-2"
+                        className="mb-4"
                     >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Dashboard
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Profile
                     </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Edit Profile</h1>
+                        <p className="text-muted-foreground">
+                            Update your personal and professional information
+                        </p>
+                    </div>
+                </div>
 
-                    {/* Hero Section */}
-                    <Card className="overflow-hidden">
-                        {/* Cover Photo */}
-                        <div className="h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20" />
-                        
-                        {/* Profile Info */}
-                        <CardContent className="relative pt-0 pb-6">
-                            {/* Avatar & Actions */}
-                            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-16">
-                                <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4">
-                                    <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                {/* Success Alert */}
+                {updateProfileMutation.isSuccess && (
+                    <Alert className="mb-6 border-green-500 bg-green-50 dark:bg-green-950">
+                        <AlertDescription className="text-green-700 dark:text-green-300">
+                            Profile updated successfully! Redirecting...
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {/* Error Alert */}
+                {updateProfileMutation.isError && (
+                    <Alert className="mb-6 border-destructive">
+                        <AlertDescription className="text-destructive">
+                            Failed to update profile. Please try again.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                <form onSubmit={handleSubmit}>
+                    <Card className="shadow-lg">
+                        <CardContent className="p-6 space-y-8">
+                            {/* Profile Picture Section */}
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                                        <User className="h-5 w-5" />
+                                        Profile Picture
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Upload a professional photo (Max 5MB, JPG/PNG)
+                                    </p>
+                                </div>
+                                
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <Avatar className="h-32 w-32 border-4 border-border">
                                         <AvatarImage 
-                                            src={profile?.profilePic} 
-                                            alt={`${user?.firstName} ${user?.lastName}`}
-                                            className="object-cover"
+                                            src={previewUrl || profileData?.profile?.profilePic} 
+                                            alt="Profile preview"
                                         />
-                                        <AvatarFallback className="text-3xl font-semibold bg-muted">
-                                            {getUserInitials()}
+                                        <AvatarFallback className="bg-muted">
+                                            <Upload className="h-8 w-8 text-muted-foreground" />
                                         </AvatarFallback>
                                     </Avatar>
                                     
-                                    <div className="text-center sm:text-left mb-4">
-                                        <h1 className="text-3xl font-bold">
-                                            {user?.firstName} {user?.lastName}
-                                        </h1>
-                                        {profile?.department && (
-                                            <p className="text-muted-foreground mt-1">
-                                                {profile.department}
-                                            </p>
-                                        )}
-                                        {profile?.minor && (
-                                            <Badge variant="secondary" className="mt-2">
-                                                Minor: {profile.minor}
-                                            </Badge>
-                                        )}
+                                    <div className="flex-1 space-y-2">
+                                        <Input
+                                            id="profilePic"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handlePhotoChange}
+                                            className="max-w-sm"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            {profilePic 
+                                                ? `Selected: ${profilePic.name}`
+                                                : "No file selected"
+                                            }
+                                        </p>
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Edit Button */}
+                            <Separator />
+
+                            {/* Basic Information */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <User className="h-5 w-5" />
+                                    Basic Information
+                                </h3>
+                                
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bio">
+                                            Bio
+                                        </Label>
+                                        <Textarea
+                                            id="bio"
+                                            placeholder="Tell us about yourself..."
+                                            value={bio}
+                                            onChange={(e) => setBio(e.target.value)}
+                                            className="min-h-[100px]"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Share your interests, goals, or a brief introduction
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="graduationYear" className="required">
+                                            Graduation Year
+                                        </Label>
+                                        <Input
+                                            id="graduationYear"
+                                            type="text"
+                                            placeholder="e.g., 2025"
+                                            value={graduationYear}
+                                            onChange={(e) => setGraduationYear(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            {/* Academic Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <GraduationCap className="h-5 w-5" />
+                                    Academic Details
+                                </h3>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="department" className="required">
+                                            Department
+                                        </Label>
+                                        <Select 
+                                            value={department} 
+                                            onValueChange={setDepartment}
+                                            required
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select Department" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {departments.map((dept) => (
+                                                    <SelectItem key={dept} value={dept}>
+                                                        {dept}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="minor" className="required">
+                                            Engineering Minor
+                                        </Label>
+                                        <Select 
+                                            value={minor} 
+                                            onValueChange={setMinor}
+                                            required
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select Minor" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {minors.map((minorOpt) => (
+                                                    <SelectItem key={minorOpt} value={minorOpt}>
+                                                        {minorOpt}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            {/* Social & Professional Links */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <LinkIcon className="h-5 w-5" />
+                                    Social & Professional Links
+                                </h3>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="linkedin">LinkedIn Profile</Label>
+                                        <Input
+                                            id="linkedin"
+                                            type="url"
+                                            placeholder="https://linkedin.com/in/username"
+                                            value={linkedin}
+                                            onChange={(e) => setLinkedin(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="github">GitHub Username</Label>
+                                        <Input
+                                            id="github"
+                                            type="text"
+                                            placeholder="username"
+                                            value={github}
+                                            onChange={(e) => setGithub(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="leetcode">LeetCode Username</Label>
+                                        <Input
+                                            id="leetcode"
+                                            type="text"
+                                            placeholder="username"
+                                            value={leetcode}
+                                            onChange={(e) => setLeetcode(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="codeforces">Codeforces Username</Label>
+                                        <Input
+                                            id="codeforces"
+                                            type="text"
+                                            placeholder="username"
+                                            value={codeforces}
+                                            onChange={(e) => setCodeforces(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="geekforgeeks">GeeksforGeeks Username</Label>
+                                        <Input
+                                            id="geekforgeeks"
+                                            type="text"
+                                            placeholder="username"
+                                            value={geekforgeeks}
+                                            onChange={(e) => setGeekforgeeks(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            {/* Form Actions */}
+                            <div className="flex flex-col sm:flex-row gap-3 justify-end">
                                 <Button
-                                    onClick={() => navigate('/updateprofile')}
+                                    type="button"
+                                    onClick={() => navigate('/userprofile')}
                                     variant="outline"
-                                    className="gap-2"
+                                    disabled={updateProfileMutation.isPending}
                                 >
-                                    <Settings className="h-4 w-4" />
-                                    Edit Profile
+                                    Cancel
                                 </Button>
-                            </div>
-
-                            <Separator className="my-6" />
-
-                            {/* Stats Row */}
-                            <div className="grid grid-cols-3 gap-4 text-center">
-                                <div>
-                                    <div className="text-2xl font-bold">{posts.length}</div>
-                                    <div className="text-sm text-muted-foreground">Posts</div>
-                                </div>
-                                <div>
-                                    <div className="text-2xl font-bold">{followersData?.count || 0}</div>
-                                    <div className="text-sm text-muted-foreground">Followers</div>
-                                </div>
-                                <div>
-                                    <div className="text-2xl font-bold">{followingData?.count || 0}</div>
-                                    <div className="text-sm text-muted-foreground">Following</div>
-                                </div>
-                            </div>
-
-                            {/* Bio */}
-                            {profile?.bio && (
-                                <>
-                                    <Separator className="my-6" />
-                                    <p className="text-foreground/90 leading-relaxed">
-                                        {profile.bio}
-                                    </p>
-                                </>
-                            )}
-
-                            {/* Quick Info */}
-                            <Separator className="my-6" />
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                {profile?.department && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                        <Briefcase className="h-4 w-4" />
-                                        <span>{profile.department}</span>
-                                    </div>
-                                )}
-                                {profile?.graduationYear && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                        <GraduationCap className="h-4 w-4" />
-                                        <span>Class of {profile.graduationYear}</span>
-                                    </div>
-                                )}
-                                {profile?.linkedin && (
-                                    <a
-                                        href={profile.linkedin}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 text-primary hover:underline"
-                                    >
-                                        <LinkIcon className="h-4 w-4" />
-                                        <span>LinkedIn</span>
-                                        <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                )}
-                                {profile?.github && (
-                                    <a
-                                        href={`https://github.com/${profile.github}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 text-primary hover:underline"
-                                    >
-                                        <LinkIcon className="h-4 w-4" />
-                                        <span>GitHub</span>
-                                        <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                )}
+                                <Button
+                                    type="submit"
+                                    disabled={!isFormValid || !hasChanges() || updateProfileMutation.isPending}
+                                >
+                                    {updateProfileMutation.isPending ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="h-4 w-4 mr-2" />
+                                            Save Changes
+                                        </>
+                                    )}
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
-
-                    {/* Tabbed Content */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="w-full justify-start">
-                            <TabsTrigger value="posts">Your Posts ({posts.length})</TabsTrigger>
-                            <TabsTrigger value="stats">Platform Stats</TabsTrigger>
-                            <TabsTrigger value="about">About</TabsTrigger>
-                        </TabsList>
-
-                        {/* Posts Tab */}
-                        <TabsContent value="posts" className="space-y-6 mt-6">
-                            {posts.length === 0 ? (
-                                <Card>
-                                    <CardContent className="py-12 text-center">
-                                        <MessageSquare className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                                        <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-                                        <p className="text-sm text-muted-foreground mb-4">
-                                            Share your first post with your network!
-                                        </p>
-                                        <Button onClick={() => navigate('/dashboard')}>
-                                            Create Post
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                posts.map((post) => <Post key={post.id} post={post} showFollowButton={false} />)
-                            )}
-                        </TabsContent>
-
-                        {/* Stats Tab */}
-                        <TabsContent value="stats" className="space-y-6 mt-6">
-                            {!profile?.leetcode && !profile?.github && !profile?.codeforces && !profile?.geekforgeeks ? (
-                                <Card>
-                                    <CardContent className="py-12 text-center">
-                                        <h3 className="text-lg font-medium mb-2">No platform stats yet</h3>
-                                        <p className="text-sm text-muted-foreground mb-4">
-                                            Add your coding profiles to display stats
-                                        </p>
-                                        <Button onClick={() => navigate('/updateprofile')}>
-                                            Add Profiles
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                <>
-                                    {profile?.leetcode && leetCodeStats && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <span className="text-orange-500">LeetCode</span>
-                                                    <Badge variant="outline">@{profile.leetcode}</Badge>
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <img
-                                                    src={`data:image/svg+xml;utf8,${encodeURIComponent(leetCodeStats)}`}
-                                                    alt="LeetCode Stats"
-                                                    className="w-full rounded-lg"
-                                                />
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                    {profile?.geekforgeeks && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <span className="text-green-500">GeeksforGeeks</span>
-                                                    <Badge variant="outline">@{profile.geekforgeeks}</Badge>
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <img
-                                                    src={`https://gfgstatscard.vercel.app/${profile.geekforgeeks}`}
-                                                    alt="GeeksforGeeks Stats"
-                                                    className="w-full rounded-lg"
-                                                />
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                    {profile?.codeforces && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <span className="text-blue-500">Codeforces</span>
-                                                    <Badge variant="outline">@{profile.codeforces}</Badge>
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <img
-                                                    src={`https://codeforces-readme-stats.vercel.app/api/card?username=${profile.codeforces}`}
-                                                    alt="Codeforces Stats"
-                                                    className="w-full rounded-lg"
-                                                />
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                    {profile?.github && (
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    GitHub
-                                                    <Badge variant="outline">@{profile.github}</Badge>
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4">
-                                                <img
-                                                    src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&hide_border=true`}
-                                                    alt="GitHub Stats"
-                                                    className="w-full rounded-lg"
-                                                />
-                                                <img
-                                                    src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&hide_border=true`}
-                                                    alt="Top Languages"
-                                                    className="w-full rounded-lg"
-                                                />
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                </>
-                            )}
-                        </TabsContent>
-
-                        {/* About Tab */}
-                        <TabsContent value="about" className="mt-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>About</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {profile?.bio && (
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Bio</h4>
-                                            <p className="text-muted-foreground leading-relaxed">{profile.bio}</p>
-                                        </div>
-                                    )}
-                                    <Separator />
-                                    <div>
-                                        <h4 className="font-semibold mb-3">Education</h4>
-                                        <div className="space-y-2">
-                                            {profile?.department && (
-                                                <p className="text-muted-foreground">
-                                                    <strong>Major:</strong> {profile.department}
-                                                </p>
-                                            )}
-                                            {profile?.minor && (
-                                                <p className="text-muted-foreground">
-                                                    <strong>Minor:</strong> {profile.minor}
-                                                </p>
-                                            )}
-                                            {profile?.graduationYear && (
-                                                <p className="text-muted-foreground">
-                                                    <strong>Graduation:</strong> {profile.graduationYear}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-                </div>
-
-                {/* Right Sidebar - 1/3 width */}
-                <div className="hidden lg:block space-y-6">
-                    {/* Message Box or Followers/Following */}
-                    {selectedUserId ? (
-                        <MessageBox 
-                            receiverId={selectedUserId} 
-                            onClose={() => setSelectedUserId(null)} 
-                        />
-                    ) : (
-                        <>
-                            <FollowListCompact
-                                title="Followers"
-                                users={followerUsers}
-                                count={followersData?.count || 0}
-                                onMessageClick={setSelectedUserId}
-                            />
-                            <FollowListCompact
-                                title="Following"
-                                users={followingUsers}
-                                count={followingData?.count || 0}
-                                onMessageClick={setSelectedUserId}
-                            />
-                        </>
-                    )}
-                </div>
+                </form>
             </div>
-        </PageLayout>
+        </div>
     );
-};
-
-export default UserProfilePage;
+}

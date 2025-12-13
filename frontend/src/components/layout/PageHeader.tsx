@@ -2,6 +2,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { H1, Body } from "@/components/ui/typography";
+import { SPACING } from "@/lib/spacing";
 
 interface PageHeaderProps {
   title: string;
@@ -13,8 +15,13 @@ interface PageHeaderProps {
 }
 
 /**
- * PageHeader component for consistent page titles
- * Shows at the top of every page with optional back button and actions
+ * PageHeader - Consistent page header with mobile-first design
+ * 
+ * Features:
+ * - Responsive typography (H1 scales with viewport)
+ * - Optional back navigation
+ * - Action buttons (right-aligned)
+ * - Mobile-optimized layout
  * 
  * Usage:
  * <PageHeader 
@@ -43,31 +50,37 @@ export function PageHeader({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Back Button */}
+    <div className={cn(SPACING.stack.md, className)}>
+      {/* Back Button - Mobile optimized */}
       {showBackButton && (
         <Button
           variant="ghost"
           size="sm"
           onClick={handleBack}
-          className="gap-2"
+          className="gap-2 -ml-2 w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          <span className="hidden md:inline">Back</span>
         </Button>
       )}
 
-      {/* Header Content */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">{title}</h1>
+      {/* Header Content - Responsive flex layout */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className={SPACING.stack.sm}>
+          <H1>{title}</H1>
           {description && (
-            <p className="text-lg text-muted-foreground">{description}</p>
+            <Body className="text-muted-foreground">
+              {description}
+            </Body>
           )}
         </div>
 
-        {/* Action Buttons */}
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {/* Action Buttons - Stack on mobile, inline on desktop */}
+        {actions && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {actions}
+          </div>
+        )}
       </div>
 
       {/* Divider */}

@@ -7,8 +7,11 @@ const app = express.Router()
 app.post("/", authMiddleware, followUser)
 app.delete("/", authMiddleware, unfollowUser)
 app.get("/", authMiddleware, getStatus)
+
 app.get("/followers", authMiddleware, getFollowers)
-app.get("/userFollowers", authMiddleware, getNativeFollowers)
 app.get("/following", authMiddleware, getFollowing)
+
+app.get("/userFollowers", authMiddleware, getNativeFollowers)
 app.get("/userFollowing", authMiddleware, getNativeFollowing)
-export default app
+
+export default app;

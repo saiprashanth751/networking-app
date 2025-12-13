@@ -5,28 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Briefcase, 
-  GraduationCap, 
-  Link as LinkIcon, 
-  MessageSquare,
-  User as UserIcon,
-  Loader2,
-  ArrowLeft,
-  ExternalLink,
+import {
+    Briefcase,
+    GraduationCap,
+    Link as LinkIcon,
+    MessageSquare,
+    User as UserIcon,
+    Loader2,
+    ExternalLink,
+    ArrowLeft,
+    Search,
+    Calendar,
 } from "lucide-react";
 import { Post } from '../components/Post';
-import { PageLayout } from '@/components/layout';
-
-// Import React Query hooks
+import { H2, Body, Small, Caption } from '@/components/ui/typography';
 import { useProfile } from '@/hooks/queries/profile';
 import { useUser } from '@/hooks/queries/user';
 import { useUserPosts } from '@/hooks/queries/post';
 import { useFollowStatus, useFollowersByUserId, useFollowingByUserId } from '@/hooks/queries/follow';
 import { useToggleFollow } from '@/hooks/mutations/follow';
-import { FollowList } from '../components/FollowList';
+import { useUserProjects } from '@/hooks/queries/project';
+import { ProjectList } from '../components/ProjectList';
+import { FollowList } from '../components/FollowList'
+import { ProjectFormDialog } from '../components/ProjectFormDialog';
 
 const ProfilePage = () => {
     const { id } = useParams<{ id: string }>();
@@ -35,19 +36,21 @@ const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState("posts");
 
     // Fetch all data
-    const { data: profileData, isLoading: profileLoading, isError: profileError } = useProfile(id || '', { enabled: !!id });
     const { data: userData, isLoading: userLoading } = useUser(id || '', { enabled: !!id });
+    const { data: profileData, isLoading: profileLoading, isError: profileError } = useProfile(id || '', { enabled: !!id });
     const { data: postsData, isLoading: postsLoading } = useUserPosts(id || '', { enabled: !!id });
     const { data: followStatus, isLoading: followStatusLoading } = useFollowStatus(id || '', { enabled: !!id });
     const { data: followersData } = useFollowersByUserId(id || '', { enabled: !!id });
     const { data: followingData } = useFollowingByUserId(id || '', { enabled: !!id });
     const { toggleFollow, isLoading: isToggling } = useToggleFollow(id || '', followStatus?.following || false);
+    const { data: projectsData, isLoading: projectsLoading } = useUserProjects(id || '', { enabled: !!id });
 
     const profile = profileData?.profile;
     const user = userData?.user;
     const posts = postsData?.posts || [];
     const isFollowing = followStatus?.following || false;
     const isLoading = profileLoading || userLoading || postsLoading || followStatusLoading;
+    const projects = projectsData?.projects || [];
 
     // Fetch LeetCode stats
     const fetchLeetCodeStats = async (username: string) => {
@@ -66,105 +69,86 @@ const ProfilePage = () => {
         }
     }, [profile?.leetcode]);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) navigate('/signin');
-    }, [navigate]);
-
     const getUserInitials = () => {
         return `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
     };
 
     if (profileError) {
         return (
-            <PageLayout>
-                <Card className="max-w-2xl mx-auto mt-8">
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                        <UserIcon className="h-16 w-16 text-muted-foreground mb-4" />
-                        <h3 className="text-xl font-semibold mb-2">Profile Not Found</h3>
-                        <p className="text-muted-foreground text-center mb-6">
+            <div className="flex items-center justify-center min-h-screen px-4">
+                <Card className="max-w-md w-full">
+                    <CardContent className="p-8 text-center space-y-4">
+                        <UserIcon className="h-16 w-16 mx-auto text-muted-foreground" />
+                        <H2>Profile Not Found</H2>
+                        <Body className="text-muted-foreground">
                             The profile you're looking for doesn't exist or has been removed.
-                        </p>
+                        </Body>
                         <Button onClick={() => navigate('/dashboard')}>
                             Return to Dashboard
                         </Button>
                     </CardContent>
                 </Card>
-            </PageLayout>
+            </div>
         );
     }
 
     if (isLoading) {
         return (
-            <PageLayout>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="text-center">
-                        <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Loading profile...</p>
-                    </div>
-                </div>
-            </PageLayout>
+            <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <Body className="text-muted-foreground">Loading profile...</Body>
+            </div>
         );
     }
 
     return (
-        <PageLayout containerSize="lg">
-            {/* Back Button */}
-            <Button
-                onClick={() => navigate('/dashboard')}
-                variant="ghost"
-                size="sm"
-                className="mb-4 gap-2"
-            >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-            </Button>
+        <>
+            {/* Sticky Header - X Style */}
+            <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-sm border-b border-neutral-800">
+                <div className="flex items-center gap-8 px-4 h-[53px]">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="hover:bg-neutral-900 rounded-full p-2 transition-colors"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div className="flex flex-col">
+                        <h1 className="font-bold text-xl">{user?.firstName} {user?.lastName}</h1>
+                        <span className="text-neutral-500 text-[13px]">{posts.length} posts</span>
+                    </div>
+                    <button className="ml-auto hover:bg-neutral-900 rounded-full p-2 transition-colors">
+                        <Search className="h-5 w-5" />
+                    </button>
+                </div>
+            </div>
 
-            {/* Hero Section */}
-            <Card className="overflow-hidden mb-6">
-                {/* Cover Photo */}
-                <div className="h-48 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20" />
-                
-                {/* Profile Info */}
-                <CardContent className="relative pt-0 pb-6">
-                    {/* Avatar */}
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-16 sm:-mt-20">
-                        <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4">
-                            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                                <AvatarImage 
-                                    src={profile?.profilePic} 
-                                    alt={`${user?.firstName} ${user?.lastName}`}
-                                    className="object-cover"
-                                />
-                                <AvatarFallback className="text-3xl font-semibold bg-muted">
-                                    {getUserInitials()}
-                                </AvatarFallback>
-                            </Avatar>
-                            
-                            <div className="text-center sm:text-left mb-4">
-                                <h1 className="text-3xl font-bold">
-                                    {user?.firstName} {user?.lastName}
-                                </h1>
-                                {profile?.department && (
-                                    <p className="text-muted-foreground mt-1">
-                                        {profile.department}
-                                    </p>
-                                )}
-                                {profile?.minor && (
-                                    <Badge variant="secondary" className="mt-2">
-                                        Minor: {profile.minor}
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
+            {/* Profile Header */}
+            <div>
+                {/* Banner */}
+                <div className="h-[200px] bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20" />
+
+                {/* Profile Info Section */}
+                <div className="px-4 pb-4">
+                    {/* Profile Picture & Actions */}
+                    <div className="flex justify-between items-end -mt-16 mb-4">
+                        <Avatar className="h-[133px] w-[133px] border-4 border-black shadow-xl">
+                            <AvatarImage
+                                src={profile?.profilePic}
+                                alt={`${user?.firstName} ${user?.lastName}`}
+                                className="object-cover"
+                            />
+                            <AvatarFallback className="text-4xl font-bold bg-muted">
+                                {getUserInitials()}
+                            </AvatarFallback>
+                        </Avatar>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2 justify-center sm:justify-start">
+                        <div className="flex gap-2 mb-3">
                             <Button
                                 onClick={toggleFollow}
                                 disabled={isToggling}
                                 variant={isFollowing ? "outline" : "default"}
-                                className="gap-2"
+                                className="rounded-full font-bold px-4 h-9"
                             >
                                 {isToggling ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -172,61 +156,42 @@ const ProfilePage = () => {
                                     isFollowing ? "Following" : "Follow"
                                 )}
                             </Button>
-                            <Button variant="outline" className="gap-2">
+                            <Button
+                                variant="outline"
+                                className="rounded-full font-bold px-4 h-9"
+                            >
                                 <MessageSquare className="h-4 w-4" />
-                                Message
                             </Button>
                         </div>
                     </div>
 
-                    <Separator className="my-6" />
-
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                        <div>
-                            <div className="text-2xl font-bold">{posts.length}</div>
-                            <div className="text-sm text-muted-foreground">Posts</div>
+                    {/* Name and Bio */}
+                    <div className="mb-1">
+                        <div className="flex items-center gap-1 mb-0.5">
+                            <h2 className="font-bold text-xl">{user?.firstName} {user?.lastName}</h2>
                         </div>
-                        <FollowList
-                            title="Followers"
-                            users={followersData?.followers || []}
-                            count={followersData?.count || 0}
-                            onMessageClick={() => {}}
-                        />
-                        <FollowList
-                            title="Following"
-                            users={followingData?.followingUsers || []}
-                            count={followingData?.count || 0}
-                            onMessageClick={() => {}}
-                        />
-                        <div>
-                            <div className="text-2xl font-bold">-</div>
-                            <div className="text-sm text-muted-foreground">Engagement</div>
-                        </div>
+                        <span className="text-neutral-500 text-[15px]">
+                            @{user?.firstName?.toLowerCase() || 'user'}
+                        </span>
                     </div>
 
-                    {/* Bio */}
                     {profile?.bio && (
-                        <>
-                            <Separator className="my-6" />
-                            <p className="text-foreground/90 leading-relaxed">
-                                {profile.bio}
-                            </p>
-                        </>
+                        <div className="mb-3">
+                            <p className="text-[15px] leading-5">{profile.bio}</p>
+                        </div>
                     )}
 
-                    {/* Quick Info */}
-                    <Separator className="my-6" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    {/* Info Pills */}
+                    <div className="flex flex-wrap items-center gap-3 mb-3 text-neutral-500 text-[15px]">
                         {profile?.department && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Briefcase className="h-4 w-4" />
+                            <div className="flex items-center gap-1">
+                                <Briefcase className="h-[18px] w-[18px]" />
                                 <span>{profile.department}</span>
                             </div>
                         )}
                         {profile?.graduationYear && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <GraduationCap className="h-4 w-4" />
+                            <div className="flex items-center gap-1">
+                                <GraduationCap className="h-[18px] w-[18px]" />
                                 <span>Class of {profile.graduationYear}</span>
                             </div>
                         )}
@@ -235,11 +200,10 @@ const ProfilePage = () => {
                                 href={profile.linkedin}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 text-primary hover:underline"
+                                className="flex items-center gap-1 text-blue-500 hover:underline"
                             >
-                                <LinkIcon className="h-4 w-4" />
+                                <LinkIcon className="h-[18px] w-[18px]" />
                                 <span>LinkedIn</span>
-                                <ExternalLink className="h-3 w-3" />
                             </a>
                         )}
                         {profile?.github && (
@@ -247,159 +211,187 @@ const ProfilePage = () => {
                                 href={`https://github.com/${profile.github}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 text-primary hover:underline"
+                                className="flex items-center gap-1 text-blue-500 hover:underline"
                             >
-                                <LinkIcon className="h-4 w-4" />
+                                <LinkIcon className="h-[18px] w-[18px]" />
                                 <span>GitHub</span>
-                                <ExternalLink className="h-3 w-3" />
                             </a>
                         )}
                     </div>
-                </CardContent>
-            </Card>
 
-            {/* Tabbed Content */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full justify-start">
-                    <TabsTrigger value="posts">Posts ({posts.length})</TabsTrigger>
-                    <TabsTrigger value="stats">Platform Stats</TabsTrigger>
-                    <TabsTrigger value="about">About</TabsTrigger>
-                </TabsList>
+                    {/* Following/Followers */}
+                    <div className="flex items-center gap-5 text-[14px]">
+                        <FollowList
+                            title="Following"
+                            users={followingData?.following || []}
+                            count={followingData?.count || 0}
+                            onMessageClick={() => { }} // Keep empty since it's another user's profile
+                        />
+                        <FollowList
+                            title="Followers"
+                            users={followersData?.followers || []}
+                            count={followersData?.count || 0}
+                            onMessageClick={() => { }} // Keep empty since it's another user's profile
+                        />
+                    </div>
+                </div>
 
-                {/* Posts Tab */}
-                <TabsContent value="posts" className="space-y-6 mt-6">
-                    {posts.length === 0 ? (
-                        <Card>
-                            <CardContent className="py-12 text-center">
-                                <MessageSquare className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                                <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    {user?.firstName} hasn't shared anything yet.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        posts.map((post) => <Post key={post.id} post={post} showFollowButton={false} />)
-                    )}
-                </TabsContent>
+                {/* Tabs */}
+                {/* Find the Tabs section and add this TabItem */}
+                <div className="border-b border-neutral-800">
+                    <div className="flex">
+                        <TabItem
+                            label="Posts"
+                            active={activeTab === "posts"}
+                            onClick={() => setActiveTab("posts")}
+                        />
+                        <TabItem
+                            label="Projects"
+                            active={activeTab === "projects"}
+                            onClick={() => setActiveTab("projects")}
+                        />
+                        <TabItem
+                            label="Stats"
+                            active={activeTab === "stats"}
+                            onClick={() => setActiveTab("stats")}
+                        />
+                        <TabItem
+                            label="About"
+                            active={activeTab === "about"}
+                            onClick={() => setActiveTab("about")}
+                        />
+                    </div>
+                </div>
 
-                {/* Stats Tab */}
-                <TabsContent value="stats" className="space-y-6 mt-6">
-                    {profile?.leetcode && leetCodeStats && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="text-orange-500">LeetCode</span>
-                                    <Badge variant="outline">@{profile.leetcode}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <img
-                                    src={`data:image/svg+xml;utf8,${encodeURIComponent(leetCodeStats)}`}
-                                    alt="LeetCode Stats"
-                                    className="w-full rounded-lg"
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
-                    {profile?.geekforgeeks && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="text-green-500">GeeksforGeeks</span>
-                                    <Badge variant="outline">@{profile.geekforgeeks}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <img
-                                    src={`https://gfgstatscard.vercel.app/${profile.geekforgeeks}`}
-                                    alt="GeeksforGeeks Stats"
-                                    className="w-full rounded-lg"
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
-                    {profile?.codeforces && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="text-blue-500">Codeforces</span>
-                                    <Badge variant="outline">@{profile.codeforces}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <img
-                                    src={`https://codeforces-readme-stats.vercel.app/api/card?username=${profile.codeforces}`}
-                                    alt="Codeforces Stats"
-                                    className="w-full rounded-lg"
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
-                    {profile?.github && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    GitHub
-                                    <Badge variant="outline">@{profile.github}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <img
-                                    src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&hide_border=true`}
-                                    alt="GitHub Stats"
-                                    className="w-full rounded-lg"
-                                />
-                                <img
-                                    src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&hide_border=true`}
-                                    alt="Top Languages"
-                                    className="w-full rounded-lg"
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
-                </TabsContent>
-
-                {/* About Tab */}
-                <TabsContent value="about" className="mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>About</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {profile?.bio && (
-                                <div>
-                                    <h4 className="font-semibold mb-2">Bio</h4>
-                                    <p className="text-muted-foreground leading-relaxed">{profile.bio}</p>
+                {/* Tab Content */}
+                <div>
+                    {activeTab === "posts" && (
+                        <div className="divide-y divide-neutral-800">
+                            {posts.length === 0 ? (
+                                <div className="px-4 py-16 text-center space-y-4">
+                                    <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+                                    <H2>No posts yet</H2>
+                                    <Body className="text-muted-foreground">
+                                        {user?.firstName} hasn't shared anything yet.
+                                    </Body>
                                 </div>
+                            ) : (
+                                posts.map((post) => <Post key={post.id} post={post} showFollowButton={false} />)
                             )}
-                            <Separator />
-                            <div>
-                                <h4 className="font-semibold mb-3">Education</h4>
-                                <div className="space-y-2">
-                                    {profile?.department && (
-                                        <p className="text-muted-foreground">
-                                            <strong>Major:</strong> {profile.department}
-                                        </p>
+                        </div>
+                    )}
+
+                    {activeTab === "projects" && (
+                        <ProjectList
+                            projects={projects}
+                            showActions={false}
+                        />
+                    )}
+
+                    {activeTab === "stats" && (
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {profile?.leetcode && leetCodeStats && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <span className="text-orange-500">LeetCode</span>
+                                            <Badge variant="outline" className="text-xs">@{profile.leetcode}</Badge>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <img
+                                            src={`data:image/svg+xml;utf8,${encodeURIComponent(leetCodeStats)}`}
+                                            alt="LeetCode Stats"
+                                            className="w-full rounded-lg"
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
+                            {profile?.github && (
+                                <Card className="md:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            GitHub
+                                            <Badge variant="outline" className="text-xs">@{profile.github}</Badge>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <img
+                                            src={`https://github-readme-stats.vercel.app/api?username=${profile.github}&show_icons=true&theme=dark&hide_border=true`}
+                                            alt="GitHub Stats"
+                                            className="w-full rounded-lg"
+                                        />
+                                        <img
+                                            src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.github}&layout=compact&theme=dark&hide_border=true`}
+                                            alt="Top Languages"
+                                            className="w-full rounded-lg"
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === "about" && (
+                        <div className="p-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>About</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {profile?.bio && (
+                                        <div>
+                                            <Small className="font-semibold mb-2 block">Bio</Small>
+                                            <Body className="text-muted-foreground leading-relaxed">{profile.bio}</Body>
+                                        </div>
                                     )}
-                                    {profile?.minor && (
-                                        <p className="text-muted-foreground">
-                                            <strong>Minor:</strong> {profile.minor}
-                                        </p>
-                                    )}
-                                    {profile?.graduationYear && (
-                                        <p className="text-muted-foreground">
-                                            <strong>Graduation:</strong> {profile.graduationYear}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-        </PageLayout>
+                                    <div className="h-px bg-border" />
+                                    <div>
+                                        <Small className="font-semibold mb-3 block">Education</Small>
+                                        <div className="space-y-2">
+                                            {profile?.department && (
+                                                <Body className="text-muted-foreground">
+                                                    <strong>Major:</strong> {profile.department}
+                                                </Body>
+                                            )}
+                                            {profile?.minor && (
+                                                <Body className="text-muted-foreground">
+                                                    <strong>Minor:</strong> {profile.minor}
+                                                </Body>
+                                            )}
+                                            {profile?.graduationYear && (
+                                                <Body className="text-muted-foreground">
+                                                    <strong>Graduation:</strong> {profile.graduationYear}
+                                                </Body>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
     );
 };
+
+// Tab Item Component
+function TabItem({ label, active = false, onClick }: { label: string; active?: boolean; onClick: () => void }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`
+                flex-1 px-4 py-4 hover:bg-neutral-900/50 transition-colors relative
+                ${active ? 'font-bold' : 'text-neutral-500'}
+            `}
+        >
+            {label}
+            {active && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 rounded-full" />
+            )}
+        </button>
+    );
+}
 
 export default ProfilePage;

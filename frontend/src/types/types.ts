@@ -99,7 +99,7 @@ export interface FollowersResponse {
 }
 
 export interface FollowingResponse {
-  followingUsers: User[];
+  following: User[];
   count: number;
 }
 
@@ -245,3 +245,51 @@ export interface AsyncState<T> {
   isError: boolean;
   error: Error | null;
 }
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  tagline?: string;
+  coverImage?: string;
+  images: string[];
+  techStack: string[];
+  category?: string;
+  repositoryUrl?: string;
+  liveUrl?: string;
+  demoVideoUrl?: string;
+  featured: boolean;
+  status: string;
+  startDate?: string;
+  endDate?: string;
+  userId: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profile?: {
+      profilePic?: string;
+      department?: string;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProjectInput {
+  title: string;
+  description: string;
+  tagline?: string;
+  coverImage?: File;
+  images?: File[];
+  techStack: string[];
+  category?: string;
+  repositoryUrl?: string;
+  liveUrl?: string;
+  demoVideoUrl?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface UpdateProjectInput extends Partial<CreateProjectInput> {}

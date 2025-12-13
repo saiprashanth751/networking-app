@@ -4,7 +4,8 @@ import followRouter from "./routes/follow";
 import authRouter from "./routes/auth";
 import postRouter from "./routes/post";
 import messageRouter from "./routes/message";
-import { prisma } from "../prisma/prisma_client";
+import projectRouter from "./routes/project"
+import prisma from "../prisma/prisma_client";
 import path from "path";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { Server } from "socket.io";
@@ -39,7 +40,9 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/follow", followRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/post", postRouter);
+app.use("/api/v1/project", projectRouter);
 app.use("/api/v1/message", messageRouter);
+
 
 // Create HTTP server
 const server = http.createServer(app);
