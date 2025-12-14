@@ -30,9 +30,18 @@ export function useWebRTC({
   
   const peerRef = useRef<SimplePeer.Instance | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const hasInitialized = useRef(false); // 🔥 FIX: Track initialization
 
   // Initialize call and get user media
   const initializeCall = useCallback(async () => {
+    // 🔥 FIX: Prevent duplicate initialization
+    if (hasInitialized.current) {
+      console.log('[WebRTC] Already initialized, skipping');
+      return;
+    }
+
+    hasInitialized.current = true;
+
     try {
       console.log('[WebRTC] Initializing call:', { callType, isInitiator });
 
@@ -46,50 +55,64 @@ export function useWebRTC({
         } : false
       });
 
-      console.log('[WebRTC] Got local stream:', stream.id);
+      console.log('[WebRTC] ✅ Got local stream:', stream.id);
       setLocalStream(stream);
       localStreamRef.current = stream;
 
-      // Create peer connection
+      // Create peer connection with TURN servers
       const peer = new SimplePeer({
         initiator: isInitiator,
         stream,
-        trickle: true, // Enable ICE candidate trickling
+        trickle: true,
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
+            { urls: 'stun:stun4.l.google.com:19302' },
+            {
+              urls: 'turn:openrelay.metered.ca:80',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            },
+            {
+              urls: 'turn:openrelay.metered.ca:443',
+              username: 'openrelayproject',
+              credential: 'openrelayproject'
+            }
           ]
         }
       });
 
       peerRef.current = peer;
 
-      // Handle signaling
+      // Handle ALL signals (offer, answer, AND ICE candidates)
       peer.on('signal', (data) => {
-        console.log('[WebRTC] Signal generated:', data.type);
+        console.log('[WebRTC] Signal generated:', data.type || 'candidate');
         
         if (data.type === 'offer') {
+          console.log('[WebRTC] Sending offer to:', otherUserId);
           socket?.emit('webrtc-offer', { receiverId: otherUserId, offer: data });
         } else if (data.type === 'answer') {
+          console.log('[WebRTC] Sending answer to:', otherUserId);
           socket?.emit('webrtc-answer', { callerId: otherUserId, answer: data });
+        } else {
+          // This is an ICE candidate
+          console.log('[WebRTC] Sending ICE candidate to:', otherUserId);
+          socket?.emit('webrtc-ice-candidate', { otherUserId, candidate: data });
         }
       });
 
-      // ICE candidates are handled in the main signal handler above
-
       // Handle remote stream
       peer.on('stream', (stream) => {
-        console.log('[WebRTC] Received remote stream:', stream.id);
+        console.log('[WebRTC] ✅ Received remote stream:', stream.id);
         setRemoteStream(stream);
       });
 
       // Handle connection state
       peer.on('connect', () => {
-        console.log('[WebRTC] Peer connection established');
+        console.log('[WebRTC] ✅ Peer connection established');
         setIsConnected(true);
         setConnectionState('connected');
         socket?.emit('webrtc-connected', { otherUserId });
@@ -98,11 +121,20 @@ export function useWebRTC({
 
       // Handle errors
       peer.on('error', (err) => {
-        console.error('[WebRTC] Peer error:', err);
-        setConnectionState('failed');
-        const reason = err.message || 'Connection failed';
-        socket?.emit('webrtc-failed', { otherUserId, reason });
-        onConnectionFailed?.(reason);
+        console.error('[WebRTC] ❌ Peer error:', err);
+        
+        // 🔥 FIX: Don't fail on non-critical errors during setup
+        const errorMessage = err.message || 'Connection failed';
+        
+        // Only fail on critical errors
+        if (errorMessage.includes('Cannot') || errorMessage.includes('Failed to execute')) {
+          console.error('[WebRTC] Critical error, failing connection');
+          setConnectionState('failed');
+          socket?.emit('webrtc-failed', { otherUserId, reason: errorMessage });
+          onConnectionFailed?.(errorMessage);
+        } else {
+          console.warn('[WebRTC] Non-critical error, continuing:', errorMessage);
+        }
       });
 
       // Handle close
@@ -116,38 +148,65 @@ export function useWebRTC({
       setConnectionState('connecting');
 
     } catch (error: any) {
-      console.error('[WebRTC] Failed to initialize:', error);
-      const reason = error.message || 'Failed to access media devices';
-      onConnectionFailed?.(reason);
+      console.error('[WebRTC] ❌ Failed to initialize:', error);
+      hasInitialized.current = false; // Reset on failure
       
-      // Alert user if permissions denied
+      const reason = error.message || 'Failed to access media devices';
+      
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        alert('Camera/Microphone access denied. Please allow permissions and try again.');
+        console.error('[WebRTC] Camera/Microphone access denied');
+        onConnectionFailed?.('Camera/Microphone access denied. Please allow permissions and try again.');
+      } else if (error.name === 'NotFoundError') {
+        console.error('[WebRTC] No camera/microphone found');
+        onConnectionFailed?.('No camera or microphone found. Please check your devices.');
+      } else {
+        onConnectionFailed?.(reason);
       }
     }
   }, [callType, isInitiator, otherUserId, socket, onConnectionEstablished, onConnectionFailed, onStreamEnded]);
 
-  // Handle incoming WebRTC offer
-  const handleOffer = useCallback((offer: any) => {
-    console.log('[WebRTC] Handling incoming offer');
+  // Handle offer
+  const handleOffer = useCallback((data: { offer: any; senderId: string }) => {
+    console.log('[WebRTC] Handling incoming offer from:', data.senderId);
     if (peerRef.current) {
-      peerRef.current.signal(offer);
+      try {
+        peerRef.current.signal(data.offer);
+        console.log('[WebRTC] ✅ Offer processed successfully');
+      } catch (error) {
+        console.error('[WebRTC] ❌ Failed to process offer:', error);
+      }
+    } else {
+      console.error('[WebRTC] ❌ Peer not initialized, cannot handle offer');
     }
   }, []);
 
-  // Handle incoming WebRTC answer
-  const handleAnswer = useCallback((answer: any) => {
-    console.log('[WebRTC] Handling incoming answer');
+  // Handle answer
+  const handleAnswer = useCallback((data: { answer: any; senderId: string }) => {
+    console.log('[WebRTC] Handling incoming answer from:', data.senderId);
     if (peerRef.current) {
-      peerRef.current.signal(answer);
+      try {
+        peerRef.current.signal(data.answer);
+        console.log('[WebRTC] ✅ Answer processed successfully');
+      } catch (error) {
+        console.error('[WebRTC] ❌ Failed to process answer:', error);
+      }
+    } else {
+      console.error('[WebRTC] ❌ Peer not initialized, cannot handle answer');
     }
   }, []);
 
-  // Handle incoming ICE candidate
-  const handleIceCandidate = useCallback((candidate: any) => {
-    console.log('[WebRTC] Handling incoming ICE candidate');
+  // Handle ICE candidate
+  const handleIceCandidate = useCallback((data: { candidate: any; senderId: string }) => {
+    console.log('[WebRTC] Handling incoming ICE candidate from:', data.senderId);
     if (peerRef.current) {
-      peerRef.current.signal(candidate);
+      try {
+        peerRef.current.signal(data.candidate);
+        console.log('[WebRTC] ✅ ICE candidate processed successfully');
+      } catch (error) {
+        console.error('[WebRTC] ❌ Failed to process ICE candidate:', error);
+      }
+    } else {
+      console.error('[WebRTC] ❌ Peer not initialized, cannot handle ICE candidate');
     }
   }, []);
 
@@ -175,7 +234,7 @@ export function useWebRTC({
     return false;
   }, []);
 
-  // Start screen sharing (for future)
+  // Start screen sharing
   const startScreenShare = useCallback(async () => {
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -186,7 +245,6 @@ export function useWebRTC({
       if (peerRef.current && localStreamRef.current) {
         const videoTrack = screenStream.getVideoTracks()[0];
         
-        // Access the underlying RTCPeerConnection
         const pc = (peerRef.current as any)._pc as RTCPeerConnection;
         const sender = pc?.getSenders().find(s => s.track?.kind === 'video');
 
@@ -194,7 +252,6 @@ export function useWebRTC({
           sender.replaceTrack(videoTrack);
         }
 
-        // Stop screen share when user stops it
         videoTrack.onended = () => {
           stopScreenShare();
         };
@@ -213,7 +270,6 @@ export function useWebRTC({
     if (localStreamRef.current && peerRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
       
-      // Access the underlying RTCPeerConnection
       const pc = (peerRef.current as any)._pc as RTCPeerConnection;
       const sender = pc?.getSenders().find(s => s.track?.kind === 'video');
 
@@ -227,12 +283,10 @@ export function useWebRTC({
   const cleanup = useCallback(() => {
     console.log('[WebRTC] Cleaning up');
     
-    // Stop all local tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
     }
 
-    // Destroy peer connection
     if (peerRef.current) {
       peerRef.current.destroy();
       peerRef.current = null;
@@ -242,6 +296,7 @@ export function useWebRTC({
     setRemoteStream(null);
     setIsConnected(false);
     setConnectionState('disconnected');
+    hasInitialized.current = false; // 🔥 Reset initialization flag
   }, []);
 
   // Cleanup on unmount

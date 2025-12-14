@@ -28,15 +28,13 @@ app.use(
 );
 app.use(express.json());
 
-
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Routes;
+// Routes
 app.use('/uploads', express.static(path.join(__dirname, './uploads')));
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/follow", followRouter);
@@ -59,19 +57,25 @@ const io = new Server(server, {
   },
 });
 
+// 🔥 FIX: Track active call states for idempotency
+const activeCallStates = new Map<string, {
+  callId: string;
+  state: 'ringing' | 'active';
+  callerId: string;
+  receiverId: string;
+  timeout?: NodeJS.Timeout;
+}>();
+
 // Authenticate Socket.IO connections
 io.use((socket, next) => {
-  // Extract token from handshake auth
   const token = socket.handshake.auth.token;
   console.log("token " + token)
   if (!token) {
     return next(new Error("Invalid User / User not logged in"));
   }
 
-  // Attach token to the request object for authMiddleware
   socket.request.headers = { authorization: `Bearer ${token}` };
 
-  // Use your auth middleware
   authMiddleware(socket.request as express.Request, {} as any, (err?: any) => {
     if (err) {
       return next(new Error("Authentication failed"));
@@ -84,16 +88,18 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   console.log("New User Connected:", socket.id);
 
-  // Extract senderId from authenticated user
-  const senderId = (socket.request as any).id; // Correct extraction
+  const senderId = (socket.request as any).id;
   if (!senderId) {
     console.error("Sender ID not found. Disconnecting socket.");
     socket.disconnect();
     return;
   }
 
-  // Log the senderId
   console.log(`Sender ID: ${senderId}`);
+
+  // 🔥 FIX #1: Auto-join user to their OWN room (Critical for call notifications)
+  socket.join(senderId);
+  console.log(`✅ User ${senderId} joined their personal room`);
 
   // Update user status to online
   prisma.user
@@ -108,28 +114,23 @@ io.on("connection", (socket) => {
       console.error("Error updating user status to online:", error);
     });
 
-
   socket.on("joinRoom", ({ receiverId }) => {
     if (!receiverId) {
       console.error("Receiver ID not provided.");
       return;
     }
 
-
     console.log(`Receiver ID passed to joinRoom: ${receiverId}`);
-
 
     if (receiverId === senderId) {
       console.error("Receiver ID cannot be the same as Sender ID.");
       return;
     }
 
-
     const room = [senderId, receiverId].sort().join("_");
     socket.join(room);
     socket.data.userId = senderId;
     console.log(`User ${senderId} joined room ${room}`);
-
 
     io.in(room)
       .fetchSockets()
@@ -138,13 +139,11 @@ io.on("connection", (socket) => {
       });
   });
 
-
   socket.on("sendMessage", async ({ receiverId, content }) => {
     if (!receiverId || !content) {
       console.error("Receiver ID or content not provided.");
       return;
     }
-
 
     if (receiverId === senderId) {
       console.error("Receiver ID cannot be the same as Sender ID.");
@@ -152,19 +151,15 @@ io.on("connection", (socket) => {
     }
 
     try {
-
       const message = await prisma.message.create({
         data: { senderId, receiverId, content, read: false },
       });
       console.log("Message saved to database:", message);
 
-
       const room = [senderId, receiverId].sort().join("_");
-
 
       socket.to(room).emit("receiveMessage", message);
       console.log(`Message sent to room ${room}:`, message);
-
 
       io.in(room)
         .fetchSockets()
@@ -176,249 +171,317 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ============================================
+  // CALL SIGNALING (With Fixes)
+  // ============================================
+
   socket.on("callInitiate", async ({ receiverId, callType }: { 
-  receiverId: string; 
-  callType: 'audio' | 'video' 
-}) => {
-  console.log(`[CALL] ${senderId} initiating ${callType} call to ${receiverId}`);
+    receiverId: string; 
+    callType: 'audio' | 'video' 
+  }) => {
+    console.log(`[CALL] ${senderId} initiating ${callType} call to ${receiverId}`);
 
-  if (!receiverId || receiverId === senderId) {
-    console.error("[CALL] Invalid receiver ID");
-    return;
-  }
-
-  try {
-    // Fetch caller details for notification
-    const caller = await prisma.user.findUnique({
-      where: { id: senderId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        profile: {
-          select: { profilePic: true }
-        }
-      }
-    });
-
-    if (!caller) {
-      console.error("[CALL] Caller not found");
+    if (!receiverId || receiverId === senderId) {
+      console.error("[CALL] Invalid receiver ID");
       return;
     }
 
-    // Create call room
-    const room = [senderId, receiverId].sort().join("_");
+    try {
+      // 🔥 FIX #3: Check if receiver is online FIRST
+      const receiverSockets = await io.in(receiverId).fetchSockets();
+      if (receiverSockets.length === 0) {
+        console.log(`[CALL] Receiver ${receiverId} is offline`);
+        socket.emit("callUnavailable", { 
+          receiverId,
+          reason: "User is offline" 
+        });
+        return;
+      }
 
-    // Create initial call history record
-    const callRecord = await prisma.callHistory.create({
-      data: {
+      // Fetch caller details for notification
+      const caller = await prisma.user.findUnique({
+        where: { id: senderId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          profile: {
+            select: { profilePic: true }
+          }
+        }
+      });
+
+      if (!caller) {
+        console.error("[CALL] Caller not found");
+        return;
+      }
+
+      const room = [senderId, receiverId].sort().join("_");
+
+      // 🔥 FIX: Create call history AFTER confirming receiver is online
+      const callRecord = await prisma.callHistory.create({
+        data: {
+          callerId: senderId,
+          receiverId: receiverId,
+          type: callType,
+          status: "no-answer",
+          startedAt: new Date()
+        }
+      });
+
+      console.log(`[CALL] Call record created: ${callRecord.id}`);
+
+      // Store call state for idempotency
+      activeCallStates.set(callRecord.id, {
+        callId: callRecord.id,
+        state: 'ringing',
         callerId: senderId,
-        receiverId: receiverId,
-        type: callType,
-        status: "no-answer", // Default status
-        startedAt: new Date()
+        receiverId: receiverId
+      });
+
+      // Notify receiver about incoming call
+      io.to(receiverId).emit("incomingCall", {
+        callId: callRecord.id,
+        callerId: senderId,
+        callerName: `${caller.firstName} ${caller.lastName || ''}`.trim(),
+        callerAvatar: caller.profile?.profilePic || null,
+        callType,
+        room
+      });
+
+      // Notify caller that call is ringing
+      socket.emit("callRinging", { callId: callRecord.id, room });
+
+      console.log(`[CALL] Incoming call notification sent to ${receiverId}`);
+
+      // 🔥 FIX #2: Backend-controlled timeout (30 seconds)
+      const timeoutTimer = setTimeout(async () => {
+        const callState = activeCallStates.get(callRecord.id);
+        
+        // Only timeout if still in ringing state
+        if (callState && callState.state === 'ringing') {
+          console.log(`[CALL] Backend timeout: Call ${callRecord.id} not answered`);
+
+          try {
+            await prisma.callHistory.update({
+              where: { id: callRecord.id },
+              data: { 
+                status: "no-answer",
+                endedAt: new Date()
+              }
+            });
+
+            // Notify both parties
+            io.to(senderId).emit("callTimeout", { callId: callRecord.id });
+            io.to(receiverId).emit("callCancelled", { callId: callRecord.id });
+
+            activeCallStates.delete(callRecord.id);
+          } catch (error) {
+            console.error("[CALL] Error handling timeout:", error);
+          }
+        }
+      }, 30000); // 30 seconds
+
+      // Store timeout handle
+      const state = activeCallStates.get(callRecord.id);
+      if (state) {
+        state.timeout = timeoutTimer;
       }
-    });
 
-    console.log(`[CALL] Call record created: ${callRecord.id}`);
-
-    // Notify receiver about incoming call
-    io.to(receiverId).emit("incomingCall", {
-      callId: callRecord.id,
-      callerId: senderId,
-      callerName: `${caller.firstName} ${caller.lastName || ''}`.trim(),
-      callerAvatar: caller.profile?.profilePic || null,
-      callType,
-      room
-    });
-
-    // Notify caller that call is ringing
-    socket.emit("callRinging", { callId: callRecord.id, room });
-
-    console.log(`[CALL] Incoming call notification sent to ${receiverId}`);
-
-  } catch (error) {
-    console.error("[CALL] Error initiating call:", error);
-    socket.emit("callError", { message: "Failed to initiate call" });
-  }
-});
-
-// 2. CALL ACCEPTANCE
-socket.on("callAccept", async ({ callId, callerId }: { 
-  callId: string; 
-  callerId: string 
-}) => {
-  console.log(`[CALL] ${senderId} accepted call ${callId} from ${callerId}`);
-
-  try {
-    // Update call status to "in progress"
-    await prisma.callHistory.update({
-      where: { id: callId },
-      data: { 
-        status: "completed", // Will be updated to actual duration on end
-        startedAt: new Date() // Reset to actual start time
-      }
-    });
-
-    const room = [senderId, callerId].sort().join("_");
-
-    // Notify caller that call was accepted
-    io.to(callerId).emit("callAccepted", { 
-      callId, 
-      room,
-      receiverId: senderId 
-    });
-
-    console.log(`[CALL] Call ${callId} accepted, both parties notified`);
-
-  } catch (error) {
-    console.error("[CALL] Error accepting call:", error);
-    socket.emit("callError", { message: "Failed to accept call" });
-  }
-});
-
-// 3. CALL REJECTION
-socket.on("callReject", async ({ callId, callerId }: { 
-  callId: string; 
-  callerId: string 
-}) => {
-  console.log(`[CALL] ${senderId} rejected call ${callId} from ${callerId}`);
-
-  try {
-    // Update call status to declined
-    await prisma.callHistory.update({
-      where: { id: callId },
-      data: { 
-        status: "declined",
-        endedAt: new Date()
-      }
-    });
-
-    // Notify caller that call was rejected
-    io.to(callerId).emit("callRejected", { callId });
-
-    console.log(`[CALL] Call ${callId} rejected`);
-
-  } catch (error) {
-    console.error("[CALL] Error rejecting call:", error);
-  }
-});
-
-// 4. CALL END
-socket.on("callEnd", async ({ callId, otherUserId, duration }: { 
-  callId: string; 
-  otherUserId: string; 
-  duration: number 
-}) => {
-  console.log(`[CALL] ${senderId} ending call ${callId}, duration: ${duration}s`);
-
-  try {
-    // Update call history with final duration
-    await prisma.callHistory.update({
-      where: { id: callId },
-      data: {
-        status: duration > 0 ? "completed" : "no-answer",
-        duration: duration,
-        endedAt: new Date()
-      }
-    });
-
-    // Notify other user that call ended
-    io.to(otherUserId).emit("callEnded", { callId });
-
-    console.log(`[CALL] Call ${callId} ended successfully`);
-
-  } catch (error) {
-    console.error("[CALL] Error ending call:", error);
-  }
-});
-
-// 5. CALL TIMEOUT (No answer after 30 seconds)
-socket.on("callTimeout", async ({ callId, receiverId }: { 
-  callId: string; 
-  receiverId: string 
-}) => {
-  console.log(`[CALL] Call ${callId} timed out (no answer)`);
-
-  try {
-    await prisma.callHistory.update({
-      where: { id: callId },
-      data: { 
-        status: "no-answer",
-        endedAt: new Date()
-      }
-    });
-
-    // Notify receiver that caller cancelled
-    io.to(receiverId).emit("callCancelled", { callId });
-
-  } catch (error) {
-    console.error("[CALL] Error handling timeout:", error);
-  }
-});
-
-// ============================================
-// WEBRTC SIGNALING (Peer-to-Peer Connection)
-// ============================================
-
-// WebRTC Offer (Caller -> Receiver)
-socket.on("webrtc-offer", ({ receiverId, offer }: { 
-  receiverId: string; 
-  offer: any 
-}) => {
-  console.log(`[WEBRTC] Forwarding offer from ${senderId} to ${receiverId}`);
-  
-  io.to(receiverId).emit("webrtc-offer", { 
-    offer, 
-    senderId 
+    } catch (error) {
+      console.error("[CALL] Error initiating call:", error);
+      socket.emit("callError", { message: "Failed to initiate call" });
+    }
   });
-});
 
-// WebRTC Answer (Receiver -> Caller)
-socket.on("webrtc-answer", ({ callerId, answer }: { 
-  callerId: string; 
-  answer: any 
-}) => {
-  console.log(`[WEBRTC] Forwarding answer from ${senderId} to ${callerId}`);
-  
-  io.to(callerId).emit("webrtc-answer", { 
-    answer,
-    senderId 
+  // CALL ACCEPTANCE
+  socket.on("callAccept", async ({ callId, callerId }: { 
+    callId: string; 
+    callerId: string 
+  }) => {
+    console.log(`[CALL] ${senderId} accepting call ${callId} from ${callerId}`);
+
+    try {
+      // 🔥 FIX #4: Idempotency guard - only accept if ringing
+      const callState = activeCallStates.get(callId);
+      if (!callState || callState.state !== 'ringing') {
+        console.log(`[CALL] Call ${callId} already accepted or invalid`);
+        return;
+      }
+
+      // Clear timeout
+      if (callState.timeout) {
+        clearTimeout(callState.timeout);
+      }
+
+      // Update state to active
+      callState.state = 'active';
+
+      await prisma.callHistory.update({
+        where: { id: callId },
+        data: { 
+          status: "completed",
+          startedAt: new Date()
+        }
+      });
+
+      const room = [senderId, callerId].sort().join("_");
+
+      io.to(callerId).emit("callAccepted", { 
+        callId, 
+        room,
+        receiverId: senderId 
+      });
+
+      console.log(`[CALL] Call ${callId} accepted, both parties notified`);
+
+    } catch (error) {
+      console.error("[CALL] Error accepting call:", error);
+      socket.emit("callError", { message: "Failed to accept call" });
+    }
   });
-});
 
-// ICE Candidate Exchange (Both directions)
-socket.on("webrtc-ice-candidate", ({ otherUserId, candidate }: { 
-  otherUserId: string; 
-  candidate: any 
-}) => {
-  console.log(`[WEBRTC] Forwarding ICE candidate from ${senderId} to ${otherUserId}`);
-  
-  io.to(otherUserId).emit("webrtc-ice-candidate", { 
-    candidate,
-    senderId 
+  // CALL REJECTION
+  socket.on("callReject", async ({ callId, callerId }: { 
+    callId: string; 
+    callerId: string 
+  }) => {
+    console.log(`[CALL] ${senderId} rejecting call ${callId} from ${callerId}`);
+
+    try {
+      const callState = activeCallStates.get(callId);
+      if (callState?.timeout) {
+        clearTimeout(callState.timeout);
+      }
+
+      await prisma.callHistory.update({
+        where: { id: callId },
+        data: { 
+          status: "declined",
+          endedAt: new Date()
+        }
+      });
+
+      io.to(callerId).emit("callRejected", { callId });
+      activeCallStates.delete(callId);
+
+      console.log(`[CALL] Call ${callId} rejected`);
+
+    } catch (error) {
+      console.error("[CALL] Error rejecting call:", error);
+    }
   });
-});
 
-// Connection established confirmation
-socket.on("webrtc-connected", ({ otherUserId }: { otherUserId: string }) => {
-  console.log(`[WEBRTC] Connection established between ${senderId} and ${otherUserId}`);
-  
-  io.to(otherUserId).emit("webrtc-connected", { senderId });
-});
+  // CALL END
+  socket.on("callEnd", async ({ callId, otherUserId, duration }: { 
+    callId: string; 
+    otherUserId: string; 
+    duration: number 
+  }) => {
+    console.log(`[CALL] ${senderId} ending call ${callId}, duration: ${duration}s`);
 
-// Connection failed
-socket.on("webrtc-failed", ({ otherUserId, reason }: { 
-  otherUserId: string; 
-  reason: string 
-}) => {
-  console.log(`[WEBRTC] Connection failed: ${reason}`);
-  
-  io.to(otherUserId).emit("webrtc-failed", { 
-    senderId,
-    reason 
+    try {
+      // 🔥 FIX #4: Idempotency guard - only end if active
+      const callState = activeCallStates.get(callId);
+      if (!callState) {
+        console.log(`[CALL] Call ${callId} already ended or invalid`);
+        return;
+      }
+
+      if (callState.timeout) {
+        clearTimeout(callState.timeout);
+      }
+
+      await prisma.callHistory.update({
+        where: { id: callId },
+        data: {
+          status: duration > 0 ? "completed" : "no-answer",
+          duration: duration,
+          endedAt: new Date()
+        }
+      });
+
+      io.to(otherUserId).emit("callEnded", { callId });
+      activeCallStates.delete(callId);
+
+      console.log(`[CALL] Call ${callId} ended successfully`);
+
+    } catch (error) {
+      console.error("[CALL] Error ending call:", error);
+    }
   });
-});
+
+  // CALL TIMEOUT (Frontend fallback - backend is authority)
+  socket.on("callTimeout", async ({ callId, receiverId }: { 
+    callId: string; 
+    receiverId: string 
+  }) => {
+    console.log(`[CALL] Frontend timeout signal for ${callId}`);
+
+    try {
+      const callState = activeCallStates.get(callId);
+      if (!callState) return;
+
+      if (callState.timeout) {
+        clearTimeout(callState.timeout);
+      }
+
+      await prisma.callHistory.update({
+        where: { id: callId },
+        data: { 
+          status: "no-answer",
+          endedAt: new Date()
+        }
+      });
+
+      io.to(receiverId).emit("callCancelled", { callId });
+      activeCallStates.delete(callId);
+
+    } catch (error) {
+      console.error("[CALL] Error handling timeout:", error);
+    }
+  });
+
+  // ============================================
+  // WEBRTC SIGNALING
+  // ============================================
+
+  socket.on("webrtc-offer", ({ receiverId, offer }: { 
+    receiverId: string; 
+    offer: any 
+  }) => {
+    console.log(`[WEBRTC] Forwarding offer from ${senderId} to ${receiverId}`);
+    io.to(receiverId).emit("webrtc-offer", { offer, senderId });
+  });
+
+  socket.on("webrtc-answer", ({ callerId, answer }: { 
+    callerId: string; 
+    answer: any 
+  }) => {
+    console.log(`[WEBRTC] Forwarding answer from ${senderId} to ${callerId}`);
+    io.to(callerId).emit("webrtc-answer", { answer, senderId });
+  });
+
+  socket.on("webrtc-ice-candidate", ({ otherUserId, candidate }: { 
+    otherUserId: string; 
+    candidate: any 
+  }) => {
+    console.log(`[WEBRTC] Forwarding ICE candidate from ${senderId} to ${otherUserId}`);
+    io.to(otherUserId).emit("webrtc-ice-candidate", { candidate, senderId });
+  });
+
+  socket.on("webrtc-connected", ({ otherUserId }: { otherUserId: string }) => {
+    console.log(`[WEBRTC] Connection established between ${senderId} and ${otherUserId}`);
+    io.to(otherUserId).emit("webrtc-connected", { senderId });
+  });
+
+  socket.on("webrtc-failed", ({ otherUserId, reason }: { 
+    otherUserId: string; 
+    reason: string 
+  }) => {
+    console.log(`[WEBRTC] Connection failed: ${reason}`);
+    io.to(otherUserId).emit("webrtc-failed", { senderId, reason });
+  });
 
   // Disconnect event
   socket.on("disconnect", async () => {
@@ -426,12 +489,11 @@ socket.on("webrtc-failed", ({ otherUserId, reason }: {
 
     if (senderId) {
       try {
-        // Update user status to offline AND set lastSeen
         await prisma.user.update({
           where: { id: senderId },
           data: {
             isOnline: false,
-            lastSeen: new Date()  // ADD THIS LINE
+            lastSeen: new Date()
           },
         });
         io.emit("updateUserStatus", { userId: senderId, isOnline: false });

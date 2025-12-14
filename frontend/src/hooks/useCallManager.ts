@@ -7,38 +7,53 @@ import { toast } from 'react-toastify';
 export function useCallManager(socket: Socket | null) {
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [incomingCall, setIncomingCall] = useState<IncomingCallEvent | null>(null);
-  
+
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const ringingSoundRef = useRef<HTMLAudioElement | null>(null);
+  const callIdRef = useRef<string>('');
+  const isRingingRef = useRef<boolean>(false);
+  const processedCallIds = useRef<Set<string>>(new Set()); // 🔥 Track processed calls
+  const incomingCallRef = useRef<IncomingCallEvent | null>(null); // 🔥 Ref for closure access
 
-  // Initialize audio for ringing (create once)
+  // Initialize ringing sound once
   useEffect(() => {
-    // Create ringing sound (you'll need to add a ring.mp3 to public folder)
-    // Or use a simple beep: data:audio/wav;base64,...
-    ringingSoundRef.current = new Audio('/ring.mp3');
+    ringingSoundRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     ringingSoundRef.current.loop = true;
+    ringingSoundRef.current.volume = 0.5;
+
+    return () => {
+      if (ringingSoundRef.current) {
+        ringingSoundRef.current.pause();
+        ringingSoundRef.current = null;
+      }
+    };
   }, []);
 
-//   useEffect(() => {
-//   // Use a free ringing sound from a reliable CDN
-//   ringingSoundRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-//   ringingSoundRef.current.loop = true;
-//   ringingSoundRef.current.volume = 0.5; // 50% volume
-// }, []);
-
-  // Play ringing sound
-  const playRingingSound = useCallback(() => {
-    ringingSoundRef.current?.play().catch(err => {
-      console.error('Failed to play ringing sound:', err);
-    });
-  }, []);
-
-  // Stop ringing sound
-  const stopRingingSound = useCallback(() => {
+  // 🔥 FIX: Robust stop ringing with force flag
+  const stopRingingSound = useCallback((force = false) => {
+    console.log('[Sound] Stopping ringing sound', { force, isPlaying: isRingingRef.current });
     if (ringingSoundRef.current) {
       ringingSoundRef.current.pause();
       ringingSoundRef.current.currentTime = 0;
+      isRingingRef.current = false;
     }
+  }, []);
+
+  // 🔥 FIX: Play ringing sound with duplicate guard
+  const playRingingSound = useCallback(() => {
+    if (isRingingRef.current) {
+      console.log('[Sound] Ringing already playing, skipping duplicate');
+      return;
+    }
+
+    console.log('[Sound] Starting ringing sound');
+    ringingSoundRef.current?.play()
+      .then(() => {
+        isRingingRef.current = true;
+      })
+      .catch(err => {
+        console.error('Failed to play ringing sound:', err);
+      });
   }, []);
 
   // Initiate outgoing call
@@ -57,7 +72,7 @@ export function useCallManager(socket: Socket | null) {
 
     // Set initial call state
     setActiveCall({
-      callId: '', // Will be set when server responds
+      callId: '',
       otherUserId,
       otherUserName,
       otherUserAvatar,
@@ -72,41 +87,44 @@ export function useCallManager(socket: Socket | null) {
     // Emit call initiation
     socket.emit('callInitiate', { receiverId: otherUserId, callType });
 
-    // Start ringing sound
+    // Start ringing sound (for caller - waiting for answer)
     playRingingSound();
 
-    // Set timeout for no answer (30 seconds)
+    // Frontend timeout as fallback (backend is authority)
     callTimeoutRef.current = setTimeout(() => {
-      console.log('[CallManager] Call timeout - no answer');
-      stopRingingSound();
-      
-      if (activeCall?.callId) {
-        socket.emit('callTimeout', { 
-          callId: activeCall.callId, 
-          receiverId: otherUserId 
+      console.log('[CallManager] Frontend timeout - no answer');
+      stopRingingSound(true);
+
+      if (callIdRef.current) {
+        socket.emit('callTimeout', {
+          callId: callIdRef.current,
+          receiverId: otherUserId
         });
       }
 
       setActiveCall(null);
+      callIdRef.current = '';
       toast.info(`${otherUserName} didn't answer`);
     }, 30000);
 
-  }, [socket, activeCall, playRingingSound, stopRingingSound]);
+  }, [socket, playRingingSound, stopRingingSound]);
 
   // Accept incoming call
   const acceptCall = useCallback(() => {
-    if (!incomingCall || !socket) return;
+    const currentIncomingCall = incomingCallRef.current;
+    if (!currentIncomingCall || !socket) return;
 
-    console.log('[CallManager] Accepting call:', incomingCall.callId);
-    
-    stopRingingSound();
+    console.log('[CallManager] Accepting call:', currentIncomingCall.callId);
+
+    // 🔥 CRITICAL: Stop ALL ringing IMMEDIATELY
+    stopRingingSound(true);
 
     setActiveCall({
-      callId: incomingCall.callId,
-      otherUserId: incomingCall.callerId,
-      otherUserName: incomingCall.callerName,
-      otherUserAvatar: incomingCall.callerAvatar,
-      callType: incomingCall.callType,
+      callId: currentIncomingCall.callId,
+      otherUserId: currentIncomingCall.callerId,
+      otherUserName: currentIncomingCall.callerName,
+      otherUserAvatar: currentIncomingCall.callerAvatar,
+      callType: currentIncomingCall.callType,
       state: 'connecting',
       startTime: Date.now(),
       isMuted: false,
@@ -114,45 +132,49 @@ export function useCallManager(socket: Socket | null) {
       isScreenSharing: false
     });
 
-    socket.emit('callAccept', { 
-      callId: incomingCall.callId, 
-      callerId: incomingCall.callerId 
+    callIdRef.current = currentIncomingCall.callId;
+
+    socket.emit('callAccept', {
+      callId: currentIncomingCall.callId,
+      callerId: currentIncomingCall.callerId
     });
 
     setIncomingCall(null);
-  }, [incomingCall, socket, stopRingingSound]);
+    incomingCallRef.current = null;
+  }, [socket, stopRingingSound]);
 
   // Reject incoming call
   const rejectCall = useCallback(() => {
-    if (!incomingCall || !socket) return;
+    const currentIncomingCall = incomingCallRef.current;
+    if (!currentIncomingCall || !socket) return;
 
-    console.log('[CallManager] Rejecting call:', incomingCall.callId);
-    
-    stopRingingSound();
+    console.log('[CallManager] Rejecting call:', currentIncomingCall.callId);
 
-    socket.emit('callReject', { 
-      callId: incomingCall.callId, 
-      callerId: incomingCall.callerId 
+    stopRingingSound(true);
+
+    socket.emit('callReject', {
+      callId: currentIncomingCall.callId,
+      callerId: currentIncomingCall.callerId
     });
 
     setIncomingCall(null);
-  }, [incomingCall, socket, stopRingingSound]);
+    incomingCallRef.current = null;
+  }, [socket, stopRingingSound]);
 
   // End active call
   const endCall = useCallback(() => {
     if (!activeCall || !socket) return;
 
     console.log('[CallManager] Ending call:', activeCall.callId);
-    
-    stopRingingSound();
 
-    // Clear timeout
+    stopRingingSound(true);
+
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
     }
 
-    const duration = activeCall.startTime 
+    const duration = activeCall.startTime
       ? Math.floor((Date.now() - activeCall.startTime) / 1000)
       : 0;
 
@@ -163,6 +185,7 @@ export function useCallManager(socket: Socket | null) {
     });
 
     setActiveCall(null);
+    callIdRef.current = '';
   }, [activeCall, socket, stopRingingSound]);
 
   // Update call state
@@ -174,35 +197,69 @@ export function useCallManager(socket: Socket | null) {
   useEffect(() => {
     if (!socket) return;
 
-    // Incoming call
+    // 🔥 FIX: Incoming call with idempotency
     const handleIncomingCall = (data: IncomingCallEvent) => {
-      console.log('[CallManager] Incoming call:', data);
+      console.log('[CallManager] 📞 Incoming call received', { 
+        callerName: data.callerName, 
+        callId: data.callId,
+        alreadyProcessed: processedCallIds.current.has(data.callId),
+        hasIncomingCall: !!incomingCall
+      });
+
+      // 🔥 CRITICAL: Prevent duplicate processing
+      if (processedCallIds.current.has(data.callId)) {
+        console.log('[CallManager] ⚠️ Already processed this call, IGNORING');
+        return;
+      }
+
+      if (incomingCallRef.current) {
+        console.log('[CallManager] ⚠️ Already have incoming call, IGNORING new one');
+        return;
+      }
+
+      // Mark as processed IMMEDIATELY
+      processedCallIds.current.add(data.callId);
+      console.log('[CallManager] ✅ Marked call as processed:', data.callId);
+
       setIncomingCall(data);
-      playRingingSound();
+      incomingCallRef.current = data; // 🔥 Update ref
+
+      // 🔥 Stop any existing ringing first
+      stopRingingSound(true);
       
-      // Show notification
+      // Small delay to ensure audio resets
+      setTimeout(() => {
+        playRingingSound();
+      }, 100);
+
       toast.info(`${data.callerName} is calling...`, {
         autoClose: false,
         closeButton: false
       });
     };
 
-    // Call ringing (outgoing call is ringing on other end)
+    // Call ringing (CALLER gets confirmation)
     const handleCallRinging = ({ callId }: { callId: string; room: string }) => {
-      console.log('[CallManager] Call ringing:', callId);
-      setActiveCall(prev => prev ? { 
-        ...prev, 
-        callId, 
-        state: 'ringing' 
+      console.log('[CallManager] Call ringing (receiver notified):', callId);
+
+      callIdRef.current = callId;
+
+      setActiveCall(prev => prev ? {
+        ...prev,
+        callId,
+        state: 'ringing'
       } : null);
+
+      // Ringing sound ALREADY playing from initiateCall
     };
 
-    // Call accepted
+    // Call accepted (BOTH users stop ringing)
     const handleCallAccepted = ({ callId }: { callId: string; receiverId: string }) => {
-      console.log('[CallManager] Call accepted:', callId);
-      
-      stopRingingSound();
-      
+      console.log('[CallManager] ✅ Call accepted:', callId);
+
+      // 🔥 CRITICAL: Force stop ALL ringing for CALLER
+      stopRingingSound(true);
+
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
         callTimeoutRef.current = null;
@@ -219,9 +276,9 @@ export function useCallManager(socket: Socket | null) {
     // Call rejected
     const handleCallRejected = ({ callId }: { callId: string }) => {
       console.log('[CallManager] Call rejected:', callId);
-      
-      stopRingingSound();
-      
+
+      stopRingingSound(true);
+
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
         callTimeoutRef.current = null;
@@ -229,36 +286,77 @@ export function useCallManager(socket: Socket | null) {
 
       toast.info('Call declined');
       setActiveCall(null);
+      callIdRef.current = '';
+      processedCallIds.current.delete(callId);
     };
 
     // Call ended by other user
     const handleCallEnded = ({ callId }: { callId: string }) => {
       console.log('[CallManager] Call ended by other user:', callId);
-      
-      stopRingingSound();
+
+      stopRingingSound(true);
       toast.info('Call ended');
       setActiveCall(null);
+      callIdRef.current = '';
+      processedCallIds.current.delete(callId);
     };
 
     // Call cancelled (timeout)
     const handleCallCancelled = ({ callId }: { callId: string }) => {
       console.log('[CallManager] Call cancelled:', callId);
-      
-      stopRingingSound();
+
+      stopRingingSound(true);
       setIncomingCall(null);
+      incomingCallRef.current = null; // 🔥 Update ref
+      processedCallIds.current.delete(callId);
+    };
+
+    // Backend timeout
+    const handleCallTimeout = ({ callId }: { callId: string }) => {
+      console.log('[CallManager] Backend timeout received:', callId);
+
+      stopRingingSound(true);
+
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+
+      toast.info('Call not answered');
+      setActiveCall(null);
+      callIdRef.current = '';
+      processedCallIds.current.delete(callId);
+    };
+
+    // User unavailable
+    const handleCallUnavailable = ({ reason }: { receiverId: string; reason: string }) => {
+      console.log('[CallManager] Call unavailable:', reason);
+
+      stopRingingSound(true);
+
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+
+      toast.error(reason);
+      setActiveCall(null);
+      callIdRef.current = '';
     };
 
     // WebRTC connection established
     const handleWebRTCConnected = () => {
-      console.log('[CallManager] WebRTC connected');
+      console.log('[CallManager] ✅ WebRTC connected - call is now active');
       setActiveCall(prev => prev ? { ...prev, state: 'active' } : null);
     };
 
     // WebRTC connection failed
     const handleWebRTCFailed = ({ reason }: { senderId: string; reason: string }) => {
-      console.log('[CallManager] WebRTC failed:', reason);
+      console.log('[CallManager] ❌ WebRTC failed:', reason);
+      stopRingingSound(true);
       toast.error(`Connection failed: ${reason}`);
       setActiveCall(null);
+      callIdRef.current = '';
     };
 
     // Register listeners
@@ -268,6 +366,8 @@ export function useCallManager(socket: Socket | null) {
     socket.on('callRejected', handleCallRejected);
     socket.on('callEnded', handleCallEnded);
     socket.on('callCancelled', handleCallCancelled);
+    socket.on('callTimeout', handleCallTimeout);
+    socket.on('callUnavailable', handleCallUnavailable);
     socket.on('webrtc-connected', handleWebRTCConnected);
     socket.on('webrtc-failed', handleWebRTCFailed);
 
@@ -278,10 +378,14 @@ export function useCallManager(socket: Socket | null) {
       socket.off('callRejected', handleCallRejected);
       socket.off('callEnded', handleCallEnded);
       socket.off('callCancelled', handleCallCancelled);
+      socket.off('callTimeout', handleCallTimeout);
+      socket.off('callUnavailable', handleCallUnavailable);
       socket.off('webrtc-connected', handleWebRTCConnected);
       socket.off('webrtc-failed', handleWebRTCFailed);
+
+      stopRingingSound(true);
     };
-  }, [socket, playRingingSound, stopRingingSound]);
+  }, [socket, playRingingSound, stopRingingSound]); // 🔥 REMOVED incomingCall from deps
 
   // Cleanup on unmount
   useEffect(() => {
@@ -289,7 +393,8 @@ export function useCallManager(socket: Socket | null) {
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
       }
-      stopRingingSound();
+      stopRingingSound(true);
+      processedCallIds.current.clear();
     };
   }, [stopRingingSound]);
 

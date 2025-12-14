@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { MessageBubble } from './MessageBubble';
@@ -15,13 +15,14 @@ import { Message } from '@/types/types';
 interface ChatThreadProps {
   userId: string;
   onBack?: () => void;
+  socket: Socket | null; // 🔥 Receive socket from parent
 }
 
-export function ChatThread({ userId, onBack }: ChatThreadProps) {
-  const [socket, setSocket] = useState<Socket | null>(null);
+export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const hasJoinedRoomRef = useRef<string | null>(null); // 🔥 Track which room we've joined
 
   const { data: currentUserData } = useCurrentUser();
   const { data: otherUserData } = useUser(userId);
@@ -32,14 +33,10 @@ export function ChatThread({ userId, onBack }: ChatThreadProps) {
   const currentUser = currentUserData?.user;
   const otherUser = otherUserData?.user;
 
-  // ✅ SINGLE SOURCE OF TRUTH: Only server messages
   const allMessages = messagesData?.pages.flatMap((page) => page.messages) || [];
-  
-  // ✅ Deduplicate by ID (just in case)
   const uniqueMessages = Array.from(
     new Map(allMessages.map(msg => [msg.id, msg])).values()
   );
-  
   const isNewConversation = !isLoading && uniqueMessages.length === 0;
 
   // Auto-scroll
@@ -61,66 +58,73 @@ export function ChatThread({ userId, onBack }: ChatThreadProps) {
     }
   }, [isLoading, uniqueMessages.length, currentUser?.id, isNewConversation]);
 
-  // WebSocket setup
+  // 🔥 FIX: Join room once when socket AND userId are available
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token || !userId) return;
+    if (!socket || !userId) return;
+    
+    // 🔥 CRITICAL: Track by userId to prevent duplicate joins
+    if (hasJoinedRoomRef.current === userId) {
+      console.log(`[ChatThread] Already joined room for ${userId}, skipping`);
+      return;
+    }
 
-    const newSocket = io(import.meta.env.VITE_API_URL, {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-      auth: { token },
-    });
+    console.log(`[ChatThread] Joining room for user ${userId}`);
+    socket.emit('joinRoom', { receiverId: userId });
+    hasJoinedRoomRef.current = userId;
 
-    setSocket(newSocket);
+    // Reset when userId changes
+    return () => {
+      console.log(`[ChatThread] Cleaning up room for ${userId}`);
+      if (hasJoinedRoomRef.current === userId) {
+        hasJoinedRoomRef.current = null;
+      }
+    };
+  }, [socket, userId]);
 
-    newSocket.on('connect', () => {
-      console.log('✅ Socket connected');
-      newSocket.emit('joinRoom', { receiverId: userId });
-    });
+  // 🔥 FIX: Socket event handlers (no duplicate registrations)
+  useEffect(() => {
+    if (!socket) return;
 
-    // ✅ FIX: On message received, just refetch - don't add to local state
-    newSocket.on('receiveMessage', (message: Message) => {
+    const handleReceiveMessage = (message: Message) => {
       console.log('📨 New message received via WebSocket');
       
-      // Refetch messages from server
       queryClient.invalidateQueries({
         queryKey: queryKeys.messages.conversation(userId),
       });
       
-      // Mark as read if it's for me
       if (message.receiverId === currentUser?.id) {
         setTimeout(() => markAsReadMutation.mutate(), 200);
       }
-    });
+    };
 
-    newSocket.on('typing', ({ userId: typingUserId, isTyping: status }) => {
+    const handleTyping = ({ userId: typingUserId, isTyping: status }: { 
+      userId: string; 
+      isTyping: boolean 
+    }) => {
       if (typingUserId === userId) {
         setIsTyping(status);
       }
-    });
+    };
+
+    socket.on('receiveMessage', handleReceiveMessage);
+    socket.on('typing', handleTyping);
 
     return () => {
-      console.log('🔌 Socket disconnected');
-      newSocket.disconnect();
+      socket.off('receiveMessage', handleReceiveMessage);
+      socket.off('typing', handleTyping);
     };
-  }, [userId, currentUser?.id, queryClient]);
+  }, [socket, userId, currentUser?.id, queryClient]);
 
   const handleSendMessage = async (content: string, mediaUrl?: string, mediaType?: string) => {
     if (!currentUser) return;
 
     try {
-      // Just send - no optimistic updates
       await sendMessageMutation.mutateAsync({
         receiverId: userId,
         content,
         mediaUrl,
         mediaType,
       });
-
-      // Mutation will handle invalidation and refetch
-      // WebSocket notification happens automatically from backend
-      
     } catch (error) {
       console.error('❌ Failed to send message:', error);
     }

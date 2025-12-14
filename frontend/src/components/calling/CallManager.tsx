@@ -22,14 +22,46 @@ export function CallManager({ socket }: CallManagerProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [hasReceivedOffer, setHasReceivedOffer] = useState(false);
 
-  // Determine if we should initialize WebRTC
+  // 🔥 FIX: Only initialize WebRTC when in proper state
+  // BOTH caller and receiver should wait for "connecting" state
   const shouldInitWebRTC = activeCall && (
     activeCall.state === 'connecting' || 
     activeCall.state === 'active'
   );
 
-  // Initialize WebRTC when call is accepted
+  // 🔥 FIX: Determine initiator based on who STARTED the call, not state
+  const [isCallerUser, setIsCallerUser] = useState(false);
+
+  // Track if this user is the caller (who initiated the call)
+  useEffect(() => {
+    if (activeCall?.state === 'initiating' || activeCall?.state === 'ringing') {
+      console.log('[CallManager] 🔔 This user is the CALLER');
+      setIsCallerUser(true);
+    } else if (!activeCall) {
+      setIsCallerUser(false);
+    }
+  }, [activeCall?.state, activeCall?.callId]);
+
+  // Caller is ALWAYS the WebRTC initiator
+  const isInitiator = isCallerUser;
+
+  // Debug logging
+  useEffect(() => {
+    if (activeCall) {
+      console.log('[CallManager] 🔍 Call state debug:', {
+        state: activeCall.state,
+        callId: activeCall.callId,
+        isCallerUser,
+        isInitiator,
+        shouldInitWebRTC,
+        hasReceivedOffer
+      });
+    }
+  }, [activeCall, isCallerUser, isInitiator, shouldInitWebRTC, hasReceivedOffer]);
+
+  // Initialize WebRTC
   const {
     localStream,
     remoteStream,
@@ -44,53 +76,116 @@ export function CallManager({ socket }: CallManagerProps) {
     cleanup
   } = useWebRTC({
     socket,
-    isInitiator: activeCall?.state === 'ringing' || activeCall?.state === 'initiating',
+    isInitiator,
     callType: activeCall?.callType || 'audio',
     otherUserId: activeCall?.otherUserId || '',
     onConnectionEstablished: () => {
+      console.log('[CallManager] ✅ Connection established, updating to active');
       updateCallState({ state: 'active' });
     },
     onConnectionFailed: (reason) => {
-      console.error('Connection failed:', reason);
-      endCall();
+      console.error('[CallManager] ❌ Connection failed:', reason);
+      // 🔥 FIX: Don't end call on connection failure immediately, might be initializing
+      setTimeout(() => {
+        if (activeCall && activeCall.state !== 'active') {
+          console.log('[CallManager] Ending call due to connection failure');
+          endCall();
+        }
+      }, 1000);
     },
     onStreamEnded: () => {
-      endCall();
+      console.log('[CallManager] Stream ended');
+      // 🔥 FIX: Only end if call is active
+      if (activeCall && activeCall.state === 'active') {
+        endCall();
+      }
     }
   });
 
-  // Initialize WebRTC when call state changes to connecting
+  // 🔥 FIX: Initialize WebRTC with proper timing
   useEffect(() => {
-    if (shouldInitWebRTC && !localStream) {
-      console.log('[CallManager] Initializing WebRTC');
-      initializeCall();
+    console.log('[CallManager] 🔄 WebRTC init effect triggered', {
+      shouldInitWebRTC,
+      hasLocalStream: !!localStream,
+      isInitiator,
+      isCallerUser,
+      hasReceivedOffer,
+      state: activeCall?.state,
+      callId: activeCall?.callId
+    });
+
+    if (!shouldInitWebRTC) {
+      console.log('[CallManager] ⏭️ Skipping: shouldInitWebRTC is false');
+      return;
     }
-  }, [shouldInitWebRTC, initializeCall, localStream]);
+
+    if (localStream) {
+      console.log('[CallManager] ⏭️ Skipping: already have local stream');
+      return;
+    }
+
+    // 🔥 CRITICAL: Receiver (non-initiator) must wait for offer before initializing
+    if (!isInitiator && !hasReceivedOffer) {
+      console.log('[CallManager] ⏳ Receiver waiting for offer before WebRTC init...');
+      return;
+    }
+
+    console.log('[CallManager] ✅ Preparing to initialize WebRTC', { 
+      isInitiator, 
+      isCaller: isCallerUser,
+      hasReceivedOffer,
+      state: activeCall?.state,
+      callId: activeCall?.callId,
+      shouldInit: shouldInitWebRTC,
+      hasLocalStream: !!localStream
+    });
+    
+    // 🔥 CRITICAL: Longer delay to ensure both parties are synchronized
+    const timer = setTimeout(() => {
+      console.log('[CallManager] Starting WebRTC initialization NOW');
+      
+      try {
+        initializeCall();
+      } catch (error) {
+        console.error('[CallManager] ❌ Failed to initialize WebRTC:', error);
+      }
+    }, isInitiator ? 500 : 300); // Give initiator more time to ensure receiver is ready
+
+    return () => {
+      console.log('[CallManager] Clearing WebRTC init timer');
+      clearTimeout(timer);
+    };
+  }, [shouldInitWebRTC, localStream, isInitiator, isCallerUser, hasReceivedOffer, activeCall?.state, activeCall?.callId, initializeCall]);
 
   // Cleanup WebRTC when call ends
   useEffect(() => {
     if (!activeCall) {
       cleanup();
+      setHasReceivedOffer(false);
+      setIsMuted(false);
+      setIsVideoOff(false);
+      setIsScreenSharing(false);
     }
   }, [activeCall, cleanup]);
 
-  // Handle WebRTC signaling events from socket
+  // Handle WebRTC signaling events
   useEffect(() => {
     if (!socket) return;
 
-    const handleWebRTCOffer = ({ offer }: { offer: any; senderId: string }) => {
-      console.log('[CallManager] Received WebRTC offer');
-      handleOffer(offer);
+    const handleWebRTCOffer = (data: { offer: any; senderId: string }) => {
+      console.log('[CallManager] 📨 Received WebRTC offer from:', data.senderId);
+      setHasReceivedOffer(true);
+      handleOffer(data);
     };
 
-    const handleWebRTCAnswer = ({ answer }: { answer: any; senderId: string }) => {
-      console.log('[CallManager] Received WebRTC answer');
-      handleAnswer(answer);
+    const handleWebRTCAnswer = (data: { answer: any; senderId: string }) => {
+      console.log('[CallManager] 📨 Received WebRTC answer from:', data.senderId);
+      handleAnswer(data);
     };
 
-    const handleWebRTCIceCandidate = ({ candidate }: { candidate: any; senderId: string }) => {
-      console.log('[CallManager] Received ICE candidate');
-      handleIceCandidate(candidate);
+    const handleWebRTCIceCandidate = (data: { candidate: any; senderId: string }) => {
+      console.log('[CallManager] 📨 Received ICE candidate from:', data.senderId);
+      handleIceCandidate(data);
     };
 
     socket.on('webrtc-offer', handleWebRTCOffer);

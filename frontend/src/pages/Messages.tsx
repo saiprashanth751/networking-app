@@ -12,31 +12,44 @@ export default function MessagesPage() {
   const selectedUserId = searchParams.get('userId');
   const [socket, setSocket] = useState<Socket | null>(null);
 
-  // Initialize socket connection
+  // 🔥 FIX: SINGLE socket connection for entire Messages page
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
+
+    console.log('[Messages] Creating SINGLE socket connection');
 
     const newSocket = io(import.meta.env.VITE_API_URL, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       auth: { token },
+      // 🔥 Prevent duplicate connections
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      forceNew: true // Force new connection, don't reuse
     });
 
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log('[Messages] Socket connected:', newSocket.id);
+      console.log('[Messages] ✅ Socket connected:', newSocket.id);
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('[Messages] Socket disconnected');
+    newSocket.on('disconnect', (reason) => {
+      console.log('[Messages] ❌ Socket disconnected:', reason);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('[Messages] Connection error:', error);
     });
 
     return () => {
+      console.log('[Messages] 🔌 Cleaning up socket connection');
       newSocket.disconnect();
+      setSocket(null);
     };
-  }, []);
+  }, []); // Empty deps - only create once
 
   const handleSelectUser = (userId: string) => {
     setSearchParams({ userId });
@@ -68,7 +81,7 @@ export default function MessagesPage() {
             />
           </div>
 
-          {/* Chat Thread - Direct render, no pre-creation */}
+          {/* Chat Thread */}
           <div
             className={`
               flex-1 
@@ -77,7 +90,11 @@ export default function MessagesPage() {
             `}
           >
             {selectedUserId ? (
-              <ChatThread userId={selectedUserId} onBack={handleBackToList} />
+              <ChatThread 
+                userId={selectedUserId} 
+                onBack={handleBackToList}
+                socket={socket} // 🔥 Pass the socket down
+              />
             ) : (
               <EmptyState />
             )}
