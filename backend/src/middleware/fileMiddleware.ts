@@ -16,20 +16,37 @@ const upload = multer({
         fileSize: 5 * 1024 * 1024, // 5MB max per file
     },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
+        // Allow images, PDFs, and documents
+        const allowedMimes = [
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+        
+        if (allowedMimes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Only image files are allowed'));
+            cb(new Error('Only images and documents are allowed'));
         }
     }
 });
 
 // Helper function to upload single file to Cloudinary
-const uploadToCloudinaryHelper = (buffer: Buffer, folder: string): Promise<string> => {
+const uploadToCloudinaryHelper = (
+    buffer: Buffer, 
+    folder: string, 
+    resourceType: 'auto' | 'image' | 'video' | 'raw' = 'auto'
+): Promise<string> => {
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
             {
                 folder,
+                resource_type: resourceType as any,
                 public_id: `${folder}-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
             },
             (error, result) => {
@@ -52,6 +69,19 @@ const uploadToCloudinaryHelper = (buffer: Buffer, folder: string): Promise<strin
 export const uploadToCloudinary = (...fieldNames: string[]) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
+            // Handle single file upload (req.file)
+            if (req.file) {
+                const folder = fieldNames[0] || 'uploads';
+                const fileUrl = await uploadToCloudinaryHelper(
+                    req.file.buffer,
+                    folder,
+                    'auto'
+                );
+                (req.file as any).cloudinaryUrl = fileUrl;
+                return next();
+            }
+
+            // Handle multiple files upload (req.files)
             if (!req.files || typeof req.files !== 'object') {
                 return next();
             }
@@ -62,7 +92,8 @@ export const uploadToCloudinary = (...fieldNames: string[]) => {
             if (files.coverImage && files.coverImage[0]) {
                 const coverImageUrl = await uploadToCloudinaryHelper(
                     files.coverImage[0].buffer,
-                    'project-covers'
+                    'project-covers',
+                    'auto'
                 );
                 (files.coverImage[0] as any).cloudinaryUrl = coverImageUrl;
             }
@@ -70,7 +101,7 @@ export const uploadToCloudinary = (...fieldNames: string[]) => {
             // Process images (multiple files)
             if (files.images && files.images.length > 0) {
                 const uploadPromises = files.images.map(file =>
-                    uploadToCloudinaryHelper(file.buffer, 'project-images')
+                    uploadToCloudinaryHelper(file.buffer, 'project-images', 'auto')
                 );
                 const imageUrls = await Promise.all(uploadPromises);
                 

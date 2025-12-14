@@ -18,6 +18,7 @@ import Profile from "./pages/Profile"
 import Verify from "./pages/Verify"
 import ProjectDetail from "./pages/ProjectDetail"
 import Explore from "./pages/Explore"
+import Messages from "./pages/Messages"
 
 function App() {
   return (
@@ -104,10 +105,7 @@ function App() {
               path="/messages"
               element={
                 <MainLayout showRightSidebar={false}>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold mb-2">Messages</h1>
-                    <p className="text-neutral-500">Coming soon...</p>
-                  </div>
+                  <Messages />
                 </MainLayout>
               }
             />

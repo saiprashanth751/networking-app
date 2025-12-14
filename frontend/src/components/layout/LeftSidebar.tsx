@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCurrentUser } from "@/hooks/queries/user";
 import { useCurrentProfile } from '@/hooks/queries/profile';
+import { useUnreadCount } from '@/hooks/queries/conversation';
 
 interface NavItem {
   icon: any;
@@ -32,16 +33,6 @@ interface NavItem {
   path: string;
   badge?: number;
 }
-
-const NAV_ITEMS: NavItem[] = [
-  { icon: Home, label: 'Home', path: '/dashboard' },
-  { icon: Search, label: 'Explore', path: '/explore' },
-  { icon: Bell, label: 'Notifications', path: '/notifications', badge: 0 },
-  { icon: Mail, label: 'Messages', path: '/messages', badge: 0 },
-  { icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
-  { icon: Users, label: 'Network', path: '/network' },
-  { icon: User, label: 'Profile', path: '/userprofile' },
-];
 
 export function LeftSidebar() {
   const navigate = useNavigate();
@@ -51,9 +42,22 @@ export function LeftSidebar() {
   // Get current user data
   const { data: currentUserData } = useCurrentUser();
   const { data: currentProfileData } = useCurrentProfile();
+  const { data: unreadData } = useUnreadCount();
   
   const currentUser = currentUserData?.user;
   const currentProfile = currentProfileData?.profile;
+  const unreadCount = unreadData?.unreadCount || 0;
+
+  // Build NAV_ITEMS dynamically with unread count
+  const NAV_ITEMS: NavItem[] = [
+    { icon: Home, label: 'Home', path: '/dashboard' },
+    { icon: Search, label: 'Explore', path: '/explore' },
+    { icon: Bell, label: 'Notifications', path: '/notifications', badge: 0 },
+    { icon: Mail, label: 'Messages', path: '/messages', badge: unreadCount },
+    { icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
+    { icon: Users, label: 'Network', path: '/network' },
+    { icon: User, label: 'Profile', path: '/userprofile' },
+  ];
 
   const getUserInitials = () => {
     if (!currentUser) return 'U';

@@ -12,13 +12,11 @@ import {
     MessageSquare,
     User as UserIcon,
     Loader2,
-    ExternalLink,
     ArrowLeft,
     Search,
-    Calendar,
 } from "lucide-react";
 import { Post } from '../components/Post';
-import { H2, Body, Small, Caption } from '@/components/ui/typography';
+import { H2, Body, Small } from '@/components/ui/typography';
 import { useProfile } from '@/hooks/queries/profile';
 import { useUser } from '@/hooks/queries/user';
 import { useUserPosts } from '@/hooks/queries/post';
@@ -27,7 +25,6 @@ import { useToggleFollow } from '@/hooks/mutations/follow';
 import { useUserProjects } from '@/hooks/queries/project';
 import { ProjectList } from '../components/ProjectList';
 import { FollowList } from '../components/FollowList'
-import { ProjectFormDialog } from '../components/ProjectFormDialog';
 
 const ProfilePage = () => {
     const { id } = useParams<{ id: string }>();

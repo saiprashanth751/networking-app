@@ -2,7 +2,6 @@ import { Project } from '@/types/types';
 import { ProjectCard } from './ProjectCard';
 import { Button } from "@/components/ui/button";
 import { Plus, Briefcase } from "lucide-react";
-import { useNavigate } from 'react-router-dom';
 import { H2, Body } from '@/components/ui/typography';
 
 interface ProjectListProps {
@@ -12,7 +11,6 @@ interface ProjectListProps {
 }
 
 export function ProjectList({ projects, showActions = false, emptyStateAction }: ProjectListProps) {
-    const navigate = useNavigate();
 
     // Empty state
     if (projects.length === 0) {
