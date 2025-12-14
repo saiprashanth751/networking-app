@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMessages } from '@/hooks/queries/conversation';
 import { useSendMessage, useMarkAsRead } from '@/hooks/mutations/message';
-import { useUser } from '@/hooks/queries/user';
-import { useCurrentUser } from '@/hooks/queries/user';
+import { useUser, useCurrentUser } from '@/hooks/queries/user';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryClient';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
@@ -19,45 +20,48 @@ interface ChatThreadProps {
 export function ChatThread({ userId, onBack }: ChatThreadProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const { data: currentUserData } = useCurrentUser();
   const { data: otherUserData } = useUser(userId);
-  const { data: messagesData, isLoading, fetchNextPage, hasNextPage, refetch } = useMessages(userId);
+  const { data: messagesData, isLoading, fetchNextPage, hasNextPage } = useMessages(userId);
   const sendMessageMutation = useSendMessage(userId);
   const markAsReadMutation = useMarkAsRead(userId);
 
   const currentUser = currentUserData?.user;
   const otherUser = otherUserData?.user;
 
-  const serverMessages = messagesData?.pages.flatMap((page) => page.messages) || [];
-  const allMessages = [...serverMessages, ...localMessages];
+  // ✅ SINGLE SOURCE OF TRUTH: Only server messages
+  const allMessages = messagesData?.pages.flatMap((page) => page.messages) || [];
   
-  const isNewConversation = !isLoading && allMessages.length === 0;
+  // ✅ Deduplicate by ID (just in case)
+  const uniqueMessages = Array.from(
+    new Map(allMessages.map(msg => [msg.id, msg])).values()
+  );
+  
+  const isNewConversation = !isLoading && uniqueMessages.length === 0;
 
+  // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [allMessages]);
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [uniqueMessages.length]);
 
+  // Mark as read
   useEffect(() => {
     if (isLoading || isNewConversation) return;
 
-    const unreadMessages = serverMessages.filter(
+    const unreadMessages = uniqueMessages.filter(
       msg => msg.receiverId === currentUser?.id && !msg.read
     );
 
     if (unreadMessages.length > 0) {
-      const timer = setTimeout(() => {
-        markAsReadMutation.mutate();
-      }, 300);
-
+      const timer = setTimeout(() => markAsReadMutation.mutate(), 300);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, serverMessages.length, currentUser?.id, isNewConversation]);
+  }, [isLoading, uniqueMessages.length, currentUser?.id, isNewConversation]);
 
+  // WebSocket setup
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token || !userId) return;
@@ -71,12 +75,23 @@ export function ChatThread({ userId, onBack }: ChatThreadProps) {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
+      console.log('✅ Socket connected');
       newSocket.emit('joinRoom', { receiverId: userId });
     });
 
+    // ✅ FIX: On message received, just refetch - don't add to local state
     newSocket.on('receiveMessage', (message: Message) => {
-      setLocalMessages((prev) => [...prev, message]);
-      setTimeout(() => markAsReadMutation.mutate(), 200);
+      console.log('📨 New message received via WebSocket');
+      
+      // Refetch messages from server
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.messages.conversation(userId),
+      });
+      
+      // Mark as read if it's for me
+      if (message.receiverId === currentUser?.id) {
+        setTimeout(() => markAsReadMutation.mutate(), 200);
+      }
     });
 
     newSocket.on('typing', ({ userId: typingUserId, isTyping: status }) => {
@@ -86,55 +101,28 @@ export function ChatThread({ userId, onBack }: ChatThreadProps) {
     });
 
     return () => {
+      console.log('🔌 Socket disconnected');
       newSocket.disconnect();
     };
-  }, [userId]);
+  }, [userId, currentUser?.id, queryClient]);
 
   const handleSendMessage = async (content: string, mediaUrl?: string, mediaType?: string) => {
     if (!currentUser) return;
 
-    // ✅ FIX: Create optimistic message with special ID prefix
-    const optimisticId = `optimistic-${Date.now()}`;
-    const tempMessage: Message = {
-      id: optimisticId,
-      senderId: currentUser.id,
-      receiverId: userId,
-      content,
-      timestamp: new Date().toISOString(),
-      read: false,
-      deleted: false,
-      mediaUrl,
-      mediaType: mediaType as any,
-    };
-
-    setLocalMessages((prev) => [...prev, tempMessage]);
-
     try {
-      // Send via WebSocket
-      if (socket) {
-        socket.emit('sendMessage', { receiverId: userId, content });
-      }
-
-      // ✅ FIX: Send via API and handle response
-      const result = await sendMessageMutation.mutateAsync({
+      // Just send - no optimistic updates
+      await sendMessageMutation.mutateAsync({
         receiverId: userId,
         content,
         mediaUrl,
         mediaType,
       });
 
-      // ✅ FIX: Remove optimistic message after successful send
-      setLocalMessages((prev) => prev.filter(m => m.id !== optimisticId));
-
-      // ✅ FIX: Refetch messages to get the real one from server
-      setTimeout(() => {
-        refetch();
-      }, 100);
-
+      // Mutation will handle invalidation and refetch
+      // WebSocket notification happens automatically from backend
+      
     } catch (error) {
-      // ✅ FIX: Remove optimistic message on error
-      setLocalMessages((prev) => prev.filter(m => m.id !== optimisticId));
-      console.error('Failed to send message:', error);
+      console.error('❌ Failed to send message:', error);
     }
   };
 
@@ -193,7 +181,7 @@ export function ChatThread({ userId, onBack }: ChatThreadProps) {
               </div>
             </div>
           ) : (
-            allMessages.map((msg) => (
+            uniqueMessages.map((msg) => (
               <MessageBubble
                 key={msg.id}
                 message={msg}
