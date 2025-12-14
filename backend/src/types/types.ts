@@ -45,7 +45,10 @@ export const PostBody = zod.object({
 })
 
 export const MessageBody = zod.object({
-    senderId: zod.string(),
-    receiverId: zod.string(),
-    content: zod.string()
-})
+  receiverId: zod.string(),
+  content: zod.string().min(1),
+  mediaUrl: zod.string().optional().nullable(),
+  mediaType: zod.string().optional().nullable(),
+  fileName: zod.string().optional().nullable(),
+  fileSize: zod.number().optional().nullable(),
+});

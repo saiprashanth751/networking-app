@@ -1,4 +1,3 @@
-// src/hooks/mutations/message.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { conversationService } from '@/api/conversation';
 import { queryKeys } from '@/lib/queryClient';
@@ -11,17 +10,23 @@ export const useSendMessage = (receiverId: string) => {
   return useMutation({
     mutationFn: (data: SendMessageInput) => conversationService.sendMessage(data),
     onSuccess: () => {
-      // Invalidate messages to show new message
+      // ✅ FIX: Invalidate messages query
       queryClient.invalidateQueries({
         queryKey: queryKeys.messages.conversation(receiverId),
       });
       
-      // Invalidate conversation list to update preview
+      // ✅ FIX: CRITICAL - Invalidate conversation list so sidebar updates
       queryClient.invalidateQueries({
         queryKey: queryKeys.conversations.list,
       });
+
+      // ✅ FIX: Also invalidate unread count
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.unreadCount,
+      });
     },
     onError: (error: any) => {
+      console.error('Send message error:', error);
       toast.error(error.response?.data?.message || 'Failed to send message');
     },
   });
@@ -33,12 +38,10 @@ export const useMarkAsRead = (userId: string) => {
   return useMutation({
     mutationFn: () => conversationService.markAsRead(userId),
     onSuccess: () => {
-      // Update conversation list unread counts
       queryClient.invalidateQueries({
         queryKey: queryKeys.conversations.list,
       });
       
-      // Update total unread count
       queryClient.invalidateQueries({
         queryKey: queryKeys.conversations.unreadCount,
       });

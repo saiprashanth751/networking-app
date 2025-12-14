@@ -1,4 +1,3 @@
-// src/components/messaging/ChatInput.tsx
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,7 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false); // ✅ FIX: Add sending state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadFileMutation = useUploadFile();
 
@@ -22,7 +22,6 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File size must be less than 5MB');
       return;
@@ -30,7 +29,6 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
 
     setSelectedFile(file);
 
-    // Create preview for images
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -51,29 +49,33 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
   };
 
   const handleSend = async () => {
-    if (!message.trim() && !selectedFile) return;
+    // ✅ FIX: Prevent multiple submissions
+    if ((!message.trim() && !selectedFile) || isSending) return;
 
-    let mediaUrl: string | undefined;
-    let mediaType: string | undefined;
+    setIsSending(true);
 
-    // Upload file first if present
-    if (selectedFile) {
-      try {
+    try {
+      let mediaUrl: string | undefined;
+      let mediaType: string | undefined;
+
+      if (selectedFile) {
         const result = await uploadFileMutation.mutateAsync(selectedFile);
         mediaUrl = result.url;
         mediaType = result.type;
-      } catch (error) {
-        toast.error('Failed to upload file');
-        return;
       }
+
+      // ✅ FIX: Send message only once
+      await onSend(message.trim() || '📎 File attachment', mediaUrl, mediaType);
+
+      // Reset only after successful send
+      setMessage('');
+      handleRemoveFile();
+    } catch (error) {
+      console.error('Failed to send:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setIsSending(false);
     }
-
-    // Send message
-    onSend(message.trim() || '📎 File attachment', mediaUrl, mediaType);
-
-    // Reset
-    setMessage('');
-    handleRemoveFile();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -85,7 +87,6 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
 
   return (
     <div className="border-t border-neutral-800 bg-black p-4">
-      {/* File Preview */}
       {selectedFile && (
         <div className="mb-3 flex items-center gap-3 p-3 bg-neutral-900 rounded-lg">
           {filePreview ? (
@@ -110,15 +111,14 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
             variant="ghost"
             size="icon"
             className="flex-shrink-0"
+            disabled={isSending}
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* Input Area */}
       <div className="flex items-end gap-2">
-        {/* File Upload Button */}
         <input
           ref={fileInputRef}
           type="file"
@@ -131,7 +131,7 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
           variant="ghost"
           size="icon"
           className="flex-shrink-0"
-          disabled={uploadFileMutation.isPending}
+          disabled={uploadFileMutation.isPending || isSending}
         >
           {uploadFileMutation.isPending ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -140,7 +140,6 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
           )}
         </Button>
 
-        {/* Message Input */}
         <div className="flex-1 relative">
           <Input
             type="text"
@@ -152,18 +151,21 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
             onKeyDown={handleKeyPress}
             placeholder="Type a message..."
             className="pr-10 bg-neutral-900 border-0 focus-visible:ring-1 focus-visible:ring-blue-500 resize-none"
-            disabled={uploadFileMutation.isPending}
+            disabled={uploadFileMutation.isPending || isSending}
           />
         </div>
 
-        {/* Send Button */}
         <Button
           onClick={handleSend}
-          disabled={(!message.trim() && !selectedFile) || uploadFileMutation.isPending}
+          disabled={(!message.trim() && !selectedFile) || uploadFileMutation.isPending || isSending}
           size="icon"
           className="flex-shrink-0 bg-blue-600 hover:bg-blue-700"
         >
-          <Send className="h-5 w-5" />
+          {isSending ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Send className="h-5 w-5" />
+          )}
         </Button>
       </div>
     </div>

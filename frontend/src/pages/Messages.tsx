@@ -1,4 +1,3 @@
-// src/pages/Messages.tsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
@@ -6,12 +5,11 @@ import { ConversationList } from '@/components/messaging/ConversationList';
 import { ChatThread } from '@/components/messaging/ChatThread';
 import { EmptyState } from '@/components/messaging/EmptyState';
 import { CallManager } from '@/components/calling/CallManager';
-import { ArrowLeft, MessageSquare } from 'lucide-react';
+import { LeftSidebar } from '@/components/layout/LeftSidebar';
 
 export default function MessagesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get('userId');
-  const [showChat, setShowChat] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
 
   // Initialize socket connection
@@ -42,45 +40,26 @@ export default function MessagesPage() {
 
   const handleSelectUser = (userId: string) => {
     setSearchParams({ userId });
-    setShowChat(true); // For mobile
   };
 
   const handleBackToList = () => {
-    setShowChat(false);
     setSearchParams({});
   };
 
   return (
     <>
-      {/* Global Call Manager */}
       {socket && <CallManager socket={socket} />}
 
-      <div className="h-screen flex flex-col">
-        {/* Header - Mobile Only */}
-        <div className="lg:hidden sticky top-0 z-10 bg-black/80 backdrop-blur-sm border-b border-neutral-800">
-          <div className="flex items-center gap-4 px-4 h-[53px]">
-            {showChat && selectedUserId ? (
-              <button
-                onClick={handleBackToList}
-                className="hover:bg-neutral-900 rounded-full p-2 transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-            ) : null}
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              <h1 className="font-bold text-xl">Messages</h1>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-black text-white">
+        <LeftSidebar />
 
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Conversation List - Left Panel */}
+        <div className="lg:ml-[275px] h-screen flex">
+          {/* Conversation List */}
           <div
             className={`
-              w-full lg:w-[380px] border-r border-neutral-800 flex-shrink-0
-              ${showChat && selectedUserId ? 'hidden lg:block' : 'block'}
+              w-full lg:w-[400px] border-r border-neutral-800 flex-shrink-0
+              ${selectedUserId ? 'hidden lg:flex' : 'flex'}
+              flex-col
             `}
           >
             <ConversationList
@@ -89,11 +68,12 @@ export default function MessagesPage() {
             />
           </div>
 
-          {/* Chat Thread - Right Panel */}
+          {/* Chat Thread - Direct render, no pre-creation */}
           <div
             className={`
               flex-1 
-              ${!showChat || !selectedUserId ? 'hidden lg:flex' : 'flex'}
+              ${!selectedUserId ? 'hidden lg:flex' : 'flex'}
+              flex-col
             `}
           >
             {selectedUserId ? (

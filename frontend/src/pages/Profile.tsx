@@ -156,6 +156,7 @@ const ProfilePage = () => {
                             <Button
                                 variant="outline"
                                 className="rounded-full font-bold px-4 h-9"
+                                onClick={() => navigate(`/messages?userId=${user?.id}`)}
                             >
                                 <MessageSquare className="h-4 w-4" />
                             </Button>

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -101,14 +101,8 @@ function App() {
               }
             />
 
-            <Route
-              path="/messages"
-              element={
-                <MainLayout showRightSidebar={false}>
-                  <Messages />
-                </MainLayout>
-              }
-            />
+            {/* Messages - Custom Layout (No MainLayout wrapper) */}
+            <Route path="/messages" element={<Messages />} />
 
             <Route
               path="/bookmarks"
@@ -146,11 +140,12 @@ function App() {
           pauseOnFocusLoss
           draggable
           pauseOnHover
+          theme="dark"
         />
 
-        {import.meta.env.DEV && (
+        {/* {import.meta.env.DEV && (
           <ReactQueryDevtools initialIsOpen={false} />
-        )}
+        )} */}
       </QueryClientProvider>
     </>
   )
