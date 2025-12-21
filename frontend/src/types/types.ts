@@ -1,4 +1,4 @@
-// src/types/index.ts
+// src/types/types.ts
 
 // ============================================================================
 // USER TYPES
@@ -379,16 +379,51 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput extends Partial<CreateProjectInput> { }
 
 // ============================================================================
-// CALL TYPES
+// CALL TYPES - UNIFIED VERSION
 // ============================================================================
 
+// Core call types
 export type CallType = 'audio' | 'video';
-export type CallStatus = 'completed' | 'missed' | 'declined' | 'no-answer' | 'failed';
+export type CallDirection = 'incoming' | 'outgoing';
+export type CallStatus = 'idle' | 'ringing' | 'connecting' | 'active' | 'ending' | 'ended';
+export type CallConnectionStatus = 'completed' | 'missed' | 'declined' | 'no-answer' | 'failed';
+
+// Call participant
+export interface CallParticipant {
+  id: string;
+  name: string;
+  avatar: string | null;
+  isOnline: boolean;
+}
+
+// Call details
+export interface CallDetails {
+  callId: string;
+  type: CallType;
+  direction: CallDirection;
+  participants: {
+    local: CallParticipant;
+    remote: CallParticipant;
+  };
+  startTime: number | null;
+  endTime: number | null;
+  duration: number;
+}
+
+// Socket events
+export interface IncomingCallEvent {
+  callId: string;
+  callerId: string;
+  callerName: string;
+  callerAvatar: string | null;
+  callType: CallType;
+  room: string; // Add this for WebRTC room
+}
 
 export interface CallHistory {
   id: string;
   type: CallType;
-  status: CallStatus;
+  status: CallConnectionStatus;
   duration: number | null;
   startedAt: string;
   endedAt: string | null;
@@ -400,66 +435,58 @@ export interface CallHistory {
   };
 }
 
-export interface CallHistoryResponse {
-  success: boolean;
-  calls: CallHistory[];
-}
-
-// WebRTC Call Events
-export interface IncomingCallEvent {
-  callId: string;
-  callerId: string;
-  callerName: string;
-  callerAvatar: string | null;
-  callType: CallType;
-  room: string;
-}
-
-export interface CallAcceptedEvent {
-  callId: string;
-  room: string;
-  receiverId: string;
-}
-
-export interface CallRingingEvent {
-  callId: string;
-  room: string;
-}
-
-export interface WebRTCOfferEvent {
-  offer: any; // RTCSessionDescriptionInit
+// WebRTC signaling
+export interface WebRTCSignal {
+  type: 'offer' | 'answer' | 'candidate' | 'end';
+  data: any;
+  timestamp: number;
   senderId: string;
 }
 
-export interface WebRTCAnswerEvent {
-  answer: any; // RTCSessionDescriptionInit
-  senderId: string;
-}
-
-export interface WebRTCIceCandidateEvent {
-  candidate: any; // RTCIceCandidate
-  senderId: string;
-}
-
-// Call State Management
-export type CallState = 
-  | 'idle'           // No active call
-  | 'initiating'     // User clicked call button
-  | 'ringing'        // Calling other user
-  | 'incoming'       // Receiving incoming call
-  | 'connecting'     // WebRTC connection establishing
-  | 'active'         // Call is active
-  | 'ending';        // Call is ending
-
-export interface ActiveCall {
-  callId: string;
-  otherUserId: string;
-  otherUserName: string;
-  otherUserAvatar: string | null;
-  callType: CallType;
-  state: CallState;
-  startTime: number | null; // timestamp
+// State machine context
+export interface CallContext {
+  // Current call
+  callDetails: CallDetails | null;
+  
+  // Media streams
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  
+  // Connection state
+  isConnected: boolean;
+  connectionError: string | null;
+  
+  // Media controls
   isMuted: boolean;
   isVideoOff: boolean;
   isScreenSharing: boolean;
+  
+  // WebRTC
+  pendingSignals: WebRTCSignal[];
+  peerConnection: any | null;
+  
+  // Timing
+  ringingStartTime: number | null;
+  callStartTime: number | null;
+  
+  // UI state
+  isRinging: boolean;
 }
+
+// State machine events
+export type CallEvent =
+  | { type: 'CALL_INITIATE'; remoteUser: CallParticipant; callType: CallType }
+  | { type: 'CALL_RECEIVED'; callId: string; callerId: string; callerName: string; callerAvatar: string | null; callType: CallType; room: string }
+  | { type: 'CALL_ACCEPT' }
+  | { type: 'CALL_REJECT' }
+  | { type: 'CALL_END' }
+  | { type: 'WEBRTC_OFFER'; offer: any; senderId: string }
+  | { type: 'WEBRTC_ANSWER'; answer: any; senderId: string }
+  | { type: 'WEBRTC_CANDIDATE'; candidate: any; senderId: string }
+  | { type: 'WEBRTC_CONNECTED' }
+  | { type: 'WEBRTC_FAILED'; error: string }
+  | { type: 'MEDIA_TOGGLE_MUTE' }
+  | { type: 'MEDIA_TOGGLE_VIDEO' }
+  | { type: 'MEDIA_TOGGLE_SCREEN_SHARE' }
+  | { type: 'SOCKET_DISCONNECTED' }
+  | { type: 'TIMEOUT' };

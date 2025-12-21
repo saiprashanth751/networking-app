@@ -3,6 +3,9 @@ import { Phone, Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, Maximize2, Mi
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { createCallLogger } from '@/utils/callLogger';
+
+const logger = createCallLogger({ file: 'components/calling/CallScreen.tsx', component: 'CallScreen' });
 
 interface CallScreenProps {
   callerName: string;
@@ -35,6 +38,8 @@ export function CallScreen({
   onToggleScreenShare,
   onEndCall
 }: CallScreenProps) {
+  logger.info('→ CallScreen rendering', { callerName, callType, callState, hasLocalStream: !!localStream, hasRemoteStream: !!remoteStream });
+
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [callDuration, setCallDuration] = useState(0);
@@ -55,13 +60,19 @@ export function CallScreen({
 
   // Call duration timer
   useEffect(() => {
-    if (callState !== 'active') return;
+    if (callState !== 'active') {
+      setCallDuration(0);
+      return;
+    }
 
     const interval = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      setCallDuration(0);
+    };
   }, [callState]);
 
   // Format call duration
@@ -92,6 +103,18 @@ export function CallScreen({
     }
   };
 
+  // Handle fullscreen change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Remote Video/Audio Stream (Main View) */}
@@ -102,6 +125,7 @@ export function CallScreen({
             autoPlay
             playsInline
             className="w-full h-full object-contain"
+            aria-label={`Video feed from ${callerName}`}
           />
         ) : (
           // Audio-only or no stream yet - Show avatar
@@ -140,6 +164,7 @@ export function CallScreen({
         <button
           onClick={toggleFullscreen}
           className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm p-2 rounded-full hover:bg-black/70 transition-colors"
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
         >
           {isFullscreen ? (
             <Minimize2 className="h-5 w-5 text-white" />
@@ -157,6 +182,7 @@ export function CallScreen({
               playsInline
               muted
               className="w-full h-full object-cover mirror"
+              aria-label="Your video feed"
             />
           </div>
         )}
@@ -171,6 +197,7 @@ export function CallScreen({
             variant={isMuted ? 'destructive' : 'secondary'}
             size="lg"
             className="rounded-full h-14 w-14 p-0"
+            aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
           >
             {isMuted ? (
               <MicOff className="h-6 w-6" />
@@ -186,6 +213,7 @@ export function CallScreen({
               variant={isVideoOff ? 'destructive' : 'secondary'}
               size="lg"
               className="rounded-full h-14 w-14 p-0"
+              aria-label={isVideoOff ? 'Turn video on' : 'Turn video off'}
             >
               {isVideoOff ? (
                 <VideoOff className="h-6 w-6" />
@@ -205,6 +233,7 @@ export function CallScreen({
                 "rounded-full h-14 w-14 p-0",
                 isScreenSharing && "bg-blue-600 hover:bg-blue-700"
               )}
+              aria-label={isScreenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
             >
               {isScreenSharing ? (
                 <MonitorOff className="h-6 w-6" />
@@ -220,6 +249,7 @@ export function CallScreen({
             variant="destructive"
             size="lg"
             className="rounded-full h-14 w-14 p-0 bg-red-600 hover:bg-red-700"
+            aria-label="End call"
           >
             <Phone className="h-6 w-6 rotate-[135deg]" />
           </Button>

@@ -11,18 +11,22 @@ import { ChatHeader } from './ChatHeader';
 import { ChatInput } from './ChatInput';
 import { MessageBubble } from './MessageBubble';
 import { Message } from '@/types/types';
+import { createCallLogger } from '@/utils/callLogger';
 
 interface ChatThreadProps {
   userId: string;
   onBack?: () => void;
-  socket: Socket | null; // 🔥 Receive socket from parent
+  socket: Socket | null; //  Receive socket from parent
 }
 
+const logger = createCallLogger({ file: 'components/messaging/ChatThread.tsx', component: 'ChatHeader' });
+
 export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
+  logger.info("Rendering ChatThread with userId and scoket", {userId, id: socket?.id});
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
-  const hasJoinedRoomRef = useRef<string | null>(null); // 🔥 Track which room we've joined
+  const hasJoinedRoomRef = useRef<string | null>(null); //  Track which room we've joined
 
   const { data: currentUserData } = useCurrentUser();
   const { data: otherUserData } = useUser(userId);
@@ -32,10 +36,11 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
 
   const currentUser = currentUserData?.user;
   const otherUser = otherUserData?.user;
+  logger.info("What otherUser is in ChatThread? It is : ", otherUser)
 
   const allMessages = messagesData?.pages.flatMap((page) => page.messages) || [];
   const uniqueMessages = Array.from(
-    new Map(allMessages.map(msg => [msg.id, msg])).values()
+    new Map(allMessages.map(msg => [msg.id, msg])).values()   //Is it safe to do this?? Why are we doing this??
   );
   const isNewConversation = !isLoading && uniqueMessages.length === 0;
 
@@ -64,7 +69,7 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
     
     // 🔥 CRITICAL: Track by userId to prevent duplicate joins
     if (hasJoinedRoomRef.current === userId) {
-      console.log(`[ChatThread] Already joined room for ${userId}, skipping`);
+      console.log(`[ChatThread] Already joined room for ${userId}, skipping`);  //It's us and that user. (Our browser and that user)
       return;
     }
 
@@ -72,7 +77,7 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
     socket.emit('joinRoom', { receiverId: userId });
     hasJoinedRoomRef.current = userId;
 
-    // Reset when userId changes
+    // Reset when userId changes.. Writing a clean up function.. How good that is..
     return () => {
       console.log(`[ChatThread] Cleaning up room for ${userId}`);
       if (hasJoinedRoomRef.current === userId) {

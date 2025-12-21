@@ -1,4 +1,3 @@
-// src/components/messaging/ChatHeader.tsx
 import { useNavigate } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,7 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useCallManager } from '@/hooks/useCallManager';
+import { useCallInitiation } from '@/components/calling/CallProvider';
+import { createCallLogger } from '@/utils/callLogger';
+
+const logger = createCallLogger({ file: 'components/messaging/ChatHeader.tsx', component: 'ChatHeader' });
 
 interface ChatHeaderProps {
   user: {
@@ -28,8 +30,18 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
+logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id});
+
   const navigate = useNavigate();
-  const { initiateCall } = useCallManager(socket);
+  const { initiateAudioCall, initiateVideoCall } = useCallInitiation();
+  logger.info("I got const { initiateAudioCall, initiateVideoCall } = useCallInitiation()");
+
+  // ✅ DEBUG: Log hook availability
+  console.log('[ChatHeader] Render', {
+    hasInitiateAudioCall: !!initiateAudioCall,
+    hasInitiateVideoCall: !!initiateVideoCall,
+    userOnline: user.isOnline
+  });
 
   const getUserInitials = () => {
     return `${user.firstName[0]}${user.lastName?.[0] || ''}`.toUpperCase();
@@ -43,7 +55,7 @@ export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
       const now = new Date();
       const diffMs = now.getTime() - lastSeen.getTime();
       const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMins / 60);
+      const diffHours = Math.floor(diffMins / 60);  
       const diffDays = Math.floor(diffHours / 24);
 
       if (diffMins < 1) return 'Just now';
@@ -56,6 +68,51 @@ export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
     }
   };
 
+  // Create call participant object
+  const createCallParticipant = () => ({
+    id: user.id,
+    name: `${user.firstName} ${user.lastName || ''}`.trim(),
+    avatar: user.profile?.profilePic || null,
+    isOnline: user.isOnline
+  });
+
+  const handleAudioCall = () => {
+    const participant = createCallParticipant();
+    logger.info('→ handleAudioCall() - User clicked audio call button', { 
+      userId: participant.id, 
+      userName: participant.name 
+    });
+    console.log('[ChatHeader] Audio call button clicked', {
+      participant,
+      hasFunction: !!initiateAudioCall
+    });
+
+    if (!initiateAudioCall) {
+      console.error('[ChatHeader] initiateAudioCall is not available!');
+      return;
+    }
+    logger.info("I am calling, initiateAudioCall(participant)");
+    initiateAudioCall(participant);
+  };
+
+  const handleVideoCall = () => {
+    const participant = createCallParticipant();
+    logger.info('→ handleVideoCall() - User clicked video call button', { 
+      userId: participant.id, 
+      userName: participant.name 
+    });
+    console.log('[ChatHeader] Video call button clicked', {
+      participant,
+      hasFunction: !!initiateVideoCall
+    });
+
+    if (!initiateVideoCall) {
+      console.error('[ChatHeader] initiateVideoCall is not available!');
+      return;
+    }
+    initiateVideoCall(participant);
+  };
+
   return (
     <div className="border-b border-neutral-800 bg-black/80 backdrop-blur-sm sticky top-0 z-10">
       <div className="flex items-center gap-3 px-4 h-[60px]">
@@ -66,6 +123,7 @@ export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
             variant="ghost"
             size="icon"
             className="lg:hidden shrink-0"
+            aria-label="Back to conversations"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -75,6 +133,7 @@ export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
         <button
           onClick={() => navigate(`/profile/${user.id}`)}
           className="flex items-center gap-3 flex-1 min-w-0 hover:bg-neutral-900 rounded-lg px-2 py-1 transition-colors"
+          aria-label={`View ${user.firstName}'s profile`}
         >
           <div className="relative flex-shrink-0">
             <Avatar className="h-10 w-10 border border-neutral-800">
@@ -97,41 +156,37 @@ export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
           </div>
         </button>
 
-        {/* Action Buttons */}
+        {/* Action Buttons */}  
         <div className="flex items-center gap-1">
+          {/* Audio Call Button */}
           <Button
-            onClick={() => initiateCall(
-              user.id,
-              `${user.firstName} ${user.lastName || ''}`.trim(),
-              user.profile?.profilePic || null,
-              'audio'
-            )}
+            onClick={handleAudioCall}
             variant="ghost"
             size="icon"
-            className="text-neutral-400 hover:text-white"
-            title="Audio call"
+            className="text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            title={user.isOnline ? "Audio call" : "User is offline"}
+            disabled={!user.isOnline}
+            aria-label={`Call ${user.firstName}`}
           >
             <Phone className="h-5 w-5" />
           </Button>
 
+          {/* Video Call Button */}
           <Button
-            onClick={() => initiateCall(
-              user.id,
-              `${user.firstName} ${user.lastName || ''}`.trim(),
-              user.profile?.profilePic || null,
-              'video'
-            )}
+            onClick={handleVideoCall}
             variant="ghost"
             size="icon"
-            className="text-neutral-400 hover:text-white"
-            title="Video call"
+            className="text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            title={user.isOnline ? "Video call" : "User is offline"}
+            disabled={!user.isOnline}
+            aria-label={`Video call ${user.firstName}`}
           >
             <Video className="h-5 w-5" />
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="More options">
                 <MoreVertical className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>

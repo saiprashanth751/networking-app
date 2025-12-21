@@ -7,6 +7,9 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { createCallLogger } from '@/utils/callLogger';
+
+const logger = createCallLogger({ file: 'components/calling/IncomingCallModal.tsx', component: 'IncomingCallModal' });
 
 interface IncomingCallModalProps {
   isOpen: boolean;
@@ -25,6 +28,7 @@ export function IncomingCallModal({
   onAccept,
   onDecline
 }: IncomingCallModalProps) {
+  logger.info('→ IncomingCallModal rendering', { callerName, callType });
   const getCallerInitials = () => {
     return callerName
       .split(' ')
@@ -34,9 +38,18 @@ export function IncomingCallModal({
       .slice(0, 2);
   };
 
+  // Prevent backdrop click from declining (only explicit button click)
+  const handleBackdropClick = (open: boolean) => {
+    if (!open) {
+      // Do nothing on backdrop click - force user to use buttons
+      // Or optionally call onDecline() if you want backdrop to decline
+      return;
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onDecline()}>
-      <DialogContent className="sm:max-w-md bg-black border-neutral-800">
+    <Dialog open={isOpen} onOpenChange={handleBackdropClick}>
+      <DialogContent className="sm:max-w-md bg-black border-neutral-800 pointer-events-auto">
         <DialogTitle className="sr-only">Incoming Call</DialogTitle>
         <DialogDescription className="sr-only">
           {callerName} is calling you
@@ -70,7 +83,8 @@ export function IncomingCallModal({
               onClick={onDecline}
               variant="destructive"
               size="lg"
-              className="rounded-full h-16 w-16 p-0"
+              className="rounded-full h-16 w-16 p-0 hover:bg-red-700"
+              aria-label="Decline call"
             >
               <PhoneOff className="h-6 w-6" />
             </Button>
@@ -79,6 +93,7 @@ export function IncomingCallModal({
               onClick={onAccept}
               className="rounded-full h-16 w-16 p-0 bg-green-600 hover:bg-green-700"
               size="lg"
+              aria-label={`Accept ${callType} call`}
             >
               {callType === 'video' ? (
                 <Video className="h-6 w-6" />

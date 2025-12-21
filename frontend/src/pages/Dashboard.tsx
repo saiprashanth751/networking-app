@@ -55,9 +55,9 @@ export default function Dashboard() {
 
     // Filter users who are not already followed
     const recommendedUsers = useMemo(() => {
-        if (!usersData?.users || !followingData?.followingUsers) return [];
+        if (!usersData?.users || !followingData?.following) return [];
         
-        const followedUserIds = followingData.followingUsers.map((user: any) => user.id);
+        const followedUserIds = followingData.following.map((user: any) => user.id);
         return usersData.users.filter(
             (user: any) => !followedUserIds.includes(user.id)
         );
@@ -109,7 +109,7 @@ export default function Dashboard() {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-background">
-                <AppBar />
+                {/* <AppBar /> */}
                 <PageLayout containerSize="lg" spacing="normal">
                     <div className={`${LAYOUT.grid.cols3} ${SPACING.inline.lg}`}>
                         {/* Main Feed Skeleton */}

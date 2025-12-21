@@ -15,12 +15,18 @@ import http from "http";
 import cors from "cors";
 import { authMiddleware } from "./middleware/authMiddleware";
 import { v2 as cloudinary } from 'cloudinary';
+import { createCallLogger } from "./utils/callLogger";
+
+const logger = createCallLogger({ file: 'index.ts' });
 
 
 const app = express();
 app.use(
   cors({
-    origin: process.env.ORIGIN_URL,
+    origin: [
+      process.env.ORIGIN_URL || 'http://localhost:5173',
+      'http://10.203.232.89:5173'
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -57,7 +63,7 @@ const io = new Server(server, {
   },
 });
 
-// 🔥 FIX: Track active call states for idempotency
+//FIX: Track active call states for idempotency
 const activeCallStates = new Map<string, {
   callId: string;
   state: 'ringing' | 'active';
@@ -74,7 +80,11 @@ io.use((socket, next) => {
     return next(new Error("Invalid User / User not logged in"));
   }
 
-  socket.request.headers = { authorization: `Bearer ${token}` };
+  socket.request.headers = {
+    ...(socket.request.headers || {}),
+    authorization: `Bearer ${token}`
+  };
+
 
   authMiddleware(socket.request as express.Request, {} as any, (err?: any) => {
     if (err) {
@@ -86,6 +96,7 @@ io.use((socket, next) => {
 
 // Socket.IO connection handler
 io.on("connection", (socket) => {
+  logger.info('SOCKET: New connection', { socketId: socket.id });
   console.log("New User Connected:", socket.id);
 
   const senderId = (socket.request as any).id;
@@ -97,7 +108,7 @@ io.on("connection", (socket) => {
 
   console.log(`Sender ID: ${senderId}`);
 
-  // 🔥 FIX #1: Auto-join user to their OWN room (Critical for call notifications)
+  //FIX #1: Auto-join user to their OWN room (Critical for call notifications)
   socket.join(senderId);
   console.log(`✅ User ${senderId} joined their personal room`);
 
@@ -175,25 +186,27 @@ io.on("connection", (socket) => {
   // CALL SIGNALING (With Fixes)
   // ============================================
 
-  socket.on("callInitiate", async ({ receiverId, callType }: { 
-    receiverId: string; 
-    callType: 'audio' | 'video' 
+  socket.on("callInitiate", async ({ receiverId, callType }: {
+    receiverId: string;
+    callType: 'audio' | 'video'
   }) => {
     console.log(`[CALL] ${senderId} initiating ${callType} call to ${receiverId}`);
 
     if (!receiverId || receiverId === senderId) {
+      logger.error('Invalid receiver ID', { receiverId, senderId });
       console.error("[CALL] Invalid receiver ID");
       return;
     }
 
     try {
-      // 🔥 FIX #3: Check if receiver is online FIRST
+      //FIX #3: Check if receiver is online FIRST
       const receiverSockets = await io.in(receiverId).fetchSockets();
       if (receiverSockets.length === 0) {
+        logger.warn('Receiver is offline', { receiverId });
         console.log(`[CALL] Receiver ${receiverId} is offline`);
-        socket.emit("callUnavailable", { 
+        socket.emit("callUnavailable", {
           receiverId,
-          reason: "User is offline" 
+          reason: "User is offline"
         });
         return;
       }
@@ -212,13 +225,14 @@ io.on("connection", (socket) => {
       });
 
       if (!caller) {
+        logger.error('Caller not found in database', { senderId });
         console.error("[CALL] Caller not found");
         return;
       }
 
       const room = [senderId, receiverId].sort().join("_");
 
-      // 🔥 FIX: Create call history AFTER confirming receiver is online
+      //  FIX: Create call history AFTER confirming receiver is online
       const callRecord = await prisma.callHistory.create({
         data: {
           callerId: senderId,
@@ -229,6 +243,7 @@ io.on("connection", (socket) => {
         }
       });
 
+      logger.info('Call record created', { callId: callRecord.id, callerId: senderId, receiverId, callType });
       console.log(`[CALL] Call record created: ${callRecord.id}`);
 
       // Store call state for idempotency
@@ -239,6 +254,7 @@ io.on("connection", (socket) => {
         receiverId: receiverId
       });
 
+      logger.info('SOCKET EMIT: incomingCall', { callId: callRecord.id, receiverId, callerName: `${caller.firstName} ${caller.lastName || ''}`.trim() });
       // Notify receiver about incoming call
       io.to(receiverId).emit("incomingCall", {
         callId: callRecord.id,
@@ -254,10 +270,10 @@ io.on("connection", (socket) => {
 
       console.log(`[CALL] Incoming call notification sent to ${receiverId}`);
 
-      // 🔥 FIX #2: Backend-controlled timeout (30 seconds)
+      //  FIX #2: Backend-controlled timeout (30 seconds)
       const timeoutTimer = setTimeout(async () => {
         const callState = activeCallStates.get(callRecord.id);
-        
+
         // Only timeout if still in ringing state
         if (callState && callState.state === 'ringing') {
           console.log(`[CALL] Backend timeout: Call ${callRecord.id} not answered`);
@@ -265,7 +281,7 @@ io.on("connection", (socket) => {
           try {
             await prisma.callHistory.update({
               where: { id: callRecord.id },
-              data: { 
+              data: {
                 status: "no-answer",
                 endedAt: new Date()
               }
@@ -280,7 +296,7 @@ io.on("connection", (socket) => {
             console.error("[CALL] Error handling timeout:", error);
           }
         }
-      }, 30000); // 30 seconds
+      }, 31000); // 30 seconds
 
       // Store timeout handle
       const state = activeCallStates.get(callRecord.id);
@@ -295,16 +311,18 @@ io.on("connection", (socket) => {
   });
 
   // CALL ACCEPTANCE
-  socket.on("callAccept", async ({ callId, callerId }: { 
-    callId: string; 
-    callerId: string 
+  socket.on("callAccept", async ({ callId, callerId }: {
+    callId: string;
+    callerId: string
   }) => {
+    logger.info('SOCKET RECEIVE: callAccept', { senderId, callId, callerId });
     console.log(`[CALL] ${senderId} accepting call ${callId} from ${callerId}`);
 
     try {
-      // 🔥 FIX #4: Idempotency guard - only accept if ringing
+      //  FIX #4: Idempotency guard - only accept if ringing
       const callState = activeCallStates.get(callId);
       if (!callState || callState.state !== 'ringing') {
+        logger.warn('Call already accepted or invalid', { callId, currentState: callState?.state });
         console.log(`[CALL] Call ${callId} already accepted or invalid`);
         return;
       }
@@ -319,18 +337,19 @@ io.on("connection", (socket) => {
 
       await prisma.callHistory.update({
         where: { id: callId },
-        data: { 
-          status: "completed",
+        data: {
+          status: "completed", //change it to active, completed is confusing
           startedAt: new Date()
         }
       });
 
       const room = [senderId, callerId].sort().join("_");
 
-      io.to(callerId).emit("callAccepted", { 
-        callId, 
+      logger.info('SOCKET EMIT: callAccepted', { callId, callerId, receiverId: senderId });
+      io.to(callerId).emit("callAccepted", {
+        callId,
         room,
-        receiverId: senderId 
+        receiverId: senderId
       });
 
       console.log(`[CALL] Call ${callId} accepted, both parties notified`);
@@ -342,9 +361,9 @@ io.on("connection", (socket) => {
   });
 
   // CALL REJECTION
-  socket.on("callReject", async ({ callId, callerId }: { 
-    callId: string; 
-    callerId: string 
+  socket.on("callReject", async ({ callId, callerId }: {
+    callId: string;
+    callerId: string
   }) => {
     console.log(`[CALL] ${senderId} rejecting call ${callId} from ${callerId}`);
 
@@ -356,12 +375,13 @@ io.on("connection", (socket) => {
 
       await prisma.callHistory.update({
         where: { id: callId },
-        data: { 
+        data: {
           status: "declined",
           endedAt: new Date()
         }
       });
 
+      logger.info('SOCKET EMIT: callRejected', { callId, callerId });
       io.to(callerId).emit("callRejected", { callId });
       activeCallStates.delete(callId);
 
@@ -373,17 +393,19 @@ io.on("connection", (socket) => {
   });
 
   // CALL END
-  socket.on("callEnd", async ({ callId, otherUserId, duration }: { 
-    callId: string; 
-    otherUserId: string; 
-    duration: number 
+  socket.on("callEnd", async ({ callId, otherUserId, duration }: {
+    callId: string;
+    otherUserId: string;
+    duration: number
   }) => {
+    logger.info('SOCKET RECEIVE: callEnd', { senderId, callId, otherUserId, duration });
     console.log(`[CALL] ${senderId} ending call ${callId}, duration: ${duration}s`);
 
     try {
-      // 🔥 FIX #4: Idempotency guard - only end if active
+      //  FIX #4: Idempotency guard - only end if active
       const callState = activeCallStates.get(callId);
       if (!callState) {
+        logger.warn('Call already ended or invalid', { callId });
         console.log(`[CALL] Call ${callId} already ended or invalid`);
         return;
       }
@@ -401,6 +423,7 @@ io.on("connection", (socket) => {
         }
       });
 
+      logger.info('SOCKET EMIT: callEnded', { callId, otherUserId });
       io.to(otherUserId).emit("callEnded", { callId });
       activeCallStates.delete(callId);
 
@@ -412,10 +435,11 @@ io.on("connection", (socket) => {
   });
 
   // CALL TIMEOUT (Frontend fallback - backend is authority)
-  socket.on("callTimeout", async ({ callId, receiverId }: { 
-    callId: string; 
-    receiverId: string 
+  socket.on("callTimeout", async ({ callId, receiverId }: {
+    callId: string;
+    receiverId: string
   }) => {
+    logger.info('SOCKET RECEIVE: callTimeout', { senderId, callId, receiverId });
     console.log(`[CALL] Frontend timeout signal for ${callId}`);
 
     try {
@@ -428,12 +452,13 @@ io.on("connection", (socket) => {
 
       await prisma.callHistory.update({
         where: { id: callId },
-        data: { 
+        data: {
           status: "no-answer",
           endedAt: new Date()
         }
       });
 
+      logger.info('SOCKET EMIT: callCancelled', { callId, receiverId });
       io.to(receiverId).emit("callCancelled", { callId });
       activeCallStates.delete(callId);
 
@@ -446,27 +471,33 @@ io.on("connection", (socket) => {
   // WEBRTC SIGNALING
   // ============================================
 
-  socket.on("webrtc-offer", ({ receiverId, offer }: { 
-    receiverId: string; 
-    offer: any 
+  socket.on("webrtc-offer", ({ receiverId, offer }: {
+    receiverId: string;
+    offer: any
   }) => {
+    logger.info('SOCKET RECEIVE: webrtc-offer', { senderId, receiverId });
     console.log(`[WEBRTC] Forwarding offer from ${senderId} to ${receiverId}`);
+    logger.info('SOCKET EMIT: webrtc-offer', { senderId, receiverId });
     io.to(receiverId).emit("webrtc-offer", { offer, senderId });
   });
 
-  socket.on("webrtc-answer", ({ callerId, answer }: { 
-    callerId: string; 
-    answer: any 
+  socket.on("webrtc-answer", ({ callerId, answer }: {
+    callerId: string;
+    answer: any
   }) => {
+    logger.info('SOCKET RECEIVE: webrtc-answer', { senderId, callerId });
     console.log(`[WEBRTC] Forwarding answer from ${senderId} to ${callerId}`);
+    logger.info('SOCKET EMIT: webrtc-answer', { senderId, callerId });
     io.to(callerId).emit("webrtc-answer", { answer, senderId });
   });
 
-  socket.on("webrtc-ice-candidate", ({ otherUserId, candidate }: { 
-    otherUserId: string; 
-    candidate: any 
+  socket.on("webrtc-ice-candidate", ({ otherUserId, candidate }: {
+    otherUserId: string;
+    candidate: any
   }) => {
+    logger.info('SOCKET RECEIVE: webrtc-ice-candidate', { senderId, otherUserId });
     console.log(`[WEBRTC] Forwarding ICE candidate from ${senderId} to ${otherUserId}`);
+    logger.info('SOCKET EMIT: webrtc-ice-candidate', { senderId, otherUserId });
     io.to(otherUserId).emit("webrtc-ice-candidate", { candidate, senderId });
   });
 
@@ -475,9 +506,9 @@ io.on("connection", (socket) => {
     io.to(otherUserId).emit("webrtc-connected", { senderId });
   });
 
-  socket.on("webrtc-failed", ({ otherUserId, reason }: { 
-    otherUserId: string; 
-    reason: string 
+  socket.on("webrtc-failed", ({ otherUserId, reason }: {
+    otherUserId: string;
+    reason: string
   }) => {
     console.log(`[WEBRTC] Connection failed: ${reason}`);
     io.to(otherUserId).emit("webrtc-failed", { senderId, reason });
@@ -508,7 +539,8 @@ io.on("connection", (socket) => {
 app.use(errorMiddleware);
 
 // Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+const PORT = parseInt(process.env.PORT || '3000', 10);
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+  logger.info(`Server is running on port ${PORT}`)
 });

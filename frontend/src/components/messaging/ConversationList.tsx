@@ -8,13 +8,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Loader2, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { createCallLogger } from '@/utils/callLogger';
 
 interface ConversationListProps {
   onSelectUser: (userId: string) => void;
   selectedUserId?: string;
 }
 
+const logger = createCallLogger({ file: 'components/messaging/ConversationList.tsx', component: 'ConversationList' });
+
 export function ConversationList({ onSelectUser, selectedUserId }: ConversationListProps) {
+  logger.info("Rendering ConversationList with selectedUserId", {selectedUserId});
   const [searchQuery, setSearchQuery] = useState('');
   const { data: conversationsData, isLoading: conversationsLoading } = useConversations();
   const { data: searchData, isLoading: searchLoading } = useSearchUsers(searchQuery);

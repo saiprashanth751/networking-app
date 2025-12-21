@@ -1,27 +1,38 @@
+// src/pages/Messages.tsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
+import { useCurrentUser } from '@/hooks/queries/user';
 import { ConversationList } from '@/components/messaging/ConversationList';
 import { ChatThread } from '@/components/messaging/ChatThread';
 import { EmptyState } from '@/components/messaging/EmptyState';
 import { CallManager } from '@/components/calling/CallManager';
 import { LeftSidebar } from '@/components/layout/LeftSidebar';
+import { CallProvider } from '@/components/calling/CallProvider';
+import { createCallLogger } from '@/utils/callLogger';
 
 export default function MessagesPage() {
+  const logger = createCallLogger({file: 'pages/Messages.tsx'});
+  logger.info("[Mounted] Messages.tsx Mounted. Here we will create socket");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get('userId');
+  logger.info(`Selected user id is : ${selectedUserId}`);
   const [socket, setSocket] = useState<Socket | null>(null);
+  
+  const { data: currentUserData } = useCurrentUser();
+  const currentUserId = currentUserData?.user?.id || '';
 
   // 🔥 FIX: SINGLE socket connection for entire Messages page
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token || !currentUserId) return;
 
     console.log('[Messages] Creating SINGLE socket connection');
+    logger.info("Started creating socket.")
 
     const newSocket = io(import.meta.env.VITE_API_URL, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['websocket', 'polling'],   
       auth: { token },
       // 🔥 Prevent duplicate connections
       reconnection: true,
@@ -34,14 +45,17 @@ export default function MessagesPage() {
 
     newSocket.on('connect', () => {
       console.log('[Messages] ✅ Socket connected:', newSocket.id);
+      logger.info("Socket successfully created in Messages page.", newSocket.id);
     });
 
     newSocket.on('disconnect', (reason) => {
       console.log('[Messages] ❌ Socket disconnected:', reason);
+      logger.info("Socket disconnected in Messages page")
     });
 
     newSocket.on('connect_error', (error) => {
       console.error('[Messages] Connection error:', error);
+      logger.info("Connection error in message page while creating socket")
     });
 
     return () => {
@@ -49,10 +63,11 @@ export default function MessagesPage() {
       newSocket.disconnect();
       setSocket(null);
     };
-  }, []); // Empty deps - only create once
+  }, [currentUserId]); // Add currentUserId as dependency
 
   const handleSelectUser = (userId: string) => {
     setSearchParams({ userId });
+    logger.info("Clicked on a conversation to communicate with user id", {userId});
   };
 
   const handleBackToList = () => {
@@ -60,8 +75,10 @@ export default function MessagesPage() {
   };
 
   return (
-    <>
-      {socket && <CallManager socket={socket} />}
+    // Wrap everything in CallProvider
+    <CallProvider socket={socket}>
+      {/* CallManager now uses context, doesn't need socket prop */}
+      <CallManager socket={socket} />
 
       <div className="min-h-screen bg-black text-white">
         <LeftSidebar />
@@ -79,7 +96,7 @@ export default function MessagesPage() {
               onSelectUser={handleSelectUser}
               selectedUserId={selectedUserId || undefined}
             />
-          </div>
+          </div>  
 
           {/* Chat Thread */}
           <div
@@ -91,9 +108,9 @@ export default function MessagesPage() {
           >
             {selectedUserId ? (
               <ChatThread 
-                userId={selectedUserId} 
-                onBack={handleBackToList}
-                socket={socket} // 🔥 Pass the socket down
+                userId={selectedUserId} //otherUserId with whom we need to communicate
+                onBack={handleBackToList} //ignore for now.
+                socket={socket} // Pass the socket down. ***Notice the same socket is being passed down.
               />
             ) : (
               <EmptyState />
@@ -101,6 +118,6 @@ export default function MessagesPage() {
           </div>
         </div>
       </div>
-    </>
+    </CallProvider>
   );
 }

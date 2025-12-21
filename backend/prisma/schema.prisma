@@ -103,7 +103,7 @@ model Message {
 
 model Conversation {
   id String @id @default(uuid())
-  user1Id String
+  user1Id String            //change names later to sender and receiver
   user2Id String
   
   lastMessageId String?

@@ -1,254 +1,128 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
-import { useCallManager } from '@/hooks/useCallManager';
-import { useWebRTC } from '@/hooks/useWebRTC';
+import { useCall } from '@/components/calling/CallProvider';
+import { createCallLogger } from '@/utils/callLogger';
 import { IncomingCallModal } from './IncomingCallModal';
 import { CallScreen } from './CallScreen';
+
+const logger = createCallLogger({
+  file: 'components/calling/CallManager.tsx',
+  component: 'CallManager'
+});
 
 interface CallManagerProps {
   socket: Socket | null;
 }
 
 export function CallManager({ socket }: CallManagerProps) {
+  logger.info('→ CallManager rendering', { hasSocket: !!socket });
+
   const {
     activeCall,
     incomingCall,
+    isRinging,
+    isConnected,
+    isInCall,
+    localStream,
+    remoteStream,
+    isMuted,
+    isVideoOff,
+    isScreenSharing,
     acceptCall,
     rejectCall,
     endCall,
-    updateCallState
-  } = useCallManager(socket);
+    toggleMute,
+    toggleVideo,
+    startScreenShare
+  } = useCall();
 
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [hasReceivedOffer, setHasReceivedOffer] = useState(false);
-
-  // 🔥 FIX: Only initialize WebRTC when in proper state
-  // BOTH caller and receiver should wait for "connecting" state
-  const shouldInitWebRTC = activeCall && (
-    activeCall.state === 'connecting' || 
-    activeCall.state === 'active'
-  );
-
-  // 🔥 FIX: Determine initiator based on who STARTED the call, not state
-  const [isCallerUser, setIsCallerUser] = useState(false);
-
-  // Track if this user is the caller (who initiated the call)
+  // ---------------------------------------------------------------------------
+  // Debug logging (dev only)
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (activeCall?.state === 'initiating' || activeCall?.state === 'ringing') {
-      console.log('[CallManager] 🔔 This user is the CALLER');
-      setIsCallerUser(true);
-    } else if (!activeCall) {
-      setIsCallerUser(false);
-    }
-  }, [activeCall?.state, activeCall?.callId]);
-
-  // Caller is ALWAYS the WebRTC initiator
-  const isInitiator = isCallerUser;
-
-  // Debug logging
-  useEffect(() => {
-    if (activeCall) {
-      console.log('[CallManager] 🔍 Call state debug:', {
-        state: activeCall.state,
-        callId: activeCall.callId,
-        isCallerUser,
-        isInitiator,
-        shouldInitWebRTC,
-        hasReceivedOffer
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CallManager] UI State Snapshot', {
+        hasIncomingCall: !!incomingCall,
+        isRinging,
+        isConnected,
+        isInCall,
+        hasLocalStream: !!localStream,
+        hasRemoteStream: !!remoteStream
       });
     }
-  }, [activeCall, isCallerUser, isInitiator, shouldInitWebRTC, hasReceivedOffer]);
-
-  // Initialize WebRTC
-  const {
+  }, [
+    incomingCall,
+    isRinging,
+    isConnected,
+    isInCall,
     localStream,
-    remoteStream,
-    initializeCall,
-    handleOffer,
-    handleAnswer,
-    handleIceCandidate,
-    toggleAudio,
-    toggleVideo,
-    startScreenShare,
-    stopScreenShare,
-    cleanup
-  } = useWebRTC({
-    socket,
-    isInitiator,
-    callType: activeCall?.callType || 'audio',
-    otherUserId: activeCall?.otherUserId || '',
-    onConnectionEstablished: () => {
-      console.log('[CallManager] ✅ Connection established, updating to active');
-      updateCallState({ state: 'active' });
-    },
-    onConnectionFailed: (reason) => {
-      console.error('[CallManager] ❌ Connection failed:', reason);
-      // 🔥 FIX: Don't end call on connection failure immediately, might be initializing
-      setTimeout(() => {
-        if (activeCall && activeCall.state !== 'active') {
-          console.log('[CallManager] Ending call due to connection failure');
-          endCall();
-        }
-      }, 1000);
-    },
-    onStreamEnded: () => {
-      console.log('[CallManager] Stream ended');
-      // 🔥 FIX: Only end if call is active
-      if (activeCall && activeCall.state === 'active') {
-        endCall();
-      }
-    }
-  });
+    remoteStream
+  ]);
 
-  // 🔥 FIX: Initialize WebRTC with proper timing
-  useEffect(() => {
-    console.log('[CallManager] 🔄 WebRTC init effect triggered', {
-      shouldInitWebRTC,
-      hasLocalStream: !!localStream,
-      isInitiator,
-      isCallerUser,
-      hasReceivedOffer,
-      state: activeCall?.state,
-      callId: activeCall?.callId
-    });
+  // ---------------------------------------------------------------------------
+  // Handlers (stable + intention-revealing)
+  // ---------------------------------------------------------------------------
+  const handleAcceptCall = useCallback(() => {
+    logger.info('→ User accepted incoming call');
+    acceptCall();
+  }, [acceptCall]);
 
-    if (!shouldInitWebRTC) {
-      console.log('[CallManager] ⏭️ Skipping: shouldInitWebRTC is false');
-      return;
-    }
+  const handleRejectCall = useCallback(() => {
+    logger.info('→ User rejected incoming call');
+    rejectCall();
+  }, [rejectCall]);
 
-    if (localStream) {
-      console.log('[CallManager] ⏭️ Skipping: already have local stream');
-      return;
-    }
+  const handleEndCall = useCallback(() => {
+    logger.info('→ User ended call');
+    endCall();
+  }, [endCall]);
 
-    // 🔥 CRITICAL: Receiver (non-initiator) must wait for offer before initializing
-    if (!isInitiator && !hasReceivedOffer) {
-      console.log('[CallManager] ⏳ Receiver waiting for offer before WebRTC init...');
-      return;
-    }
+  const handleToggleMute = useCallback(() => {
+    toggleMute();
+  }, [toggleMute]);
 
-    console.log('[CallManager] ✅ Preparing to initialize WebRTC', { 
-      isInitiator, 
-      isCaller: isCallerUser,
-      hasReceivedOffer,
-      state: activeCall?.state,
-      callId: activeCall?.callId,
-      shouldInit: shouldInitWebRTC,
-      hasLocalStream: !!localStream
-    });
-    
-    // 🔥 CRITICAL: Longer delay to ensure both parties are synchronized
-    const timer = setTimeout(() => {
-      console.log('[CallManager] Starting WebRTC initialization NOW');
-      
-      try {
-        initializeCall();
-      } catch (error) {
-        console.error('[CallManager] ❌ Failed to initialize WebRTC:', error);
-      }
-    }, isInitiator ? 500 : 300); // Give initiator more time to ensure receiver is ready
+  const handleToggleVideo = useCallback(() => {
+    toggleVideo();
+  }, [toggleVideo]);
 
-    return () => {
-      console.log('[CallManager] Clearing WebRTC init timer');
-      clearTimeout(timer);
-    };
-  }, [shouldInitWebRTC, localStream, isInitiator, isCallerUser, hasReceivedOffer, activeCall?.state, activeCall?.callId, initializeCall]);
+  const handleToggleScreenShare = useCallback(async () => {
+    await startScreenShare();
+  }, [startScreenShare]);
 
-  // Cleanup WebRTC when call ends
-  useEffect(() => {
-    if (!activeCall) {
-      cleanup();
-      setHasReceivedOffer(false);
-      setIsMuted(false);
-      setIsVideoOff(false);
-      setIsScreenSharing(false);
-    }
-  }, [activeCall, cleanup]);
+  // ---------------------------------------------------------------------------
+  // UI visibility logic (SAFE, DERIVED, STABLE)
+  // ---------------------------------------------------------------------------
 
-  // Handle WebRTC signaling events
-  useEffect(() => {
-    if (!socket) return;
+  const shouldShowIncomingCallModal =
+    !!incomingCall && isRinging && !isConnected;
 
-    const handleWebRTCOffer = (data: { offer: any; senderId: string }) => {
-      console.log('[CallManager] 📨 Received WebRTC offer from:', data.senderId);
-      setHasReceivedOffer(true);
-      handleOffer(data);
-    };
+  const shouldShowCallScreen =
+    !!activeCall && isInCall;
 
-    const handleWebRTCAnswer = (data: { answer: any; senderId: string }) => {
-      console.log('[CallManager] 📨 Received WebRTC answer from:', data.senderId);
-      handleAnswer(data);
-    };
-
-    const handleWebRTCIceCandidate = (data: { candidate: any; senderId: string }) => {
-      console.log('[CallManager] 📨 Received ICE candidate from:', data.senderId);
-      handleIceCandidate(data);
-    };
-
-    socket.on('webrtc-offer', handleWebRTCOffer);
-    socket.on('webrtc-answer', handleWebRTCAnswer);
-    socket.on('webrtc-ice-candidate', handleWebRTCIceCandidate);
-
-    return () => {
-      socket.off('webrtc-offer', handleWebRTCOffer);
-      socket.off('webrtc-answer', handleWebRTCAnswer);
-      socket.off('webrtc-ice-candidate', handleWebRTCIceCandidate);
-    };
-  }, [socket, handleOffer, handleAnswer, handleIceCandidate]);
-
-  // Handle mute toggle
-  const handleToggleMute = () => {
-    const newMutedState = toggleAudio();
-    setIsMuted(newMutedState);
-    updateCallState({ isMuted: newMutedState });
-  };
-
-  // Handle video toggle
-  const handleToggleVideo = () => {
-    const newVideoOffState = toggleVideo();
-    setIsVideoOff(newVideoOffState);
-    updateCallState({ isVideoOff: newVideoOffState });
-  };
-
-  // Handle screen share toggle
-  const handleToggleScreenShare = async () => {
-    if (isScreenSharing) {
-      stopScreenShare();
-      setIsScreenSharing(false);
-      updateCallState({ isScreenSharing: false });
-    } else {
-      const success = await startScreenShare();
-      if (success) {
-        setIsScreenSharing(true);
-        updateCallState({ isScreenSharing: true });
-      }
-    }
-  };
-
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <>
       {/* Incoming Call Modal */}
-      {incomingCall && (
+      {shouldShowIncomingCallModal && (
         <IncomingCallModal
-          isOpen={!!incomingCall}
-          callerName={incomingCall.callerName}
-          callerAvatar={incomingCall.callerAvatar}
-          callType={incomingCall.callType}
-          onAccept={acceptCall}
-          onDecline={rejectCall}
+          isOpen
+          callerName={incomingCall.participants.remote.name}
+          callerAvatar={incomingCall.participants.remote.avatar}
+          callType={incomingCall.type}
+          onAccept={handleAcceptCall}
+          onDecline={handleRejectCall}
         />
       )}
 
       {/* Active Call Screen */}
-      {activeCall && (activeCall.state === 'connecting' || activeCall.state === 'active') && (
+      {shouldShowCallScreen && (
         <CallScreen
-          callerName={activeCall.otherUserName}
-          callerAvatar={activeCall.otherUserAvatar}
-          callType={activeCall.callType}
-          callState={activeCall.state}
+          callerName={activeCall.participants.remote.name}
+          callerAvatar={activeCall.participants.remote.avatar}
+          callType={activeCall.type}
+          callState={isConnected ? 'active' : 'connecting'}
           localStream={localStream}
           remoteStream={remoteStream}
           isMuted={isMuted}
@@ -257,7 +131,7 @@ export function CallManager({ socket }: CallManagerProps) {
           onToggleMute={handleToggleMute}
           onToggleVideo={handleToggleVideo}
           onToggleScreenShare={handleToggleScreenShare}
-          onEndCall={endCall}
+          onEndCall={handleEndCall}
         />
       )}
     </>
