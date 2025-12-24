@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { Post } from '../components/Post';
-import { AppBar } from '../components/AppBar';
 import { CreatePost } from '../components/CreatePost';
 import { User } from '../components/User';
 import { Button } from "@/components/ui/button";
@@ -130,8 +129,6 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Fixed AppBar */}
-            <AppBar />
 
             {/* Main Content with PageLayout System */}
             <PageLayout containerSize="lg" spacing="normal">

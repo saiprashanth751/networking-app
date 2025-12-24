@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useMemo } from 'react';
 import { Socket } from 'socket.io-client';
 import { useCallOrchestrator } from '@/hooks/useCallOrchestrator';
 import { toast } from 'react-toastify';
@@ -49,87 +49,8 @@ interface CallProviderProps {
   children: React.ReactNode;
 }
 
-// Sound manager component (handles ringing sounds)
-const SoundManager: React.FC = () => {
-  const ringingSoundRef = useRef<HTMLAudioElement | null>(null);
-  const isPlayingRef = useRef(false);
-  const hasUserInteractedRef = useRef(false);
-
-  // Handle user interaction for autoplay
-  useEffect(() => {
-    const handleUserInteraction = () => {
-      hasUserInteractedRef.current = true;
-      if (ringingSoundRef.current) {
-        ringingSoundRef.current.play().catch(() => {}).then(() => {
-          ringingSoundRef.current?.pause();
-        });
-      }
-    };
-
-    document.addEventListener('click', handleUserInteraction, { once: true });
-    document.addEventListener('keydown', handleUserInteraction, { once: true });
-    document.addEventListener('touchstart', handleUserInteraction, { once: true });
-
-    return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ringingSoundRef.current) {
-      ringingSoundRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-      ringingSoundRef.current.loop = true;
-      ringingSoundRef.current.volume = 0.3;
-      ringingSoundRef.current.preload = 'auto';
-    }
-
-    const handleStartRinging = () => {
-      if (isPlayingRef.current) return;
-
-      if (!hasUserInteractedRef.current) {
-        console.log('[SoundManager] User hasn\'t interacted yet, cannot play sound');
-        return;
-      }
-
-      ringingSoundRef.current?.play()
-        .then(() => {
-          isPlayingRef.current = true;
-          console.log('[SoundManager] Ringing started');
-        })
-        .catch(err => {
-          console.error('[SoundManager] Failed to play ringing:', err);
-        });
-    };
-
-    const handleStopRinging = () => {
-      if (!isPlayingRef.current) return;
-
-      ringingSoundRef.current?.pause();
-      if (ringingSoundRef.current) {
-        ringingSoundRef.current.currentTime = 0;
-      }
-      isPlayingRef.current = false;
-      console.log('[SoundManager] Ringing stopped');
-    };
-
-    callEventBus.on('sound:startRinging', handleStartRinging);
-    callEventBus.on('sound:stopRinging', handleStopRinging);
-
-    return () => {
-      callEventBus.off('sound:startRinging', handleStartRinging);
-      callEventBus.off('sound:stopRinging', handleStopRinging);
-
-      ringingSoundRef.current?.pause();
-      if (ringingSoundRef.current) {
-        ringingSoundRef.current.currentTime = 0;
-      }
-    };
-  }, []);
-
-  return null;
-};
+// ✅ Sound management now handled by singleton ringingManager
+// No component needed - sound manager survives re-renders
 
 export const CallProvider: React.FC<CallProviderProps> = ({
   socket,
@@ -147,7 +68,7 @@ export const CallProvider: React.FC<CallProviderProps> = ({
   // Wrap initiateCall to ensure it's always callable
   const initiateCall = useCallback((remoteUser: CallParticipant, callType: CallType) => {
     console.log('[CallProvider] initiateCall called', { remoteUser, callType });
-    
+
     if (!orchestrator || !orchestrator.initiateCall) {
       console.error('[CallProvider] Orchestrator not ready');
       toast.error('Call system not ready');
@@ -246,19 +167,12 @@ export const CallProvider: React.FC<CallProviderProps> = ({
     };
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (orchestrator.isInCall) {
-        console.log('[CallProvider] Unmounting, ending active call');
-        orchestrator.endCall();
-      }
-    };
-  }, [orchestrator]);
+  // ✅ Phase 3: Removed problematic cleanup effect
+  // Provider should NOT mutate call state during unmount
+  // Cleanup is handled by useCallOrchestrator internally
 
   return (
     <CallContext.Provider value={contextValue}>
-      <SoundManager />
       {children}
     </CallContext.Provider>
   );
@@ -278,7 +192,7 @@ export const useCallInitiation = () => {
   const context = useContext(CallContext);
   // Initiating Audio Call
   const initiateAudioCall = useCallback((remoteUser: CallParticipant) => {
-    console.log('[useCallInitiation] initiateAudioCall called', { 
+    console.log('[useCallInitiation] initiateAudioCall called', {
       remoteUser,
       hasContext: !!context,
       hasInitiateCall: !!context?.initiateCall
@@ -302,7 +216,7 @@ export const useCallInitiation = () => {
 
   // Initiating Video Call
   const initiateVideoCall = useCallback((remoteUser: CallParticipant) => {
-    console.log('[useCallInitiation] initiateVideoCall called', { 
+    console.log('[useCallInitiation] initiateVideoCall called', {
       remoteUser,
       hasContext: !!context,
       hasInitiateCall: !!context?.initiateCall
