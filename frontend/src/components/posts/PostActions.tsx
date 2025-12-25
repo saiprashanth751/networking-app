@@ -2,12 +2,6 @@ import { useState } from 'react';
 import { Heart, MessageCircle, Bookmark, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToggleLike, useToggleBookmark, useRecordShare } from '@/hooks/mutations/engagement';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface PostActionsProps {
     postId: string;
@@ -82,18 +76,37 @@ export function PostActions({
         }
     };
 
+    const handleCommentClick = () => {
+        if (onCommentClick) {
+            onCommentClick();
+        }
+    };
+
     return (
-        <div className="flex items-center justify-between max-w-md text-neutral-500 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between text-muted-foreground mt-3">
             {/* Comment */}
             <button
-                onClick={onCommentClick}
-                className="flex items-center gap-2 hover:text-primary transition-colors group"
+                onClick={handleCommentClick}
+                className="flex items-center gap-1 hover:text-blue-500 transition-colors group"
                 aria-label="Comment on post"
             >
-                <div className="group-hover:bg-primary/10 rounded-full p-2 transition-colors">
+                <div className="group-hover:bg-blue-500/10 rounded-full p-2 transition-colors">
                     <MessageCircle className="h-[18px] w-[18px]" />
                 </div>
-                <span className="text-[13px] font-medium">{commentsCount}</span>
+                <span className="text-[13px]">{commentsCount || 0}</span>
+            </button>
+
+            {/* Repost */}
+            <button
+                onClick={() => handleShare()}
+                disabled={recordShareMutation.isPending}
+                className="flex items-center gap-1 hover:text-green-500 transition-colors group"
+                aria-label="Share post"
+            >
+                <div className="group-hover:bg-green-500/10 rounded-full p-2 transition-colors">
+                    <Share2 className="h-[18px] w-[18px]" />
+                </div>
+                <span className="text-[13px]">{sharesCount || 0}</span>
             </button>
 
             {/* Like */}
@@ -101,17 +114,18 @@ export function PostActions({
                 onClick={handleLike}
                 disabled={toggleLikeMutation.isPending}
                 className={cn(
-                    'flex items-center gap-2 transition-colors group',
-                    liked ? 'text-red-500' : 'hover:text-red-500'
+                    "flex items-center gap-1 transition-colors group",
+                    liked ? "text-red-500" : "hover:text-red-500"
                 )}
-                aria-label={liked ? 'Unlike post' : 'Like post'}
+                aria-label={liked ? "Unlike post" : "Like post"}
             >
-                <div className="group-hover:bg-red-500/10 rounded-full p-2 transition-colors">
-                    <Heart
-                        className={cn('h-[18px] w-[18px]', liked && 'fill-current')}
-                    />
+                <div className={cn(
+                    "rounded-full p-2 transition-colors",
+                    liked ? "bg-red-500/10" : "group-hover:bg-red-500/10"
+                )}>
+                    <Heart className={cn("h-[18px] w-[18px]", liked && "fill-current")} />
                 </div>
-                <span className="text-[13px] font-medium">{currentLikes}</span>
+                <span className="text-[13px]">{currentLikes}</span>
             </button>
 
             {/* Bookmark */}
@@ -119,45 +133,18 @@ export function PostActions({
                 onClick={handleBookmark}
                 disabled={toggleBookmarkMutation.isPending}
                 className={cn(
-                    'flex items-center gap-2 transition-colors group',
-                    bookmarked ? 'text-primary' : 'hover:text-primary'
+                    "transition-colors group",
+                    bookmarked ? "text-blue-500" : "hover:text-blue-500"
                 )}
-                aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark post'}
+                aria-label={bookmarked ? "Remove bookmark" : "Bookmark post"}
             >
-                <div className="group-hover:bg-primary/10 rounded-full p-2 transition-colors">
-                    <Bookmark
-                        className={cn('h-[18px] w-[18px]', bookmarked && 'fill-current')}
-                    />
+                <div className={cn(
+                    "rounded-full p-2 transition-colors",
+                    bookmarked ? "bg-blue-500/10" : "group-hover:bg-blue-500/10"
+                )}>
+                    <Bookmark className={cn("h-[18px] w-[18px]", bookmarked && "fill-current")} />
                 </div>
-                {currentBookmarks > 0 && (
-                    <span className="text-[13px] font-medium">{currentBookmarks}</span>
-                )}
             </button>
-
-            {/* Share */}
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button
-                        className="hover:text-primary transition-colors group"
-                        aria-label="Share post"
-                    >
-                        <div className="group-hover:bg-primary/10 rounded-full p-2 transition-colors">
-                            <Share2 className="h-[18px] w-[18px]" />
-                        </div>
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleShare()}>
-                        Copy link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleShare('twitter')}>
-                        Share on Twitter
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleShare('linkedin')}>
-                        Share on LinkedIn
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
         </div>
     );
 }

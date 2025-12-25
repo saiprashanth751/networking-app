@@ -6,7 +6,18 @@ interface PostContentProps {
 }
 
 export function PostContent({ content, className = '' }: PostContentProps) {
-    if (!content || !content.root || !content.root.children) {
+    // Parse content if it's a string (from API)
+    let parsedContent = content;
+    if (typeof content === 'string') {
+        try {
+            parsedContent = JSON.parse(content);
+        } catch (error) {
+            console.error('Failed to parse post content:', error);
+            return null;
+        }
+    }
+
+    if (!parsedContent || !parsedContent.root || !parsedContent.root.children) {
         return null;
     }
 
@@ -138,7 +149,7 @@ export function PostContent({ content, className = '' }: PostContentProps) {
 
     return (
         <div className={`prose prose-neutral dark:prose-invert max-w-none ${className}`}>
-            {content.root.children.map((node: any, index: number) => renderNode(node, index))}
+            {parsedContent.root.children.map((node: any, index: number) => renderNode(node, index))}
         </div>
     );
 }

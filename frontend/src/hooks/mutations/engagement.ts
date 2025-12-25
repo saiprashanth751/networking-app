@@ -60,8 +60,12 @@ export const useAddComment = (
         mutationFn: ({ postId, content, parentId }) =>
             engagementService.addComment(postId, content, parentId),
         onSuccess: (_, variables) => {
+            // Refresh comments list (including replies)
             queryClient.invalidateQueries({ queryKey: queryKeys.comments.byPost(variables.postId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.comments.all });
+            // Update post comment count in real-time
             queryClient.invalidateQueries({ queryKey: queryKeys.posts.detail(variables.postId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
             toast.success('Comment added!');
         },
         ...options,
@@ -69,14 +73,18 @@ export const useAddComment = (
 };
 
 export const useDeleteComment = (
-    options?: UseMutationOptions<void, Error, string>
+    options?: UseMutationOptions<void, Error, { commentId: string; postId: string }>
 ) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (commentId: string) => engagementService.deleteComment(commentId),
-        onSuccess: () => {
+        mutationFn: ({ commentId }) => engagementService.deleteComment(commentId),
+        onSuccess: (_, variables) => {
+            // Refresh comments
             queryClient.invalidateQueries({ queryKey: queryKeys.comments.all });
+            // Update post comment count in real-time
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.detail(variables.postId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
             toast.success('Comment deleted!');
         },
         ...options,

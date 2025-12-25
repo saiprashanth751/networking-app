@@ -11,30 +11,37 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAddComment, useToggleCommentLike, useDeleteComment } from '@/hooks/mutations/engagement';
+import { useCurrentUser } from '@/hooks/queries/user';
 import { cn } from '@/lib/utils';
 
 interface CommentItemProps {
     comment: Comment;
     postId: string;
+    postOwnerId: string; // Post owner's ID for delete authorization
     allComments: Comment[];
     depth?: number;
 }
 
-export function CommentItem({ comment, postId, allComments, depth = 0 }: CommentItemProps) {
+export function CommentItem({ comment, postId, postOwnerId, allComments, depth = 0 }: CommentItemProps) {
     const [showReplyInput, setShowReplyInput] = useState(false);
     const [replyText, setReplyText] = useState('');
-    const [isLiked, setIsLiked] = useState(false);
-    const [likesCount, setLikesCount] = useState(comment.likesCount);
+    const [isLiked, setIsLiked] = useState(comment.isLiked || false);
+    const [likesCount, setLikesCount] = useState(comment._count?.likes || 0);
 
     const addCommentMutation = useAddComment();
-    const toggleLikeMutation = useToggleCommentLike();
+    const toggleCommentLikeMutation = useToggleCommentLike();
     const deleteCommentMutation = useDeleteComment();
 
-    const profilePic = comment.user.profile?.profilePic ||
+    const { data: currentUserData } = useCurrentUser();
+    const currentUserId = currentUserData?.user?.id;
+
+    // Authorization: Can delete if comment owner OR post owner
+    const canDelete = currentUserId && (comment.userId === currentUserId || postOwnerId === currentUserId);
+    const profilePic = comment.user?.profile?.profilePic ||
         'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png';
 
     const getUserInitials = () => {
-        return `${comment.user.firstName?.[0] || ''}${comment.user.lastName?.[0] || ''}`.toUpperCase();
+        return `${comment.user?.firstName?.[0] || ''}${comment.user?.lastName?.[0] || ''}`.toUpperCase();
     };
 
     const formatDate = (dateString: string) => {
@@ -71,32 +78,33 @@ export function CommentItem({ comment, postId, allComments, depth = 0 }: Comment
         setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
 
         try {
-            await toggleLikeMutation.mutateAsync(comment.id);
+            await toggleCommentLikeMutation.mutateAsync(comment.id);
         } catch (error) {
             setIsLiked(isLiked);
-            setLikesCount(comment.likesCount);
+            setLikesCount(comment._count?.likes || 0);
         }
     };
 
     const handleDelete = async () => {
-        if (confirm('Delete this comment?')) {
-            try {
-                await deleteCommentMutation.mutateAsync(comment.id);
-            } catch (error) {
-                console.error('Failed to delete comment:', error);
-            }
+        try {
+            await deleteCommentMutation.mutateAsync({
+                commentId: comment.id,
+                postId
+            });
+        } catch (error) {
+            console.error('Failed to delete comment:', error);
         }
     };
 
     // Get replies for this comment
-    const replies = allComments.filter((c) => c.parentId === comment.id);
+    const replies = comment.replies || [];  // Use replies from comment object
     const repliesCount = replies.length; // Calculate from actual replies
     const maxDepth = 3; // Limit nesting depth
 
     return (
         <div className={cn('flex gap-3', depth > 0 && 'ml-12')}>
             <Avatar className="h-8 w-8 shrink-0">
-                <AvatarImage src={profilePic} alt={`${comment.user.firstName} ${comment.user.lastName}`} />
+                <AvatarImage src={profilePic} alt={`${comment.user?.firstName} ${comment.user?.lastName}`} />
                 <AvatarFallback className="bg-muted text-xs">
                     {getUserInitials()}
                 </AvatarFallback>
@@ -107,30 +115,32 @@ export function CommentItem({ comment, postId, allComments, depth = 0 }: Comment
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">
-                            {comment.user.firstName} {comment.user.lastName}
+                            {comment.user?.firstName} {comment.user?.lastName}
                         </span>
                         <span className="text-xs text-neutral-500">
                             {formatDate(comment.createdAt)}
                         </span>
                     </div>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className="hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full p-1"
-                                aria-label="Comment options"
-                            >
-                                <MoreHorizontal className="h-4 w-4" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={handleDelete}>
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>Report</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Delete Button - Only show if authorized */}
+                    {canDelete && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className="hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full p-1"
+                                    aria-label="Comment options"
+                                >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={handleDelete}>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
 
                 {/* Comment Content */}
@@ -210,6 +220,7 @@ export function CommentItem({ comment, postId, allComments, depth = 0 }: Comment
                                 key={reply.id}
                                 comment={reply}
                                 postId={postId}
+                                postOwnerId={postOwnerId}
                                 allComments={allComments}
                                 depth={depth + 1}
                             />

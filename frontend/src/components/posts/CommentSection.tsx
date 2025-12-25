@@ -10,9 +10,10 @@ import { CommentItem } from './CommentItem';
 
 interface CommentSectionProps {
     postId: string;
+    postOwnerId: string; // Post owner's ID for delete authorization
 }
 
-export function CommentSection({ postId }: CommentSectionProps) {
+export function CommentSection({ postId, postOwnerId }: CommentSectionProps) {
     const [newComment, setNewComment] = useState('');
     const { data: commentsData, isLoading } = usePostComments(postId);
     const { data: currentUserData } = useCurrentUser();
@@ -94,6 +95,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                                 key={comment.id}
                                 comment={comment}
                                 postId={postId}
+                                postOwnerId={postOwnerId}
                                 allComments={comments}
                             />
                         ))

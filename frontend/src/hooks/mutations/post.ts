@@ -15,8 +15,28 @@ export const useCreatePost = (
     onSuccess: () => {
       // Invalidate all post-related queries to refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
-      
+
       toast.success('Post created successfully!');
+    },
+    ...options,
+  });
+};
+
+export const useUpdatePost = (
+  options?: UseMutationOptions<any, Error, { postId: string; data: { content: string; categoryIds?: string[]; visibility?: string } }>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ postId, data }) => postService.updatePost(postId, data),
+    onSuccess: (_, variables) => {
+      // Invalidate post queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts.detail(variables.postId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
+      toast.success('Post updated successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update post');
     },
     ...options,
   });

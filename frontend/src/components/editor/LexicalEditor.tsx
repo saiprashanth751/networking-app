@@ -12,6 +12,7 @@ import { HeadingNode } from '@lexical/rich-text';
 import { EditorToolbar } from './EditorToolbar';
 import { OnChangePlugin } from './OnChangePlugin';
 import { HashtagPlugin, HashtagNode } from './HashtagPlugin';
+import { InitialContentPlugin } from './InitialContentPlugin';
 
 const editorTheme = {
     paragraph: 'mb-2',
@@ -57,18 +58,15 @@ const editorTheme = {
 };
 
 interface LexicalEditorProps {
-    onChange?: (editorState: any) => void;
-    initialContent?: any;
+    onChange: (editorState: any) => void;
     placeholder?: string;
+    initialContent?: string | null; // JSON string from database
 }
 
-export function LexicalEditor({ onChange, initialContent, placeholder = 'Start writing...' }: LexicalEditorProps) {
-    const initialConfig = {
+export function LexicalEditor({ onChange, placeholder = "Start writing...", initialContent }: LexicalEditorProps) {
+    const editorConfig = {
         namespace: 'PostEditor',
         theme: editorTheme,
-        onError: (error: Error) => {
-            console.error('Lexical Error:', error);
-        },
         nodes: [
             ListNode,
             ListItemNode,
@@ -79,11 +77,13 @@ export function LexicalEditor({ onChange, initialContent, placeholder = 'Start w
             HeadingNode,
             HashtagNode,
         ],
-        editorState: initialContent ? JSON.stringify(initialContent) : undefined,
+        onError: (error: Error) => {
+            console.error('Lexical Error:', error);
+        },
+        // Don't set editorState here - it causes errors
     };
-
     return (
-        <LexicalComposer initialConfig={initialConfig}>
+        <LexicalComposer initialConfig={editorConfig}>
             <div className="relative border-border rounded-lg bg-card">
                 <EditorToolbar />
 
@@ -104,6 +104,7 @@ export function LexicalEditor({ onChange, initialContent, placeholder = 'Start w
                     <LinkPlugin />
                     <HashtagPlugin />
                     {onChange && <OnChangePlugin onChange={onChange} />}
+                    {initialContent && <InitialContentPlugin initialContent={initialContent} />}
                 </div>
             </div>
         </LexicalComposer>

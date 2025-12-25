@@ -1,10 +1,13 @@
-import { Link } from 'react-router-dom';
-import { MoreHorizontal, Loader2, ExternalLink } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MoreHorizontal, Loader2, ExternalLink, Pencil, Bookmark, Trash2 } from 'lucide-react';
 import { Post } from '@/types/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PostContent } from './PostContent';
+import { CommentSection } from './CommentSection';
+import { useState } from 'react';
+import { EditPostModal } from './EditPostModal';
 import { PostActions } from './PostActions';
 import {
     DropdownMenu,
@@ -76,6 +79,17 @@ export function PostCard({
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
+    // STATE - Comment section and edit modal
+    const [showComments, setShowComments] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    const handleCommentClick = () => {
+        setShowComments(!showComments);
+        if (onCommentClick) {
+            onCommentClick();
+        }
+    };
+
     // Production-grade image error handler
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, index: number) => {
         console.error(`Failed to load image ${index + 1}:`, (e.target as HTMLImageElement).src);
@@ -144,16 +158,34 @@ export function PostCard({
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button
-                                        className="hover:bg-primary/10 hover:text-primary rounded-full p-1.5 transition-colors"
+                                        className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
                                         onClick={(e) => e.stopPropagation()}
                                         aria-label="Post options"
                                     >
-                                        <MoreHorizontal className="h-[18px] w-[18px]" />
+                                        <MoreHorizontal className="h-4 w-4" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>Report post</DropdownMenuItem>
-                                    {isOwnPost && <DropdownMenuItem>Delete post</DropdownMenuItem>}
+                                    {isOwnPost && (
+                                        <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+                                            <Pencil className="h-4 w-4 mr-2" />
+                                            Edit post
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem>
+                                        <Bookmark className="h-4 w-4 mr-2" />
+                                        Save
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Share
+                                    </DropdownMenuItem>
+                                    {isOwnPost && (
+                                        <DropdownMenuItem className="text-red-600">
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -161,7 +193,7 @@ export function PostCard({
 
                     {/* Title */}
                     {post.title && (
-                        <h3 className="font-bold text-[15px] mb-1 leading-tight">
+                        <h3 className="font-bold text-lg mb-1 leading-tight">
                             {post.title}
                         </h3>
                     )}
@@ -270,11 +302,23 @@ export function PostCard({
                             commentsCount={post.commentsCount}
                             sharesCount={post.sharesCount}
                             bookmarksCount={post.bookmarksCount}
-                            onCommentClick={onCommentClick}
+                            onCommentClick={handleCommentClick}
                         />
+                    )}
+                    {showComments && (
+                        <div className="mt-4 pt-4 border-t border-border">
+                            <CommentSection postId={post.id} postOwnerId={post.userId} />
+                        </div>
                     )}
                 </div>
             </div>
+
+            {/* Edit Post Modal */}
+            <EditPostModal
+                post={post}
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+            />
         </article>
     );
 }

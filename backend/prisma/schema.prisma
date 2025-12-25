@@ -245,7 +245,7 @@ model Comment {
 
   // Threading
   parentId String?
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   replies  Comment[] @relation("CommentReplies")
 
   likesCount Int           @default(0)

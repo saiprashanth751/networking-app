@@ -284,7 +284,7 @@ export const createPost = asyncHandler(async (req: AuthRequest, res: Response) =
 // GET ALL POSTS (FEED)
 // ============================================================================
 
-export const getAllPosts = asyncHandler(async (req: Request, res: Response) => {
+export const getAllPosts = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page = 1, limit = 10, categorySlug, tagSlug, sort = 'recent' } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -351,6 +351,12 @@ export const getAllPosts = asyncHandler(async (req: Request, res: Response) => {
                 },
             },
             media: { orderBy: { order: 'asc' } },
+            likes: {
+                select: { userId: true },
+            },
+            bookmarks: {
+                select: { userId: true },
+            },
             _count: {
                 select: {
                     likes: true,
@@ -364,9 +370,18 @@ export const getAllPosts = asyncHandler(async (req: Request, res: Response) => {
 
     const totalPosts = await prisma.post.count({ where });
 
+    // Transform posts to include isLiked and isBookmarked for current user
+    const transformedPosts = posts.map(post => ({
+        ...post,
+        isLiked: post.likes?.some((like: any) => like.userId === req.id) || false,
+        isBookmarked: post.bookmarks?.some((bookmark: any) => bookmark.userId === req.id) || false,
+        likes: undefined, // Remove from response
+        bookmarks: undefined, // Remove from response
+    }));
+
     return res.status(200).json({
         message: 'Posts retrieved successfully',
-        posts,
+        posts: transformedPosts,
         pagination: {
             total: totalPosts,
             page: Number(page),
@@ -470,6 +485,12 @@ export const getUserPosts = asyncHandler(async (req: AuthRequest, res: Response)
                 },
             },
             media: { orderBy: { order: 'asc' } },
+            likes: {
+                select: { userId: true },
+            },
+            bookmarks: {
+                select: { userId: true },
+            },
             _count: {
                 select: {
                     likes: true,
@@ -481,9 +502,18 @@ export const getUserPosts = asyncHandler(async (req: AuthRequest, res: Response)
         },
     });
 
+    // Transform for current user
+    const transformedPosts = posts.map(post => ({
+        ...post,
+        isLiked: post.likes?.some((like: any) => like.userId === req.id) || false,
+        isBookmarked: post.bookmarks?.some((bookmark: any) => bookmark.userId === req.id) || false,
+        likes: undefined,
+        bookmarks: undefined,
+    }));
+
     return res.status(200).json({
         message: 'Posts retrieved successfully',
-        posts,
+        posts: transformedPosts,
     });
 });
 
@@ -491,7 +521,7 @@ export const getUserPosts = asyncHandler(async (req: AuthRequest, res: Response)
 // GET POSTS BY USER ID (For viewing other users' profiles)
 // ============================================================================
 
-export const getPostsByUserId = asyncHandler(async (req: Request, res: Response) => {
+export const getPostsByUserId = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
 
     if (!userId) {
@@ -527,6 +557,12 @@ export const getPostsByUserId = asyncHandler(async (req: Request, res: Response)
                 },
             },
             media: { orderBy: { order: 'asc' } },
+            likes: {
+                select: { userId: true },
+            },
+            bookmarks: {
+                select: { userId: true },
+            },
             _count: {
                 select: {
                     likes: true,
@@ -538,9 +574,18 @@ export const getPostsByUserId = asyncHandler(async (req: Request, res: Response)
         },
     });
 
+    // Transform for current user (if logged in)
+    const transformedPosts = posts.map(post => ({
+        ...post,
+        isLiked: req.id ? (post.likes?.some((like: any) => like.userId === req.id) || false) : false,
+        isBookmarked: req.id ? (post.bookmarks?.some((bookmark: any) => bookmark.userId === req.id) || false) : false,
+        likes: undefined,
+        bookmarks: undefined,
+    }));
+
     return res.status(200).json({
         message: 'Posts retrieved successfully',
-        posts,
+        posts: transformedPosts,
     });
 });
 
@@ -566,8 +611,16 @@ export const updatePost = asyncHandler(async (req: AuthRequest, res: Response) =
         throw new CustomError('Not authorized to update this post', 403);
     }
 
-    // Extract plain text
-    const contentText = content ? extractTextFromLexical(content) : existingPost.contentText;
+    // Extract plain text - content comes as JSON string from request
+    let contentText = existingPost.contentText;
+    if (content) {
+        try {
+            const parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
+            contentText = extractTextFromLexical(parsedContent);
+        } catch (error) {
+            console.error('Failed to parse content for text extraction:', error);
+        }
+    }
 
     // Create edit history entry
     await prisma.postEdit.create({

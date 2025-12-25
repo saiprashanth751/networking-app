@@ -1,6 +1,6 @@
 import express from "express";
 import { createPost, createDraft, publishPost, deletePost, getAllPosts, getPostById, getUserPosts, getPostsByUserId, updatePost } from "../controllers/post";
-import { authMiddleware } from "../middleware/authMiddleware";
+import { authMiddleware, optionalAuthMiddleware } from "../middleware/authMiddleware";
 import upload, { uploadToCloudinary } from '../middleware/fileMiddleware'
 
 const app = express.Router();
@@ -20,14 +20,14 @@ app.post("/", authMiddleware, upload.array('photos'), uploadToCloudinary('photos
 // PUT /api/v1/post/:id - Update post
 app.put("/:id", authMiddleware, updatePost);
 
-// GET /api/v1/post/user - Get current user's posts
+// GET /api/v1/post/user - Get current user's posts (REQUIRES AUTH)
 app.get("/user", authMiddleware, getUserPosts);
 
-// GET /api/v1/post/user/:userId - Get posts by any user ID (for Profile page)
-app.get("/user/:userId", getPostsByUserId);
+// GET /api/v1/post/user/:userId - Get posts by any user ID (PUBLIC with optional personalization)
+app.get("/user/:userId", optionalAuthMiddleware, getPostsByUserId);
 
-// GET /api/v1/post - Get all posts (feed)
-app.get("/", getAllPosts);
+// GET /api/v1/post - Get all posts feed (PUBLIC with optional personalization)
+app.get("/", optionalAuthMiddleware, getAllPosts);
 
 // GET /api/v1/post/:id - Get single post (MUST BE LAST!)
 app.get("/:id", getPostById);

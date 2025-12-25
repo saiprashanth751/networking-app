@@ -190,6 +190,9 @@ export const getPostComments = asyncHandler(async (req: Request, res: Response) 
                     profile: { select: { profilePic: true } },
                 },
             },
+            likes: {
+                select: { userId: true },
+            },
             replies: {
                 take: 3, // Show first 3 replies
                 orderBy: { createdAt: 'asc' },
@@ -201,6 +204,9 @@ export const getPostComments = asyncHandler(async (req: Request, res: Response) 
                             lastName: true,
                             profile: { select: { profilePic: true } },
                         },
+                    },
+                    likes: {
+                        select: { userId: true },
                     },
                     _count: { select: { likes: true } },
                 },
@@ -215,9 +221,24 @@ export const getPostComments = asyncHandler(async (req: Request, res: Response) 
         where: { postId, parentId: null },
     });
 
+    // Cast for AuthRequest userId
+    const userId = (req as any).id;
+
+    // Transform to include isLiked
+    const transformedComments = comments.map(comment => ({
+        ...comment,
+        isLiked: userId ? comment.likes?.some(like => like.userId === userId) || false : false,
+        likes: undefined, // Remove from response
+        replies: comment.replies.map((reply: any) => ({
+            ...reply,
+            isLiked: userId ? reply.likes?.some((like: any) => like.userId === userId) || false : false,
+            likes: undefined,
+        })),
+    }));
+
     return res.status(200).json({
         message: 'Comments retrieved successfully',
-        comments,
+        comments: transformedComments,
         pagination: {
             total,
             page: Number(page),
@@ -272,13 +293,22 @@ export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response
 
     const comment = await prisma.comment.findUnique({
         where: { id: commentId },
+        include: {
+            post: {
+                select: { userId: true }, // Get post owner
+            },
+        },
     });
 
     if (!comment) {
         throw new CustomError('Comment not found', 404);
     }
 
-    if (comment.userId !== userId) {
+    // Authorization: Comment owner OR post owner can delete
+    const isCommentOwner = comment.userId === userId;
+    const isPostOwner = comment.post.userId === userId;
+
+    if (!isCommentOwner && !isPostOwner) {
         throw new CustomError('Not authorized to delete this comment', 403);
     }
 

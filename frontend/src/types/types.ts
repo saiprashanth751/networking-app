@@ -78,6 +78,10 @@ export interface Post {
   // Links support
   links?: string[];
 
+  // User engagement status
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+
   // Engagement counters
   likesCount: number;
   commentsCount: number;
@@ -130,13 +134,13 @@ export interface Comment {
   id: string;
   postId: string;
   userId: string;
-  parentId: string | null;
+  parentId?: string | null;
   content: string;
-  likesCount: number;
-  repliesCount: number;
+  likesCount?: number;
+  repliesCount?: number;
   createdAt: string;
   updatedAt: string;
-  user: {
+  user?: {
     id: string;
     firstName: string;
     lastName: string;
@@ -144,6 +148,12 @@ export interface Comment {
       profilePic?: string;
     };
   };
+  _count?: {
+    likes: number;
+    replies: number;
+  };
+  replies?: Comment[];
+  isLiked?: boolean;
 }
 
 // ============================================================================
