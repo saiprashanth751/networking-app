@@ -9,6 +9,7 @@ import { CommentSection } from './CommentSection';
 import { useState } from 'react';
 import { EditPostModal } from './EditPostModal';
 import { PostActions } from './PostActions';
+import { PostMediaCarousel } from './PostMediaCarousel';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -82,6 +83,7 @@ export function PostCard({
     // STATE - Comment section and edit modal
     const [showComments, setShowComments] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
 
     const handleCommentClick = () => {
         setShowComments(!showComments);
@@ -271,9 +273,13 @@ export function PostCard({
                                 <div
                                     key={item.id}
                                     className={cn(
-                                        'relative bg-muted group/image',
+                                        'relative bg-muted group/image cursor-pointer',
                                         post.media.length === 1 ? 'aspect-video' : 'aspect-square'
                                     )}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCarouselIndex(index);
+                                    }}
                                 >
                                     <img
                                         src={item.url}
@@ -302,6 +308,8 @@ export function PostCard({
                             commentsCount={post.commentsCount}
                             sharesCount={post.sharesCount}
                             bookmarksCount={post.bookmarksCount}
+                            isLiked={post.isLiked}
+                            isBookmarked={post.isBookmarked}
                             onCommentClick={handleCommentClick}
                         />
                     )}
@@ -319,6 +327,16 @@ export function PostCard({
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
             />
+
+            {/* Media Carousel */}
+            {carouselIndex !== null && (
+                <PostMediaCarousel
+                    media={post.media}
+                    initialIndex={carouselIndex}
+                    isOpen={carouselIndex !== null}
+                    onClose={() => setCarouselIndex(null)}
+                />
+            )}
         </article>
     );
 }

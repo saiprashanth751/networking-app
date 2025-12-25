@@ -42,6 +42,7 @@ model User {
   bookmarkCollections BookmarkCollection[]
   postShares          PostShare[]
   postDrafts          PostDraft[]
+  searchHistory       SearchHistory[]
 }
 
 model Profile {
@@ -463,4 +464,16 @@ model Project {
 
   @@index([userId])
   @@index([featured, userId])
+}
+
+model SearchHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  query     String
+  type      String   // "all", "users", "posts", "projects", "tags"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }

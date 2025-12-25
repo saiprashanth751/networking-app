@@ -12,6 +12,8 @@ import tagRouter from "./routes/tag";
 import draftRouter from "./routes/draft";
 import engagementRouter from "./routes/engagement";
 import mediaRouter from "./routes/media";
+import searchRouter from "./routes/search";
+import trendingRouter from "./routes/trending";
 import prisma from "../prisma/prisma_client";
 import path from "path";
 import { errorMiddleware } from "./middleware/errorMiddleware";
@@ -60,6 +62,8 @@ app.use("/api/v1/tag", tagRouter);
 app.use("/api/v1/draft", draftRouter);
 app.use("/api/v1/engagement", engagementRouter);
 app.use("/api/v1/media", mediaRouter);
+app.use("/api/v1/search", searchRouter);
+app.use("/api/v1/trending", trendingRouter);
 
 // Create HTTP server
 const server = http.createServer(app);

@@ -561,3 +561,95 @@ export type CallEvent =
   | { type: 'MEDIA_TOGGLE_SCREEN_SHARE' }
   | { type: 'SOCKET_DISCONNECTED' }
   | { type: 'TIMEOUT' };
+
+// ============================================================================
+// SEARCH & DISCOVERY TYPES
+// ============================================================================
+
+export interface SearchUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profile?: {
+    profilePic?: string;
+    bio?: string;
+    department?: string;
+  };
+}
+
+export interface SearchPost {
+  id: string;
+  title: string | null;
+  contentText: string;
+  publishedAt: string;
+  likesCount: number;
+  commentsCount: number;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profile: { profilePic: string | null };
+  };
+  categories: Array<{
+    category: {
+      id: string;
+      name: string;
+      icon: string;
+      color: string;
+    };
+  }>;
+  media: Array<{
+    id: string;
+    url: string;
+    type: string;
+  }>;
+}
+
+export interface SearchProject {
+  id: string;
+  title: string;
+  description: string;
+  techStack: string[];
+  category: string | null;
+  featured: boolean;
+  coverImage: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profile: { profilePic: string | null };
+  };
+}
+
+export interface SearchTag {
+  id: string;
+  name: string;
+  slug: string;
+  _count: {
+    posts: number;
+  };
+}
+
+export interface GlobalSearchResults {
+  users: SearchUser[];
+  posts: SearchPost[];
+  projects: SearchProject[];
+  tags: SearchTag[];
+}
+
+export interface GlobalSearchResponse {
+  message: string;
+  query: string;
+  results: GlobalSearchResults;
+  counts: {
+    users: number;
+    posts: number;
+    projects: number;
+    tags: number;
+    total: number;
+  };
+}
+
+export type SearchType = 'all' | 'users' | 'posts' | 'projects' | 'tags';

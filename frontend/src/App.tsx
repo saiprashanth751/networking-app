@@ -19,6 +19,7 @@ import Verify from "./pages/Verify"
 import ProjectDetail from "./pages/ProjectDetail"
 import Explore from "./pages/Explore"
 import Messages from "./pages/Messages"
+import Search from "./pages/Search"
 
 function App() {
   return (
@@ -85,6 +86,15 @@ function App() {
               element={
                 <MainLayout showRightSidebar={true}>
                   <Explore />
+                </MainLayout>
+              }
+            />
+
+            <Route
+              path="/search"
+              element={
+                <MainLayout showRightSidebar={true}>
+                  <Search />
                 </MainLayout>
               }
             />

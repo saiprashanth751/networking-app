@@ -3,6 +3,7 @@ import { Search, Users, Briefcase, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { useAllProjects } from '@/hooks/queries/project';
+import { useDebounce } from '@/hooks/useDebounce';
 import { H2, Body } from '@/components/ui/typography';
 import {
   Select,
@@ -19,18 +20,21 @@ export default function Explore() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'featured'>('featured');
 
+  // Debounce search query to prevent lag and excessive filtering
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const { data: projectsData, isLoading } = useAllProjects();
 
   const projects = projectsData?.projects || [];
 
-  // Filter and sort projects
+  // Filter and sort projects (using debounced query for performance)
   const filteredProjects = projects
     .filter((project) => {
       const matchesSearch =
-        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        project.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         project.techStack?.some((tech) =>
-          tech.toLowerCase().includes(searchQuery.toLowerCase())
+          tech.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
         );
 
       const matchesCategory =
