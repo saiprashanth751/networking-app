@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Layers } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
@@ -37,19 +37,12 @@ export function CategorySelector({
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                    Categories
-                    <span className="text-neutral-500 font-normal ml-2">
-                        (Select {maxSelection === 1 ? '1' : `up to ${maxSelection}`})
-                    </span>
-                </Label>
-                <span className="text-xs text-neutral-500">
-                    {selectedCategories.length}/{maxSelection}
-                </span>
-            </div>
+            <Label className="text-sm font-medium flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                Categories
+            </Label>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {categories.map((category) => {
                     const isSelected = selectedCategories.includes(category.id);
                     const isDisabled = !isSelected && selectedCategories.length >= maxSelection;
@@ -67,8 +60,8 @@ export function CategorySelector({
                                 'hover:shadow-md hover:scale-[1.02] active:scale-[0.98]',
                                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
                                 isSelected
-                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                                    ? 'shadow-sm'
+                                    : 'border-neutral-800 hover:border-neutral-700'
                             )}
                             style={{
                                 borderColor: isSelected ? category.color : undefined,

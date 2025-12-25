@@ -11,9 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LexicalEditor } from '../editor/LexicalEditor';
 import { ImageUploadPlugin } from '../editor/ImageUploadPlugin';
-import { LinkPreviewPlugin } from '../editor/LinkPreviewPlugin';
 import { CategorySelector } from './CategorySelector';
-import { TagInput } from './TagInput';
 import { DraftRecovery } from './DraftRecovery';
 import { useCategories } from '@/hooks/queries/category';
 import { useCreatePost } from '@/hooks/mutations/post';
@@ -30,9 +28,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState<any>(null);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [tags, setTags] = useState<string[]>([]);
     const [images, setImages] = useState<File[]>([]);
-    const [linkPreview, setLinkPreview] = useState('');
 
     const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
     const categories = categoriesData?.categories || [];
@@ -63,10 +59,10 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
             // Create post with proper backend format
             const postData: CreatePostInput = {
                 title: title.trim() || null,
-                content: content,  // ✅ Lexical JSON
-                categoryIds: selectedCategories,  // ✅ Send selected categories
-                tags: tags,  // ✅ Send tags
-                mediaIds: mediaIds,  // ✅ Send uploaded media IDs
+                content: content,  // Lexical JSON
+                categoryIds: selectedCategories,
+                tags: [],  // Backend extracts from content automatically
+                mediaIds: mediaIds,
             };
 
             await createPostMutation.mutateAsync(postData);
@@ -85,26 +81,31 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
         setTitle('');
         setContent(null);
         setSelectedCategories([]);
-        setTags([]);
         setImages([]);
-        setLinkPreview('');
     };
 
     const handleRestoreDraft = (draft: any) => {
         setTitle(draft.title || '');
         setContent(draft.content);
         setSelectedCategories(draft.categoryIds || []);
-        setTags(draft.tags || []);
         toast.info('Draft restored! Continue editing...');
+    };
+
+    const handleCategoryChange = (newCategories: string[]) => {
+        if (newCategories.length > 2) {
+            toast.warning('You can only select up to 2 categories');
+            return;
+        }
+        setSelectedCategories(newCategories);
     };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-black border border-neutral-800">
                 <DialogHeader>
-                    <div className="flex items-center justify-between">
-                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                            <Sparkles className="h-6 w-6 text-primary" />
+                    <div className="flex items-center justify-between pr-8">
+                        <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-blue-500" />
                             Create Post
                         </DialogTitle>
 
@@ -114,26 +115,26 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                                 content={content}
                                 title={title}
                                 categoryIds={selectedCategories}
-                                tags={tags}
+                                tags={[]}
                                 onRestore={handleRestoreDraft}
                             />
                         )}
                     </div>
                 </DialogHeader>
 
-                <div className="space-y-6 py-4">
+                <div className="space-y-5 py-4">
                     {/* Title (Optional) */}
                     <div className="space-y-2">
-                        <Label htmlFor="title" className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                            Title <span className="text-neutral-400">(Optional)</span>
+                        <Label htmlFor="title" className="text-sm font-medium text-neutral-400">
+                            Title <span className="text-neutral-600">(Optional)</span>
                         </Label>
                         <Input
                             id="title"
-                            placeholder="Give your post a catchy title..."
+                            placeholder="Give your post a title..."
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             maxLength={100}
-                            className="text-lg font-semibold border-2 focus:border-primary transition-colors"
+                            className="bg-neutral-900 border-neutral-800 focus:border-blue-500 text-base"
                         />
                         {title && (
                             <p className="text-xs text-neutral-500 text-right">
@@ -142,54 +143,59 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                         )}
                     </div>
 
-                    {/* Content Editor */}
+                    {/* Content Editor - Main Focus */}
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                            Content <span className="text-red-500">*</span>
+                        <Label className="text-sm font-medium text-neutral-400">
+                            Content <span className="text-blue-500">*</span>
                         </Label>
+                        <div className="text-xs text-neutral-500 mb-2">
+                            💡 Use #hashtags for topics • Paste links directly • Style your text
+                        </div>
                         <LexicalEditor
                             onChange={setContent}
                             initialContent={content}
-                            placeholder="What's on your mind? Use #hashtags to tag topics..."
+                            placeholder="What's on your mind? Share your thoughts, add links, use #hashtags..."
                         />
                     </div>
 
-                    {/* Categories */}
-                    {categoriesLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <CategorySelector
-                            categories={categories}
-                            selectedCategories={selectedCategories}
-                            onChange={setSelectedCategories}
-                            maxSelection={2}
-                        />
-                    )}
-
-                    {/* Tags */}
-                    <TagInput
-                        tags={tags}
-                        onChange={setTags}
-                        maxTags={10}
-                    />
-
                     {/* Images */}
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                            Images <span className="text-neutral-400">(Max 5)</span>
+                        <Label className="text-sm font-medium text-neutral-400">
+                            Images <span className="text-neutral-600">(Optional, max 5)</span>
                         </Label>
                         <ImageUploadPlugin onImagesChange={setImages} maxImages={5} />
                     </div>
 
-                    {/* Link Preview */}
-                    <LinkPreviewPlugin onLinkAdd={setLinkPreview} existingLink={linkPreview} />
+                    {/* Categories */}
+                    {categoriesLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium text-neutral-400">
+                                    Categories <span className="text-neutral-600">(Select up to 2)</span>
+                                </Label>
+                                {selectedCategories.length > 0 && (
+                                    <span className="text-xs text-neutral-500">
+                                        {selectedCategories.length}/2 selected
+                                    </span>
+                                )}
+                            </div>
+                            <CategorySelector
+                                categories={categories}
+                                selectedCategories={selectedCategories}
+                                onChange={handleCategoryChange}
+                                maxSelection={2}
+                            />
+                        </div>
+                    )}
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between pt-6 border-t border-neutral-200 dark:border-neutral-800">
+                    <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
                         <p className="text-xs text-neutral-500">
-                            💡 Your post will be visible to all users
+                            💡 Your post will be visible to everyone
                         </p>
 
                         <div className="flex gap-3">
@@ -198,6 +204,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                                 variant="outline"
                                 onClick={onClose}
                                 disabled={createPostMutation.isPending}
+                                className="border-neutral-700 hover:bg-neutral-900"
                             >
                                 Cancel
                             </Button>
@@ -205,17 +212,17 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={createPostMutation.isPending || !content}
-                                className="min-w-[120px]"
+                                className="bg-blue-500 hover:bg-blue-600 min-w-[100px]"
                             >
                                 {createPostMutation.isPending ? (
                                     <>
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Publishing...
+                                        Posting...
                                     </>
                                 ) : (
                                     <>
                                         <Sparkles className="h-4 w-4 mr-2" />
-                                        Publish Post
+                                        Post
                                     </>
                                 )}
                             </Button>

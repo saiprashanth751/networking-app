@@ -7,7 +7,7 @@ interface AuthRequest extends Request {
     id?: string;
 }
 
-// Save draft
+// Save draft (Single draft per user - upsert pattern)
 export const saveDraft = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { title, content, contentText, categoryIds, tags } = req.body;
     const userId = req.id!;
@@ -16,20 +16,43 @@ export const saveDraft = asyncHandler(async (req: AuthRequest, res: Response) =>
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    const draft = await prisma.postDraft.create({
-        data: {
-            userId,
-            title: title || null,
-            content,
-            contentText: contentText || null,
-            categoryIds: categoryIds || [],
-            tags: tags || [],
-            expiresAt,
-        },
+    // Find existing draft for this user
+    const existingDraft = await prisma.postDraft.findFirst({
+        where: { userId },
     });
 
-    return res.status(201).json({
-        message: 'Draft saved successfully',
+    let draft;
+
+    if (existingDraft) {
+        // Update existing draft (single draft per user)
+        draft = await prisma.postDraft.update({
+            where: { id: existingDraft.id },
+            data: {
+                title: title || null,
+                content,
+                contentText: contentText || null,
+                categoryIds: categoryIds || [],
+                tags: tags || [],
+                expiresAt,
+            },
+        });
+    } else {
+        // Create first draft for this user
+        draft = await prisma.postDraft.create({
+            data: {
+                userId,
+                title: title || null,
+                content,
+                contentText: contentText || null,
+                categoryIds: categoryIds || [],
+                tags: tags || [],
+                expiresAt,
+            },
+        });
+    }
+
+    return res.status(existingDraft ? 200 : 201).json({
+        message: existingDraft ? 'Draft updated successfully' : 'Draft created successfully',
         draft,
     });
 });
@@ -43,7 +66,7 @@ export const getUserDrafts = asyncHandler(async (req: AuthRequest, res: Response
             userId,
             expiresAt: { gt: new Date() }, // Only non-expired drafts
         },
-        orderBy: { lastSaved: 'desc' },
+        orderBy: { updatedAt: 'desc' }, // Most recently updated first
     });
 
     return res.status(200).json({

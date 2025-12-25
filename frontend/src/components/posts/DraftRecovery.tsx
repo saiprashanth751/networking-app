@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Save, AlertCircle, Trash2 } from 'lucide-react';
+import { Save, AlertCircle, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useUserDrafts } from '@/hooks/queries/draft';
@@ -11,6 +11,8 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/components/ui/dialog';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 
 interface DraftRecoveryProps {
     content: any;
@@ -27,14 +29,20 @@ export function DraftRecovery({
     categoryIds = [],
     tags = [],
     onRestore,
-    autoSaveInterval = 10000, // 10 seconds
+    autoSaveInterval = 5000, // 5 seconds (faster feedback)
 }: DraftRecoveryProps) {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [showDraftsModal, setShowDraftsModal] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
+    const queryClient = useQueryClient();
     const saveDraftMutation = useSaveDraft();
-    const { data: drafts = [] } = useUserDrafts();
+    const { data: draftsData } = useUserDrafts();
     const deleteDraftMutation = useDeleteDraft();
+
+    // Safely extract drafts array
+    const drafts = draftsData?.drafts || [];
+    const currentDraft = drafts[0]; // Single draft mode - only show first one
 
     // Auto-save logic
     useEffect(() => {
@@ -48,6 +56,7 @@ export function DraftRecovery({
     }, [content, title, categoryIds, tags, autoSaveInterval]);
 
     const handleAutoSave = async () => {
+        setIsSaving(true);
         try {
             // Extract plain text from content
             const contentText = extractTextFromContent(content);
@@ -63,6 +72,8 @@ export function DraftRecovery({
             setLastSaved(new Date());
         } catch (error) {
             console.error('Failed to save draft:', error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -74,8 +85,27 @@ export function DraftRecovery({
     };
 
     const handleDeleteDraft = async (draftId: string) => {
-        if (confirm('Delete this draft?')) {
+        if (!confirm('Delete this draft? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            // Optimistic update - remove from UI immediately
+            queryClient.setQueryData(['drafts'], (old: any) => {
+                if (!old?.drafts) return old;
+                return {
+                    ...old,
+                    drafts: old.drafts.filter((d: any) => d.id !== draftId)
+                };
+            });
+
             await deleteDraftMutation.mutateAsync(draftId);
+            toast.success('Draft deleted');
+            setShowDraftsModal(false);
+        } catch (error) {
+            // Revert on error
+            queryClient.invalidateQueries({ queryKey: ['drafts'] });
+            toast.error('Failed to delete draft');
         }
     };
 
@@ -97,7 +127,8 @@ export function DraftRecovery({
         if (!lastSaved) return 'Not saved';
 
         const seconds = Math.floor((Date.now() - lastSaved.getTime()) / 1000);
-        if (seconds < 60) return 'Saved just now';
+        if (seconds < 10) return 'Saved just now';
+        if (seconds < 60) return `Saved ${seconds}s ago`;
         if (seconds < 3600) return `Saved ${Math.floor(seconds / 60)}m ago`;
         return `Saved ${Math.floor(seconds / 3600)}h ago`;
     };
@@ -105,94 +136,99 @@ export function DraftRecovery({
     return (
         <>
             {/* Auto-save Indicator */}
-            <div className="flex items-center gap-2 text-xs text-neutral-500">
+            <div className="flex items-center gap-2">
                 <div className={cn(
-                    'flex items-center gap-1.5 px-2 py-1 rounded-md transition-all',
-                    saveDraftMutation.isPending && 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
-                    lastSaved && !saveDraftMutation.isPending && 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                    'flex items-center gap-1.5 px-2 py-1 rounded-md transition-all text-xs',
+                    isSaving && 'bg-amber-500/10 text-amber-500',
+                    lastSaved && !isSaving && 'bg-green-500/10 text-green-500'
                 )}>
-                    <Save className={cn(
-                        'h-3 w-3',
-                        saveDraftMutation.isPending && 'animate-pulse'
-                    )} />
-                    <span className="font-medium">
-                        {saveDraftMutation.isPending ? 'Saving...' : getTimeSinceLastSave()}
-                    </span>
+                    {isSaving ? (
+                        <>
+                            <Save className="h-3 w-3 animate-pulse" />
+                            <span className="font-medium">Saving...</span>
+                        </>
+                    ) : lastSaved ? (
+                        <>
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span className="font-medium">{getTimeSinceLastSave()}</span>
+                        </>
+                    ) : (
+                        <>
+                            <AlertCircle className="h-3 w-3 text-neutral-500" />
+                            <span className="text-neutral-500">Not saved</span>
+                        </>
+                    )}
                 </div>
 
-                {drafts.length > 0 && (
+                {currentDraft && (
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowDraftsModal(true)}
-                        className="h-6 px-2 text-xs"
+                        className="h-7 px-2 text-xs text-blue-500 hover:text-blue-400"
                     >
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        {drafts.length} draft{drafts.length > 1 ? 's' : ''}
+                        View draft
                     </Button>
                 )}
             </div>
 
-            {/* Drafts Modal */}
+            {/* Draft Modal - Single Draft */}
             <Dialog open={showDraftsModal} onOpenChange={setShowDraftsModal}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-w-lg bg-black border border-neutral-800">
                     <DialogHeader>
-                        <DialogTitle>Your Drafts</DialogTitle>
+                        <DialogTitle>Your Draft</DialogTitle>
                         <DialogDescription>
-                            Restore a previous draft or delete it
+                            Restore your previous draft or delete it
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-3 mt-4">
-                        {drafts.length === 0 ? (
+                    <div className="mt-4">
+                        {!currentDraft ? (
                             <p className="text-center text-neutral-500 py-8">
-                                No drafts found
+                                No draft found
                             </p>
                         ) : (
-                            drafts.map((draft: any) => (
-                                <div
-                                    key={draft.id}
-                                    className="p-4 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1 space-y-2">
-                                            {draft.title && (
-                                                <h4 className="font-semibold line-clamp-1">{draft.title}</h4>
-                                            )}
-                                            <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2">
-                                                {draft.contentText || 'No content'}
-                                            </p>
-                                            <div className="flex items-center gap-3 text-xs text-neutral-500">
+                            <div className="p-4 border border-neutral-800 rounded-lg hover:border-neutral-700 transition-colors bg-neutral-900/50">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 space-y-2">
+                                        {currentDraft.title && (
+                                            <h4 className="font-semibold line-clamp-1">{currentDraft.title}</h4>
+                                        )}
+                                        <p className="text-sm text-neutral-400 line-clamp-2">
+                                            {currentDraft.contentText || 'No content'}
+                                        </p>
+                                        <div className="flex items-center gap-3 text-xs text-neutral-500">
+                                            <span>
+                                                {new Date(currentDraft.updatedAt).toLocaleString()}
+                                            </span>
+                                            {currentDraft.categoryIds && currentDraft.categoryIds.length > 0 && (
                                                 <span>
-                                                    {new Date(draft.updatedAt).toLocaleString()}
+                                                    {currentDraft.categoryIds.length} {currentDraft.categoryIds.length === 1 ? 'category' : 'categories'}
                                                 </span>
-                                                {draft.tags && draft.tags.length > 0 && (
-                                                    <span>
-                                                        {draft.tags.length} tag{draft.tags.length > 1 ? 's' : ''}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col gap-2">
-                                            <Button
-                                                size="sm"
-                                                onClick={() => handleRestoreDraft(draft)}
-                                            >
-                                                Restore
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleDeleteDraft(draft.id)}
-                                            >
-                                                <Trash2 className="h-3 w-3" />
-                                            </Button>
+                                            )}
                                         </div>
                                     </div>
+
+                                    <div className="flex flex-col gap-2">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleRestoreDraft(currentDraft)}
+                                            className="bg-blue-500 hover:bg-blue-600"
+                                        >
+                                            Restore
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleDeleteDraft(currentDraft.id)}
+                                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                    </div>
                                 </div>
-                            ))
+                            </div>
                         )}
                     </div>
                 </DialogContent>

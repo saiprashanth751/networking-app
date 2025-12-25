@@ -16,8 +16,11 @@ export function TagInput({ tags, onChange, maxTags = 10 }: TagInputProps) {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const { data: searchResults = [] } = useTagSearch(input.trim());
+    const { data: searchData } = useTagSearch(input.trim());
     const { data: tagsData } = useTrendingTags();
+
+    // Safely extract arrays from API responses
+    const searchResults = searchData?.tags || [];
     const trendingTags = tagsData?.tags || [];
 
     // Filter out already selected tags and limit to 10

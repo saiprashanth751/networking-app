@@ -86,7 +86,7 @@ export function EditorToolbar() {
     };
 
     return (
-        <div className="flex items-center gap-1 p-2 border-b bg-neutral-50 dark:bg-neutral-800/50">
+        <div className="flex items-center gap-1 p-2 border-b border-neutral-800 bg-neutral-900">
             <Button
                 variant="ghost"
                 size="sm"
