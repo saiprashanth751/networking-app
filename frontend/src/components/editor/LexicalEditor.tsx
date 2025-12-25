@@ -11,6 +11,7 @@ import { LinkNode, AutoLinkNode } from '@lexical/link';
 import { HeadingNode } from '@lexical/rich-text';
 import { EditorToolbar } from './EditorToolbar';
 import { OnChangePlugin } from './OnChangePlugin';
+import { HashtagPlugin, HashtagNode } from './HashtagPlugin';
 
 const editorTheme = {
     paragraph: 'mb-2',
@@ -76,6 +77,7 @@ export function LexicalEditor({ onChange, initialContent, placeholder = 'Start w
             LinkNode,
             AutoLinkNode,
             HeadingNode,
+            HashtagNode,
         ],
         editorState: initialContent ? JSON.stringify(initialContent) : undefined,
     };
@@ -100,6 +102,7 @@ export function LexicalEditor({ onChange, initialContent, placeholder = 'Start w
                     <HistoryPlugin />
                     <ListPlugin />
                     <LinkPlugin />
+                    <HashtagPlugin />
                     {onChange && <OnChangePlugin onChange={onChange} />}
                 </div>
             </div>

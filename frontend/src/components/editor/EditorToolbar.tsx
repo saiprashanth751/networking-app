@@ -92,7 +92,8 @@ export function EditorToolbar() {
                 size="sm"
                 onClick={undo}
                 className="h-8 w-8 p-0"
-                title="Undo"
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
             >
                 <Undo2 className="h-4 w-4" />
             </Button>
@@ -101,7 +102,8 @@ export function EditorToolbar() {
                 size="sm"
                 onClick={redo}
                 className="h-8 w-8 p-0"
-                title="Redo"
+                title="Redo (Ctrl+Y)"
+                aria-label="Redo"
             >
                 <Redo2 className="h-4 w-4" />
             </Button>
@@ -113,7 +115,9 @@ export function EditorToolbar() {
                 size="sm"
                 onClick={formatBold}
                 className={`h-8 w-8 p-0 ${isBold ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
-                title="Bold"
+                title="Bold (Ctrl+B)"
+                aria-label="Bold"
+                aria-pressed={isBold}
             >
                 <Bold className="h-4 w-4" />
             </Button>
@@ -122,7 +126,9 @@ export function EditorToolbar() {
                 size="sm"
                 onClick={formatItalic}
                 className={`h-8 w-8 p-0 ${isItalic ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
-                title="Italic"
+                title="Italic (Ctrl+I)"
+                aria-label="Italic"
+                aria-pressed={isItalic}
             >
                 <Italic className="h-4 w-4" />
             </Button>
@@ -131,7 +137,9 @@ export function EditorToolbar() {
                 size="sm"
                 onClick={formatCode}
                 className={`h-8 w-8 p-0 ${isCode ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
-                title="Code"
+                title="Inline Code (Ctrl+E)"
+                aria-label="Inline Code"
+                aria-pressed={isCode}
             >
                 <Code className="h-4 w-4" />
             </Button>
@@ -144,6 +152,7 @@ export function EditorToolbar() {
                 onClick={insertBulletList}
                 className="h-8 w-8 p-0"
                 title="Bullet List"
+                aria-label="Bullet List"
             >
                 <List className="h-4 w-4" />
             </Button>
@@ -153,6 +162,7 @@ export function EditorToolbar() {
                 onClick={insertNumberedList}
                 className="h-8 w-8 p-0"
                 title="Numbered List"
+                aria-label="Numbered List"
             >
                 <ListOrdered className="h-4 w-4" />
             </Button>
@@ -162,6 +172,7 @@ export function EditorToolbar() {
                 onClick={formatCodeBlock}
                 className="h-8 w-8 p-0"
                 title="Code Block"
+                aria-label="Code Block"
             >
                 <Code className="h-4 w-4" />
             </Button>

@@ -189,9 +189,9 @@ enum MediaType {
 }
 
 model PostMedia {
-  id     String @id @default(uuid())
-  postId String
-  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id     String  @id @default(uuid())
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   type      MediaType
   url       String

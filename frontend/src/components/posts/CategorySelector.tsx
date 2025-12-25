@@ -60,6 +60,8 @@ export function CategorySelector({
                             type="button"
                             onClick={() => handleToggle(category.id)}
                             disabled={isDisabled}
+                            aria-pressed={isSelected}
+                            aria-label={`${isSelected ? 'Deselect' : 'Select'} ${category.name} category`}
                             className={cn(
                                 'group relative p-4 rounded-xl border-2 transition-all duration-200',
                                 'hover:shadow-md hover:scale-[1.02] active:scale-[0.98]',

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,22 @@ export function ImageUploadPlugin({
     const [files, setFiles] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // File validation constants
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+
+    // Cleanup object URLs on unmount to prevent memory leaks
+    useEffect(() => {
+        return () => {
+            previews.forEach(preview => {
+                // Only revoke URLs we created, not existing image URLs
+                if (!existingImages.includes(preview)) {
+                    URL.revokeObjectURL(preview);
+                }
+            });
+        };
+    }, [previews, existingImages]);
+
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
 
@@ -27,10 +43,33 @@ export function ImageUploadPlugin({
             return;
         }
 
-        // Create previews
-        const newPreviews = selectedFiles.map(file => URL.createObjectURL(file));
+        // Validate each file
+        const validFiles: File[] = [];
+        for (const file of selectedFiles) {
+            // Check file size
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`File "${file.name}" exceeds 10MB limit. Please choose a smaller image.`);
+                continue;
+            }
+
+            // Check MIME type
+            if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+                alert(`File "${file.name}" is not a supported image format. Please use JPEG, PNG, WebP, or GIF.`);
+                continue;
+            }
+
+            validFiles.push(file);
+        }
+
+        // Only proceed if we have valid files
+        if (validFiles.length === 0) {
+            return;
+        }
+
+        // Create previews for valid files
+        const newPreviews = validFiles.map(file => URL.createObjectURL(file));
         const updatedPreviews = [...previews, ...newPreviews];
-        const updatedFiles = [...files, ...selectedFiles];
+        const updatedFiles = [...files, ...validFiles];
 
         setPreviews(updatedPreviews);
         setFiles(updatedFiles);

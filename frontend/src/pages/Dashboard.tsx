@@ -1,22 +1,20 @@
 import { useState, useMemo } from 'react';
-import { Post } from '../components/Post';
-import { CreatePost } from '../components/CreatePost';
+import { PostCard } from '@/components/posts/PostCard';
+import { CreatePostModal } from '@/components/posts/CreatePostModal';
 import { User } from '../components/User';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Filter, TrendingUp, Users, AlertCircle } from "lucide-react";
+import { TrendingUp, Users, AlertCircle, Plus } from "lucide-react";
 
 // Import design system
-import { 
-  PageLayout, 
-  H3, 
-  Body, 
-  Small,
-  SPACING, 
-  LAYOUT 
+import {
+    PageLayout,
+    H3,
+    Body,
+    Small,
+    SPACING,
+    LAYOUT
 } from '@/components/layout';
 
 // Import React Query hooks
@@ -24,30 +22,29 @@ import { useCurrentProfile } from '@/hooks/queries/profile';
 import { useUsersByMinor } from '@/hooks/queries/user';
 import { useAllPosts } from '@/hooks/queries/post';
 import { useFollowing } from '@/hooks/queries/follow';
-import { PostLabel } from '@/types/types';
 
 export default function Dashboard() {
-    const [selectedLabel, setSelectedLabel] = useState<PostLabel | null>(null);
+    const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
     // Fetch all data with React Query
-    const { 
-        data: profileData, 
-        isLoading: profileLoading, 
-        isError: profileError 
+    const {
+        data: profileData,
+        isLoading: profileLoading,
+        isError: profileError
     } = useCurrentProfile();
 
-    const { 
-        data: usersData, 
-        isLoading: usersLoading 
+    const {
+        data: usersData,
+        isLoading: usersLoading
     } = useUsersByMinor(
         profileData?.profile?.minor || '',
         { enabled: !!profileData?.profile?.minor }
     );
 
-    const { 
-        data: postsData, 
-        isLoading: postsLoading, 
-        isError: postsError 
+    const {
+        data: postsData,
+        isLoading: postsLoading,
+        isError: postsError
     } = useAllPosts();
 
     const { data: followingData } = useFollowing();
@@ -55,242 +52,187 @@ export default function Dashboard() {
     // Filter users who are not already followed
     const recommendedUsers = useMemo(() => {
         if (!usersData?.users || !followingData?.following) return [];
-        
+
         const followedUserIds = followingData.following.map((user: any) => user.id);
         return usersData.users.filter(
             (user: any) => !followedUserIds.includes(user.id)
         );
     }, [usersData, followingData]);
 
-    // Filter posts by selected label
-    const filteredPosts = useMemo(() => {
-        if (!postsData?.posts) return [];
-        if (!selectedLabel) return postsData.posts;
-        
-        return postsData.posts.filter((post) => 
-            post.labels.includes(selectedLabel)
-        );
-    }, [postsData, selectedLabel]);
+    // Get all posts (no filtering for now)
+    const posts = postsData?.posts || [];
 
-    // Get unique labels from all posts
-    const allLabels = useMemo(() => {
-        if (!postsData?.posts) return [];
-        return Array.from(new Set(postsData.posts.flatMap((post) => post.labels)));
-    }, [postsData]);
-
-    // Combined loading and error states
-    const isLoading = profileLoading || postsLoading || usersLoading;
-    const hasError = profileError || postsError;
-
-    // Error State
-    if (hasError) {
+    if (profileError) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                <Card className="max-w-md w-full">
-                    <CardContent className={SPACING.container.lg}>
-                        <div className={`text-center ${SPACING.stack.md}`}>
-                            <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-                            <H3>Failed to Load Dashboard</H3>
-                            <Body className="text-muted-foreground">
-                                We couldn't load your dashboard. Please try refreshing the page.
+            <PageLayout>
+                <div className={`flex items-center justify-center min-h-[400px] ${SPACING.stack.md}`}>
+                    <Card className="border-destructive">
+                        <CardContent className={`py-8 ${SPACING.stack.sm}`}>
+                            <div className="flex items-center justify-center text-destructive mb-2">
+                                <AlertCircle className="h-8 w-8" />
+                            </div>
+                            <H3 className="text-center">Failed to Load Profile</H3>
+                            <Body className="text-center text-muted-foreground">
+                                Please try refreshing the page
                             </Body>
-                            <Button onClick={() => window.location.reload()}>
-                                Refresh Page
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    // Loading State with Proper Skeletons
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background">
-                {/* <AppBar /> */}
-                <PageLayout containerSize="lg" spacing="normal">
-                    <div className={`${LAYOUT.grid.cols3} ${SPACING.inline.lg}`}>
-                        {/* Main Feed Skeleton */}
-                        <div className={`lg:col-span-2 ${SPACING.stack.lg}`}>
-                            <Skeleton className="h-32 w-full rounded-lg" />
-                            <Skeleton className="h-64 w-full rounded-lg" />
-                            <Skeleton className="h-64 w-full rounded-lg" />
-                        </div>
-                        {/* Sidebar Skeleton - Hidden on mobile */}
-                        <div className="hidden lg:block">
-                            <Skeleton className="h-96 w-full rounded-lg" />
-                        </div>
-                    </div>
-                </PageLayout>
-            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </PageLayout>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <PageLayout>
+            {/* Create Post Modal */}
+            <CreatePostModal
+                open={isCreatePostOpen}
+                onClose={() => setIsCreatePostOpen(false)}
+            />
 
-            {/* Main Content with PageLayout System */}
-            <PageLayout containerSize="lg" spacing="normal">
-                
-                <div className={`${LAYOUT.grid.cols3} ${SPACING.inline.lg}`}>
-                    
-                    {/* Main Feed - 2/3 width on desktop, full width on mobile */}
-                    <div className={`lg:col-span-2 ${SPACING.stack.lg}`}>
-                        
-                        {/* Filter Chips Card */}
-                        <Card className="border-border bg-card">
-                            <CardHeader className="pb-3">
-                                <div className={LAYOUT.flex.between}>
-                                    <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
-                                        <Filter className="h-4 w-4 text-primary" />
-                                        <span>Filter Posts</span>
-                                    </CardTitle>
-                                    {selectedLabel && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setSelectedLabel(null)}
-                                            className="h-8 text-xs"
-                                        >
-                                            Clear
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="w-full">
-                                    <div className={`flex ${SPACING.inline.sm} pb-2`}>
-                                        <Badge
-                                            variant={!selectedLabel ? "default" : "outline"}
-                                            className="cursor-pointer whitespace-nowrap hover:scale-105 transition-transform text-xs"
-                                            onClick={() => setSelectedLabel(null)}
-                                        >
-                                            All Posts
-                                        </Badge>
-                                        {allLabels.map((label, index) => (
-                                            <Badge
-                                                key={index}
-                                                variant={selectedLabel === label ? "default" : "outline"}
-                                                className="cursor-pointer whitespace-nowrap hover:scale-105 transition-transform text-xs"
-                                                onClick={() => setSelectedLabel(label)}
-                                            >
-                                                {label}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
-
-                        {/* Create Post Card */}
-                        <CreatePost />
-
-                        {/* Posts Feed */}
-                        <div className={SPACING.stack.lg}>
-                            {filteredPosts.length === 0 ? (
-                                <Card className="border-border bg-card">
-                                    <CardContent className={`py-12 text-center ${SPACING.stack.md}`}>
-                                        <div className="text-4xl mb-4">🔭</div>
-                                        <H3>No Posts Found</H3>
-                                        <Body className="text-muted-foreground">
-                                            {selectedLabel 
-                                                ? `No posts with the "${selectedLabel}" label yet.`
-                                                : "Be the first to share something!"
-                                            }
-                                        </Body>
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                filteredPosts.map((post) => (
-                                    <Post key={post.id} post={post} showFollowButton={true} />
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Right Sidebar - 1/3 width, hidden on mobile/tablet */}
-                    <div className={`hidden lg:block ${SPACING.stack.lg}`}>
-                        
-                        {/* Trending Topics Card */}
-                        <Card className="border-border bg-card top-20">
-                            <CardHeader className="pb-3">
-                                <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
-                                    <TrendingUp className="h-4 w-4 text-primary" />
-                                    <span>Trending Topics</span>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Sidebar - 1/3 width, hidden on mobile/tablet */}
+                <div className={`hidden lg:block ${SPACING.stack.lg}`}>
+                    {/* Active Users Card */}
+                    <Card className="border-border bg-card sticky top-20">
+                        <CardHeader className="pb-3">
+                            <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
+                                <Users className="h-4 w-4 text-primary" />
+                                <span>People You May Know</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {usersLoading ? (
                                 <div className={SPACING.stack.sm}>
-                                    {allLabels.length === 0 ? (
-                                        <div className={`text-center py-4 ${SPACING.stack.sm}`}>
-                                            <Small className="text-muted-foreground">
-                                                No trending topics yet
-                                            </Small>
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className={`flex items-center ${SPACING.inline.sm}`}>
+                                            <Skeleton className="h-10 w-10 rounded-full" />
+                                            <div className="flex-1">
+                                                <Skeleton className="h-4 w-24 mb-1" />
+                                                <Skeleton className="h-3 w-16" />
+                                            </div>
                                         </div>
-                                    ) : (
-                                        allLabels.slice(0, 5).map((label, index) => {
-                                            const count = postsData?.posts?.filter(
-                                                (post) => post.labels.includes(label)
-                                            ).length || 0;
-                                            
-                                            return (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => setSelectedLabel(label)}
-                                                    className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors group"
-                                                >
-                                                    <div className={LAYOUT.flex.between}>
-                                                        <Small className="font-medium text-foreground group-hover:text-primary transition-colors">
-                                                            {label}
-                                                        </Small>
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            {count}
-                                                        </Badge>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })
-                                    )}
+                                    ))}
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* People You May Know Card */}
-                        <Card className="border-border bg-card">
-                            <CardHeader className="pb-3">
-                                <div className={SPACING.stack.xs}>
-                                    <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
-                                        <Users className="h-4 w-4 text-primary" />
-                                        <span>People You May Know</span>
-                                    </CardTitle>
+                            ) : recommendedUsers.length === 0 ? (
+                                <div className={`text-center py-4 ${SPACING.stack.sm}`}>
                                     <Small className="text-muted-foreground">
-                                        Based on your {profileData?.profile?.minor || 'interests'}
+                                        No recommendations at this time
                                     </Small>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-[500px] pr-4">
-                                    {recommendedUsers.length === 0 ? (
-                                        <div className={`text-center py-8 ${SPACING.stack.sm}`}>
-                                            <Users className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-                                            <Small className="text-muted-foreground">
-                                                No recommendations yet
-                                            </Small>
-                                        </div>
-                                    ) : (
-                                        <div className={SPACING.stack.sm}>
-                                            {recommendedUsers.slice(0, 10).map((user) => (
-                                                <User key={user.id} user={user} />
-                                            ))}
-                                        </div>
-                                    )}
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
+                            ) : (
+                                <div className={SPACING.stack.sm}>
+                                    {recommendedUsers.slice(0, 5).map((user: any) => (
+                                        <User
+                                            key={user.id}
+                                            user={user}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Main Feed - 2/3 width on desktop, full width on mobile */}
+                <div className={`lg:col-span-2 ${SPACING.stack.lg}`}>
+
+                    {/* Create Post Button */}
+                    <Card className="border-border bg-card">
+                        <CardContent className="py-4">
+                            <Button
+                                onClick={() => setIsCreatePostOpen(true)}
+                                className="w-full"
+                                size="lg"
+                            >
+                                <Plus className="h-5 w-5 mr-2" />
+                                Create Post
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Posts Feed */}
+                    <div className={SPACING.stack.lg}>
+                        {postsLoading ? (
+                            // Loading skeletons
+                            <div className={SPACING.stack.lg}>
+                                {[1, 2, 3].map((i) => (
+                                    <Card key={i} className="border-border bg-card">
+                                        <CardContent className="py-6">
+                                            <div className={`flex items-center ${SPACING.inline.sm} mb-4`}>
+                                                <Skeleton className="h-10 w-10 rounded-full" />
+                                                <div className="flex-1">
+                                                    <Skeleton className="h-4 w-32 mb-2" />
+                                                    <Skeleton className="h-3 w-24" />
+                                                </div>
+                                            </div>
+                                            <Skeleton className="h-4 w-full mb-2" />
+                                            <Skeleton className="h-4 w-5/6" />
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : postsError ? (
+                            // Error state
+                            <Card className="border-destructive bg-card">
+                                <CardContent className={`py-12 text-center ${SPACING.stack.md}`}>
+                                    <div className="flex items-center justify-center text-destructive mb-2">
+                                        <AlertCircle className="h-8 w-8" />
+                                    </div>
+                                    <H3>Failed to Load Posts</H3>
+                                    <Body className="text-muted-foreground">
+                                        Please try refreshing the page
+                                    </Body>
+                                </CardContent>
+                            </Card>
+                        ) : posts.length === 0 ? (
+                            // Empty state
+                            <Card className="border-border bg-card">
+                                <CardContent className={`py-12 text-center ${SPACING.stack.md}`}>
+                                    <div className="text-4xl mb-4">🔭</div>
+                                    <H3>No Posts Found</H3>
+                                    <Body className="text-muted-foreground">
+                                        Be the first to share something!
+                                    </Body>
+                                    <Button
+                                        onClick={() => setIsCreatePostOpen(true)}
+                                        className="mt-4"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Create Your First Post
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            // Posts list
+                            posts.map((post) => (
+                                <PostCard key={post.id} post={post} showActions={true} />
+                            ))
+                        )}
                     </div>
                 </div>
-            </PageLayout>
-        </div>
+
+                {/* Right Sidebar - 1/3 width, hidden on mobile/tablet */}
+                <div className={`hidden lg:block ${SPACING.stack.lg}`}>
+
+                    {/* Trending Topics Card */}
+                    <Card className="border-border bg-card sticky top-20">
+                        <CardHeader className="pb-3">
+                            <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
+                                <TrendingUp className="h-4 w-4 text-primary" />
+                                <span>Trending Topics</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className={`text-center py-4 ${SPACING.stack.sm}`}>
+                                <Small className="text-muted-foreground">
+                                    Coming soon: Category and tag trending
+                                </Small>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </PageLayout>
     );
 }

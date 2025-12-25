@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { LexicalEditor } from '../editor/LexicalEditor';
 import { ImageUploadPlugin } from '../editor/ImageUploadPlugin';
 import { LinkPreviewPlugin } from '../editor/LinkPreviewPlugin';
-import { extractHashtags } from '../editor/HashtagPlugin';
 import { CategorySelector } from './CategorySelector';
 import { TagInput } from './TagInput';
 import { DraftRecovery } from './DraftRecovery';
@@ -20,6 +19,7 @@ import { useCategories } from '@/hooks/queries/category';
 import { useCreatePost } from '@/hooks/mutations/post';
 import { CreatePostInput } from '@/types/types';
 import { toast } from 'react-toastify';
+import { mediaService } from '@/api/media';
 
 interface CreatePostModalProps {
     open: boolean;
@@ -34,7 +34,8 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     const [images, setImages] = useState<File[]>([]);
     const [linkPreview, setLinkPreview] = useState('');
 
-    const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+    const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
+    const categories = categoriesData?.categories || [];
     const createPostMutation = useCreatePost();
 
     const handleSubmit = async () => {
@@ -44,22 +45,33 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
         }
 
         try {
-            // For NOW, we'll convert new format to old format for existing backend
-            // TODO: Update backend to accept new format with Lexical JSON
-            const contentText = extractTextFromContent(content);
+            // Upload media files first if any
+            let mediaIds: string[] = [];
+            if (images.length > 0) {
+                toast.info('Uploading images...');
 
+                mediaIds = await Promise.all(
+                    images.map(async (file) => {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const response = await mediaService.uploadMedia(formData);
+                        return response.media.id;
+                    })
+                );
+            }
+
+            // Create post with proper backend format
             const postData: CreatePostInput = {
-                title: title.trim() || 'Untitled Post',
-                description: contentText, // Convert Lexical to plain text for now
-                labels: [], // Empty for now - will use categories after backend update
-                links: linkPreview ? [linkPreview] : [],
-                photos: images,
+                title: title.trim() || null,
+                content: content,  // ✅ Lexical JSON
+                categoryIds: selectedCategories,  // ✅ Send selected categories
+                tags: tags,  // ✅ Send tags
+                mediaIds: mediaIds,  // ✅ Send uploaded media IDs
             };
 
             await createPostMutation.mutateAsync(postData);
 
-            toast.success('Post created successfully! 🎉');
-
+            // Success toast handled by mutation hook
             // Reset form
             resetForm();
             onClose();
@@ -84,20 +96,6 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
         setSelectedCategories(draft.categoryIds || []);
         setTags(draft.tags || []);
         toast.info('Draft restored! Continue editing...');
-    };
-
-    const extractTextFromContent = (content: any): string => {
-        try {
-            if (!content || !content.root || !content.root.children) return '';
-            const extractFromNode = (node: any): string => {
-                if (node.text) return node.text;
-                if (node.children) return node.children.map(extractFromNode).join(' ');
-                return '';
-            };
-            return content.root.children.map(extractFromNode).join('\n');
-        } catch (error) {
-            return '';
-        }
     };
 
     return (

@@ -4,7 +4,7 @@ import { apiClient, createFormDataRequest } from '../lib/apiClient';
 export const postService = {
   // Get all posts
   getAllPosts: async (): Promise<{ posts: Post[] }> => {
-    const response = await apiClient.get('/post/all');
+    const response = await apiClient.get('/post');
     return response.data;
   },
 

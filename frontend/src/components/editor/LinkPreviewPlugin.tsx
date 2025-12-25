@@ -9,15 +9,38 @@ interface LinkPreviewPluginProps {
     existingLink?: string;
 }
 
+// Validate URL to prevent XSS and invalid URLs
+const isValidUrl = (urlString: string): boolean => {
+    try {
+        const url = new URL(urlString);
+        // Only allow http and https protocols
+        return ['http:', 'https:'].includes(url.protocol);
+    } catch {
+        return false;
+    }
+};
+
 export function LinkPreviewPlugin({ onLinkAdd, existingLink }: LinkPreviewPluginProps) {
     const [url, setUrl] = useState(existingLink || '');
     const [showInput, setShowInput] = useState(!!existingLink);
+    const [error, setError] = useState('');
 
     const handleAddLink = () => {
-        if (url.trim()) {
-            onLinkAdd(url.trim());
-            setShowInput(false);
+        const trimmedUrl = url.trim();
+
+        if (!trimmedUrl) {
+            setError('Please enter a URL');
+            return;
         }
+
+        if (!isValidUrl(trimmedUrl)) {
+            setError('Please enter a valid HTTP or HTTPS URL');
+            return;
+        }
+
+        setError('');
+        onLinkAdd(trimmedUrl);
+        setShowInput(false);
     };
 
     const handleRemoveLink = () => {
@@ -48,36 +71,44 @@ export function LinkPreviewPlugin({ onLinkAdd, existingLink }: LinkPreviewPlugin
                 Link Preview
             </Label>
 
-            <div className="flex gap-2">
-                <Input
-                    type="url"
-                    placeholder="https://example.com"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddLink();
-                        }
-                    }}
-                    className="flex-1"
-                />
-                <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddLink}
-                    disabled={!url.trim()}
-                >
-                    Add
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRemoveLink}
-                >
-                    Remove
-                </Button>
+            <div className="space-y-2">
+                <div className="flex gap-2">
+                    <Input
+                        type="url"
+                        placeholder="https://example.com"
+                        value={url}
+                        onChange={(e) => {
+                            setUrl(e.target.value);
+                            setError(''); // Clear error on change
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddLink();
+                            }
+                        }}
+                        className={`flex-1 ${error ? 'border-red-500' : ''}`}
+                    />
+                    <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddLink}
+                        disabled={!url.trim()}
+                    >
+                        Add
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveLink}
+                    >
+                        Remove
+                    </Button>
+                </div>
+                {error && (
+                    <p className="text-xs text-red-500">{error}</p>
+                )}
             </div>
 
             {url && (

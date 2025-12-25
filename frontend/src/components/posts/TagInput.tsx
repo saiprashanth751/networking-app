@@ -17,11 +17,17 @@ export function TagInput({ tags, onChange, maxTags = 10 }: TagInputProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const { data: searchResults = [] } = useTagSearch(input.trim());
-    const { data: trendingTags = [] } = useTrendingTags();
+    const { data: tagsData } = useTrendingTags();
+    const trendingTags = tagsData?.tags || [];
+
+    // Filter out already selected tags and limit to 10
+    const availableTrendingTags = trendingTags
+        .filter((tag: any) => !tags.includes(tag.name))
+        .slice(0, 10);
 
     const suggestions = input.trim()
         ? searchResults.filter((tag: any) => !tags.includes(tag.name))
-        : trendingTags.filter((tag: any) => !tags.includes(tag.name)).slice(0, 5);
+        : availableTrendingTags;
 
     const handleAddTag = (tagName: string) => {
         const normalized = tagName.trim().toLowerCase().replace(/^#/, '');
@@ -95,6 +101,7 @@ export function TagInput({ tags, onChange, maxTags = 10 }: TagInputProps) {
                                 type="button"
                                 onClick={() => handleRemoveTag(tag)}
                                 className="hover:text-primary/70 transition-colors"
+                                aria-label={`Remove ${tag} tag`}
                             >
                                 <X className="h-3 w-3" />
                             </button>

@@ -165,7 +165,7 @@ export function DraftRecovery({
                                             </p>
                                             <div className="flex items-center gap-3 text-xs text-neutral-500">
                                                 <span>
-                                                    {new Date(draft.lastSaved).toLocaleString()}
+                                                    {new Date(draft.updatedAt).toLocaleString()}
                                                 </span>
                                                 {draft.tags && draft.tags.length > 0 && (
                                                     <span>
