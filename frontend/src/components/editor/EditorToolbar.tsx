@@ -91,7 +91,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={undo}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-foreground"
                 title="Undo (Ctrl+Z)"
                 aria-label="Undo"
             >
@@ -101,7 +101,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={redo}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-foreground"
                 title="Redo (Ctrl+Y)"
                 aria-label="Redo"
             >
@@ -114,7 +114,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={formatBold}
-                className={`h-8 w-8 p-0 ${isBold ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
+                className={`h-8 w-8 p-0 text-foreground ${isBold ? 'bg-muted' : ''}`}
                 title="Bold (Ctrl+B)"
                 aria-label="Bold"
                 aria-pressed={isBold}
@@ -125,7 +125,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={formatItalic}
-                className={`h-8 w-8 p-0 ${isItalic ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
+                className={`h-8 w-8 p-0 text-foreground ${isItalic ? 'bg-muted' : ''}`}
                 title="Italic (Ctrl+I)"
                 aria-label="Italic"
                 aria-pressed={isItalic}
@@ -136,7 +136,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={formatCode}
-                className={`h-8 w-8 p-0 ${isCode ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
+                className={`h-8 w-8 p-0 text-white ${isCode ? 'bg-neutral-200 dark:bg-neutral-700' : ''}`}
                 title="Inline Code (Ctrl+E)"
                 aria-label="Inline Code"
                 aria-pressed={isCode}
@@ -150,7 +150,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={insertBulletList}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-white"
                 title="Bullet List"
                 aria-label="Bullet List"
             >
@@ -160,7 +160,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={insertNumberedList}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-white"
                 title="Numbered List"
                 aria-label="Numbered List"
             >
@@ -170,7 +170,7 @@ export function EditorToolbar() {
                 variant="ghost"
                 size="sm"
                 onClick={formatCodeBlock}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-white"
                 title="Code Block"
                 aria-label="Code Block"
             >

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  Search, 
-  Bell, 
-  Mail, 
-  Users, 
-  Bookmark, 
-  User, 
+import {
+  Home,
+  Search,
+  Bell,
+  Mail,
+  Users,
+  Bookmark,
+  User,
   MoreHorizontal,
   Menu,
   X as XIcon,
@@ -26,6 +26,7 @@ import {
 import { useCurrentUser } from "@/hooks/queries/user";
 import { useCurrentProfile } from '@/hooks/queries/profile';
 import { useUnreadCount } from '@/hooks/queries/conversation';
+import { CreatePostModal } from '../posts/CreatePostModal';
 
 interface NavItem {
   icon: any;
@@ -38,12 +39,13 @@ export function LeftSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
   // Get current user data
   const { data: currentUserData } = useCurrentUser();
   const { data: currentProfileData } = useCurrentProfile();
   const { data: unreadData } = useUnreadCount();
-  
+
   const currentUser = currentUserData?.user;
   const currentProfile = currentProfileData?.profile;
   const unreadCount = unreadData?.unreadCount || 0;
@@ -75,6 +77,10 @@ export function LeftSidebar() {
 
   return (
     <>
+      <CreatePostModal
+        open={isCreatePostOpen}
+        onClose={() => setIsCreatePostOpen(false)}
+      />
       {/* Mobile Header */}
       <div className="fixed top-0 left-0 right-0 z-50 lg:hidden bg-black/80 backdrop-blur-sm border-b border-neutral-800">
         <div className="flex items-center justify-between h-14 px-4">
@@ -88,7 +94,7 @@ export function LeftSidebar() {
               <Menu className="h-5 w-5" />
             )}
           </button>
-          
+
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 bg-blue-500 rounded-lg flex items-center justify-center">
               <span className="text-sm font-bold">C</span>
@@ -102,7 +108,7 @@ export function LeftSidebar() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -114,7 +120,7 @@ export function LeftSidebar() {
         transition-transform duration-300 ease-in-out
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-        bg-black
+        bg-background
         pt-14 lg:pt-0
       `}>
         <div className="flex flex-col h-full py-2">
@@ -131,7 +137,7 @@ export function LeftSidebar() {
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
-              
+
               return (
                 <button
                   key={item.path}
@@ -183,8 +189,8 @@ export function LeftSidebar() {
           </nav>
 
           {/* Post Button */}
-          <button 
-            onClick={() => navigate('/dashboard')}
+          <button
+            onClick={() => setIsCreatePostOpen(true)}
             className="w-full rounded-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 mb-4 text-[17px] transition-colors"
           >
             Post
@@ -196,8 +202,8 @@ export function LeftSidebar() {
               <button className="flex items-center justify-between px-3 py-3 hover:bg-neutral-900 rounded-full transition-colors w-full">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <Avatar className="h-10 w-10 border-2 border-border">
-                    <AvatarImage 
-                      src={currentProfile?.profilePic} 
+                    <AvatarImage
+                      src={currentProfile?.profilePic}
                       alt={currentUser?.firstName}
                     />
                     <AvatarFallback className="bg-muted text-xs">

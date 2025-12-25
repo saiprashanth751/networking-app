@@ -16,16 +16,16 @@ import {
     ArrowLeft,
     Search,
 } from "lucide-react";
-import { Post } from '../components/Post';
-import { FollowList } from '../components/FollowList';
-import MessageBox from './MessageBox';
+import { PostCard } from '@/components/posts/PostCard';
+import { FollowList } from '@/components/FollowList';
+import MessageBox from '@/pages/MessageBox';
 import { H2, Body, Small } from '@/components/ui/typography';
 import { useCurrentProfile } from '@/hooks/queries/profile';
 import { useCurrentUser } from '@/hooks/queries/user';
 import { useCurrentUserPosts } from '@/hooks/queries/post';
 import { useCurrentUserProjects } from '@/hooks/queries/project';
-import { ProjectList } from '../components/ProjectList';
-import { ProjectFormDialog } from '../components/ProjectFormDialog';
+import { ProjectList } from '@/components/projects/ProjectList';
+import { ProjectFormDialog } from '@/components/projects/ProjectFormDialog';
 import { useFollowers, useFollowing } from '@/hooks/queries/follow';
 
 const UserProfilePage = () => {
@@ -215,7 +215,7 @@ const UserProfilePage = () => {
                             title="Followers"
                             users={followers}
                             count={followersData?.count || 0}
-                            onMessageClick={setSelectedUserId} 
+                            onMessageClick={setSelectedUserId}
                         />
                     </div>
                 </div>
@@ -258,7 +258,7 @@ const UserProfilePage = () => {
                                     </Button>
                                 </div>
                             ) : (
-                                posts.map((post) => <Post key={post.id} post={post} showFollowButton={false} />)
+                                posts.map((post) => <PostCard key={post.id} post={post} />)
                             )}
                         </div>
                     )}

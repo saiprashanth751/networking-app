@@ -75,6 +75,9 @@ export interface Post {
   createdAt: string;
   updatedAt: string;
 
+  // Links support
+  links?: string[];
+
   // Engagement counters
   likesCount: number;
   commentsCount: number;

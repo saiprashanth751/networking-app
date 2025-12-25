@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { PostCard } from '@/components/posts/PostCard';
 import { CreatePostModal } from '@/components/posts/CreatePostModal';
@@ -6,14 +6,27 @@ import { useAllPosts } from '@/hooks/queries/post';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCurrentUser } from '@/hooks/queries/user';
 import { useCurrentProfile } from '@/hooks/queries/profile';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
     const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+    const navigate = useNavigate();
 
     // Fetch data
     const { data: postsData, isLoading: postsLoading, isError: postsError } = useAllPosts();
-    const { data: currentUserData } = useCurrentUser();
+    const { data: currentUserData, error: userError } = useCurrentUser();
     const { data: currentProfileData } = useCurrentProfile();
+
+    // Handle auth errors - redirect to login
+    useEffect(() => {
+        if (userError) {
+            const axiosError = userError as any;
+            if (axiosError?.response?.status === 401 || axiosError?.response?.status === 403) {
+                localStorage.removeItem('token');
+                navigate('/signin');
+            }
+        }
+    }, [userError, navigate]);
 
     const posts = postsData?.posts || [];
     const currentUser = currentUserData?.user;
@@ -117,6 +130,7 @@ export default function Dashboard() {
                             key={post.id}
                             post={post}
                             showActions={true}
+                            showFollowButton={true}
                         />
                     ))
                 )}

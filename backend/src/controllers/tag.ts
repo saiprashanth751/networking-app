@@ -69,7 +69,7 @@ export const getPostsByTag = asyncHandler(async (req: Request, res: Response) =>
     // Get posts with this tag
     const posts = await prisma.post.findMany({
         where: {
-            isDraft: false,
+            status: 'PUBLISHED',
             tags: {
                 some: {
                     tagId: tag.id,
@@ -115,7 +115,7 @@ export const getPostsByTag = asyncHandler(async (req: Request, res: Response) =>
     // Get total count
     const totalPosts = await prisma.post.count({
         where: {
-            isDraft: false,
+            status: 'PUBLISHED',
             tags: {
                 some: {
                     tagId: tag.id,

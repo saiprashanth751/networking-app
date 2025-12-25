@@ -10,13 +10,13 @@ export const postService = {
 
   // Get posts by user ID
   getPostsByUserId: async (userId: string): Promise<{ posts: Post[] }> => {
-    const response = await apiClient.get(`/post/${userId}`);
+    const response = await apiClient.get(`/post/user/${userId}`);
     return response.data;
   },
 
   // Get current user's posts
   getCurrentUserPosts: async (): Promise<{ posts: Post[] }> => {
-    const response = await apiClient.get('/post/userAll');
+    const response = await apiClient.get('/post/user');
     return response.data;
   },
 
@@ -26,6 +26,22 @@ export const postService = {
     const response = await apiClient.post('/post/create', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return response.data;
+  },
+
+  // ============================================================================
+  // PRODUCTION WORKFLOW
+  // ============================================================================
+
+  // Create draft post (Step 1)
+  createDraft: async (data: Partial<CreatePostInput>): Promise<{ post: Post }> => {
+    const response = await apiClient.post('/post/draft', data);
+    return response.data;
+  },
+
+  // Publish draft post (Step 3)
+  publishPost: async (postId: string): Promise<{ post: Post }> => {
+    const response = await apiClient.patch(`/post/${postId}/publish`);
     return response.data;
   },
 

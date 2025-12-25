@@ -74,7 +74,7 @@ export const getPostsByCategory = asyncHandler(async (req: Request, res: Respons
     // Get posts in this category
     const posts = await prisma.post.findMany({
         where: {
-            isDraft: false,
+            status: 'PUBLISHED',
             categories: {
                 some: {
                     categoryId: category.id,
@@ -138,7 +138,7 @@ export const getPostsByCategory = asyncHandler(async (req: Request, res: Respons
     // Get total count for pagination
     const totalPosts = await prisma.post.count({
         where: {
-            isDraft: false,
+            status: 'PUBLISHED',
             categories: {
                 some: {
                     categoryId: category.id,

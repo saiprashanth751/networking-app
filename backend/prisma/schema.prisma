@@ -108,6 +108,12 @@ model Tag {
   @@index([slug])
 }
 
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model Post {
   id String @id @default(uuid())
 
@@ -137,7 +143,7 @@ model Post {
   shares    PostShare[]
 
   // Publishing
-  isDraft     Boolean   @default(false)
+  status      PostStatus @default(DRAFT)
   publishedAt DateTime?
 
   // Edit history
@@ -151,7 +157,7 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId, isDraft])
+  @@index([userId, status])
   @@index([publishedAt])
 }
 

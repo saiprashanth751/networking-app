@@ -93,11 +93,11 @@ export function MessageBubble({ message, isOwn, otherUser }: MessageBubbleProps)
           'max-w-[70%] rounded-2xl px-4 py-2',
           isOwn
             ? 'bg-blue-600 text-white rounded-br-sm'
-            : 'bg-neutral-900 text-white rounded-bl-sm'
+            : 'bg-card text-foreground rounded-bl-sm'
         )}
       >
         {renderMedia()}
-        
+
         {message.content && (
           <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
             {message.content}

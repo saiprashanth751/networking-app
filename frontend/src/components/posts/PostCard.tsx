@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Loader2, ExternalLink } from 'lucide-react';
 import { Post } from '@/types/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { PostContent } from './PostContent';
 import { PostActions } from './PostActions';
 import {
@@ -12,14 +13,50 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useCurrentUser } from '@/hooks/queries/user';
+import { useFollowStatus } from '@/hooks/queries/follow';
+import { useToggleFollow } from '@/hooks/mutations/follow';
 
 interface PostCardProps {
     post: Post;
     showActions?: boolean;
+    showFollowButton?: boolean;
     onCommentClick?: () => void;
 }
 
-export function PostCard({ post, showActions = true, onCommentClick }: PostCardProps) {
+export function PostCard({
+    post,
+    showActions = true,
+    showFollowButton = false,
+    onCommentClick
+}: PostCardProps) {
+    // Get current logged-in user
+    const { data: currentUserData } = useCurrentUser();
+    const loggedInUserId = currentUserData?.user?.id;
+
+    // Determine if this is the user's own post
+    const isOwnPost = loggedInUserId === post.userId;
+    const profileLink = isOwnPost ? '/userprofile' : `/profile/${post.userId}`;
+
+    // Get follow status for this post's author
+    const { data: followStatus } = useFollowStatus(
+        post.userId,
+        {
+            enabled: showFollowButton && !!loggedInUserId && !isOwnPost
+        }
+    );
+
+    // Toggle follow mutation
+    const { toggleFollow, isLoading: isToggling } = useToggleFollow(
+        post.userId,
+        followStatus?.following || false
+    );
+
+    // Determine if we should show the follow button
+    const shouldShowFollowButton = showFollowButton &&
+        loggedInUserId &&
+        !isOwnPost;
+
     const profilePic = post.user.profile?.profilePic ||
         'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png';
 
@@ -39,13 +76,22 @@ export function PostCard({ post, showActions = true, onCommentClick }: PostCardP
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
+    // Production-grade image error handler
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, index: number) => {
+        console.error(`Failed to load image ${index + 1}:`, (e.target as HTMLImageElement).src);
+        (e.target as HTMLImageElement).src = '/placeholder-image.png';
+    };
+
     return (
         <article className="px-4 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors border-b border-neutral-200 dark:border-neutral-800">
             <div className="flex gap-3">
                 {/* Avatar */}
-                <Link to={`/profile/${post.userId}`} className="shrink-0">
+                <Link to={profileLink} className="shrink-0">
                     <Avatar className="h-10 w-10 hover:opacity-80 transition-opacity">
-                        <AvatarImage src={profilePic} alt={`${post.user.firstName} ${post.user.lastName}`} />
+                        <AvatarImage
+                            src={profilePic}
+                            alt={`${post.user.firstName} ${post.user.lastName}`}
+                        />
                         <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                             {getUserInitials()}
                         </AvatarFallback>
@@ -58,46 +104,64 @@ export function PostCard({ post, showActions = true, onCommentClick }: PostCardP
                     <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1 min-w-0 flex-1">
                             <Link
-                                to={`/profile/${post.userId}`}
+                                to={profileLink}
                                 className="hover:underline font-bold text-[15px] truncate"
                             >
                                 {post.user.firstName} {post.user.lastName}
                             </Link>
-                            {post.user.profile?.department && (
-                                <>
-                                    <span className="text-neutral-500">·</span>
-                                    <span className="text-neutral-500 text-[13px] truncate">
-                                        {post.user.profile.department}
-                                    </span>
-                                </>
-                            )}
-                            <span className="text-neutral-500">·</span>
-                            <span className="text-neutral-500 text-[13px]">
+                            <span className="text-muted-foreground text-[15px] truncate">
+                                @{post.user.firstName?.toLowerCase()}
+                            </span>
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-muted-foreground text-[13px]">
                                 {formatDate(post.publishedAt || post.createdAt)}
                             </span>
                         </div>
 
-                        {/* More Options */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    className="hover:bg-primary/10 hover:text-primary rounded-full p-1.5 transition-colors"
-                                    onClick={(e) => e.stopPropagation()}
-                                    aria-label="Post options"
+                        <div className="flex items-center gap-1 shrink-0">
+                            {/* Follow Button */}
+                            {shouldShowFollowButton && (
+                                <Button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggleFollow();
+                                    }}
+                                    disabled={isToggling}
+                                    variant={followStatus?.following ? "outline" : "default"}
+                                    size="sm"
+                                    className="h-7 text-xs rounded-full px-3 font-bold"
                                 >
-                                    <MoreHorizontal className="h-[18px] w-[18px]" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Report post</DropdownMenuItem>
-                                <DropdownMenuItem>Hide post</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                    {isToggling ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        followStatus?.following ? "Following" : "Follow"
+                                    )}
+                                </Button>
+                            )}
+
+                            {/* More Options */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        className="hover:bg-primary/10 hover:text-primary rounded-full p-1.5 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                        aria-label="Post options"
+                                    >
+                                        <MoreHorizontal className="h-[18px] w-[18px]" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>Report post</DropdownMenuItem>
+                                    {isOwnPost && <DropdownMenuItem>Delete post</DropdownMenuItem>}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
 
                     {/* Title */}
                     {post.title && (
-                        <h3 className="font-bold text-lg mb-2 leading-tight">
+                        <h3 className="font-bold text-[15px] mb-1 leading-tight">
                             {post.title}
                         </h3>
                     )}
@@ -141,27 +205,49 @@ export function PostCard({ post, showActions = true, onCommentClick }: PostCardP
                         </div>
                     )}
 
-                    {/* Media Gallery */}
+                    {/* Links - NEW FEATURE */}
+                    {post.links && post.links.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                            {post.links.map((link, index) => (
+                                <a
+                                    key={index}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-2 rounded-lg border border-border bg-muted/50 hover:bg-muted transition-colors text-[13px] group"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
+                                    <span className="truncate flex-1 text-primary">
+                                        {link}
+                                    </span>
+                                </a>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Media Gallery - IMPROVED */}
                     {post.media && post.media.length > 0 && (
                         <div className={cn(
-                            'grid gap-1 mb-3 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800',
+                            'grid gap-1 mb-3 rounded-xl overflow-hidden border border-border',
                             post.media.length === 1 && 'grid-cols-1',
                             post.media.length === 2 && 'grid-cols-2',
-                            post.media.length >= 3 && 'grid-cols-2'
+                            post.media.length === 3 && 'grid-cols-3',
+                            post.media.length >= 4 && 'grid-cols-2'
                         )}>
                             {post.media.slice(0, 4).map((item, index) => (
                                 <div
                                     key={item.id}
                                     className={cn(
                                         'relative bg-muted group/image',
-                                        post.media.length === 1 ? 'aspect-video' : 'aspect-square',
-                                        post.media.length === 3 && index === 0 && 'col-span-2'
+                                        post.media.length === 1 ? 'aspect-video' : 'aspect-square'
                                     )}
                                 >
                                     <img
                                         src={item.url}
                                         alt={`Post image ${index + 1} of ${post.media.length}`}
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover/image:scale-105"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => handleImageError(e, index)}
                                     />
                                     {/* Show +N overlay for 4+ images */}
                                     {index === 3 && post.media.length > 4 && (

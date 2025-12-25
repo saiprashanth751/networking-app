@@ -22,7 +22,7 @@ interface ChatThreadProps {
 const logger = createCallLogger({ file: 'components/messaging/ChatThread.tsx', component: 'ChatHeader' });
 
 export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
-  logger.info("Rendering ChatThread with userId and scoket", {userId, id: socket?.id});
+  logger.info("Rendering ChatThread with userId and scoket", { userId, id: socket?.id });
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -66,7 +66,7 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
   // 🔥 FIX: Join room once when socket AND userId are available
   useEffect(() => {
     if (!socket || !userId) return;
-    
+
     // 🔥 CRITICAL: Track by userId to prevent duplicate joins
     if (hasJoinedRoomRef.current === userId) {
       console.log(`[ChatThread] Already joined room for ${userId}, skipping`);  //It's us and that user. (Our browser and that user)
@@ -92,19 +92,19 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
 
     const handleReceiveMessage = (message: Message) => {
       console.log('📨 New message received via WebSocket');
-      
+
       queryClient.invalidateQueries({
         queryKey: queryKeys.messages.conversation(userId),
       });
-      
+
       if (message.receiverId === currentUser?.id) {
         setTimeout(() => markAsReadMutation.mutate(), 200);
       }
     };
 
-    const handleTyping = ({ userId: typingUserId, isTyping: status }: { 
-      userId: string; 
-      isTyping: boolean 
+    const handleTyping = ({ userId: typingUserId, isTyping: status }: {
+      userId: string;
+      isTyping: boolean
     }) => {
       if (typingUserId === userId) {
         setIsTyping(status);
@@ -161,7 +161,7 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-black">
+    <div className="flex flex-col h-full bg-background">
       <ChatHeader user={otherUser} socket={socket} onBack={onBack} />
 
       <ScrollArea className="flex-1 px-4">
@@ -180,7 +180,7 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
               <div className="text-center space-y-3 max-w-sm">
                 <div className="text-neutral-500 text-sm">
                   This is the beginning of your conversation with{' '}
-                  <span className="font-semibold text-white">
+                  <span className="font-semibold text-foreground">
                     {otherUser.firstName}
                   </span>
                 </div>

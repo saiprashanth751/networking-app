@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Users, Briefcase, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { ProjectCard } from '@/components/ProjectCard';
+import { ProjectCard } from '@/components/projects/ProjectCard';
 import { useAllProjects } from '@/hooks/queries/project';
 import { H2, Body } from '@/components/ui/typography';
 import {
@@ -58,9 +58,8 @@ export default function Explore() {
         <div className="flex border-b border-neutral-800">
           <button
             onClick={() => setActiveTab('projects')}
-            className={`flex-1 px-4 py-4 hover:bg-neutral-900/50 transition-colors relative ${
-              activeTab === 'projects' ? 'font-bold' : 'text-neutral-500'
-            }`}
+            className={`flex-1 px-4 py-4 hover:bg-neutral-900/50 transition-colors relative ${activeTab === 'projects' ? 'font-bold' : 'text-neutral-500'
+              }`}
           >
             Projects
             {activeTab === 'projects' && (
@@ -69,9 +68,8 @@ export default function Explore() {
           </button>
           <button
             onClick={() => setActiveTab('people')}
-            className={`flex-1 px-4 py-4 hover:bg-neutral-900/50 transition-colors relative ${
-              activeTab === 'people' ? 'font-bold' : 'text-neutral-500'
-            }`}
+            className={`flex-1 px-4 py-4 hover:bg-neutral-900/50 transition-colors relative ${activeTab === 'people' ? 'font-bold' : 'text-neutral-500'
+              }`}
           >
             People
             {activeTab === 'people' && (

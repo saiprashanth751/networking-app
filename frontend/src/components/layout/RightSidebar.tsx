@@ -51,7 +51,7 @@ export function RightSidebar() {
 
   return (
     <aside className="hidden lg:block fixed right-0 top-0 h-screen w-[380px] px-4 py-1 overflow-y-auto scrollbar-thin">
-      <div className="sticky top-0 bg-black pt-1 pb-3 z-10">
+      <div className="sticky top-0 bg-background pt-1 pb-3 z-10">
         {/* Search */}
         <form onSubmit={handleSearch}>
           <div className="relative">
@@ -70,13 +70,13 @@ export function RightSidebar() {
       {/* You might like */}
       <div className="bg-neutral-900 rounded-2xl mb-4 overflow-hidden">
         <h2 className="font-bold text-xl px-4 py-3">You might like</h2>
-        
+
         {suggestedUsers.map((user) => (
-          <div 
+          <div
             key={user.id}
             className="flex items-center justify-between px-4 py-3 hover:bg-neutral-800/50 cursor-pointer transition-colors"
           >
-            <div 
+            <div
               className="flex items-center gap-3 flex-1 min-w-0"
               onClick={() => navigate(`/profile/${user.id}`)}
             >
@@ -97,7 +97,7 @@ export function RightSidebar() {
             </div>
             <Button
               variant="outline"
-              className="rounded-full bg-white text-black hover:bg-neutral-200 font-bold px-4 h-8 text-[14px] shrink-0"
+              className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-4 h-8 text-[14px] shrink-0"
               onClick={(e) => {
                 e.stopPropagation();
                 // TODO: Implement follow functionality
@@ -109,7 +109,7 @@ export function RightSidebar() {
           </div>
         ))}
 
-        <button 
+        <button
           className="w-full px-4 py-3 text-left text-blue-500 hover:bg-neutral-800/50 text-[15px] transition-colors"
           onClick={() => navigate('/network')}
         >
@@ -120,9 +120,9 @@ export function RightSidebar() {
       {/* Trending Topics */}
       <div className="bg-neutral-900 rounded-2xl overflow-hidden">
         <h2 className="font-bold text-xl px-4 py-3">Trending</h2>
-        
+
         {trendingTopics.map((topic, index) => (
-          <div 
+          <div
             key={index}
             className="px-4 py-3 hover:bg-neutral-800/50 cursor-pointer transition-colors"
           >
@@ -142,7 +142,7 @@ export function RightSidebar() {
           </div>
         ))}
 
-        <button 
+        <button
           className="w-full px-4 py-3 text-left text-blue-500 hover:bg-neutral-800/50 text-[15px] transition-colors"
           onClick={() => navigate('/explore')}
         >

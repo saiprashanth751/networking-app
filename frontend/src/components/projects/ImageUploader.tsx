@@ -32,7 +32,7 @@ export function ImageUploader({
       maxWidthOrHeight: 1920,
       useWebWorker: true,
     };
-    
+
     try {
       return await imageCompression(file, options);
     } catch (error) {
@@ -43,7 +43,7 @@ export function ImageUploader({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
-    
+
     if (!selectedFiles.length) return;
 
     const totalFiles = files.length + existingImages.length + selectedFiles.length;
@@ -60,7 +60,7 @@ export function ImageUploader({
       );
 
       const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
-      
+
       setPreviews(prev => [...prev, ...newPreviews]);
       const newFiles = [...files, ...compressedFiles];
       setFiles(newFiles);
@@ -80,7 +80,7 @@ export function ImageUploader({
     URL.revokeObjectURL(previews[index]);
     const newPreviews = previews.filter((_, i) => i !== index);
     const newFiles = files.filter((_, i) => i !== index);
-    
+
     setPreviews(newPreviews);
     setFiles(newFiles);
     onImagesChange(newFiles);
@@ -108,7 +108,7 @@ export function ImageUploader({
       );
 
       const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
-      
+
       setPreviews(prev => [...prev, ...newPreviews]);
       const newFiles = [...files, ...compressedFiles];
       setFiles(newFiles);
@@ -130,7 +130,7 @@ export function ImageUploader({
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">{label}</label>
-      
+
       {/* Existing Images */}
       {existingImages.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
@@ -194,7 +194,7 @@ export function ImageUploader({
             className="hidden"
             disabled={isCompressing}
           />
-          
+
           {isCompressing ? (
             <div className="space-y-2">
               <Upload className="h-8 w-8 mx-auto text-neutral-500 animate-pulse" />

@@ -1,29 +1,21 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import { apiClient } from '@/lib/apiClient';
 
 export const mediaService = {
-    uploadMedia: async (formData: FormData) => {
-        const response = await axios.post(`${API_URL}/media/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-            withCredentials: true,
-        });
+    uploadMedia: async (postId: string, formData: FormData) => {
+        // Append postId to formData (Production Workflow Step 2)
+        formData.append('postId', postId);
+
+        const response = await apiClient.post("/media/upload", formData);
         return response.data;
     },
 
     getMedia: async (id: string) => {
-        const response = await axios.get(`${API_URL}/media/${id}`, {
-            withCredentials: true,
-        });
+        const response = await apiClient.get(`/media/${id}`);
         return response.data;
     },
 
     deleteMedia: async (id: string) => {
-        const response = await axios.delete(`${API_URL}/media/${id}`, {
-            withCredentials: true,
-        });
+        const response = await apiClient.delete(`media/${id}`);
         return response.data;
     },
 };

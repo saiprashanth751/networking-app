@@ -77,7 +77,7 @@ export function TechStackInput({ value, onChange, error }: TechStackInputProps) 
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Tech Stack *</label>
-      
+
       {/* Selected Tags */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -145,7 +145,7 @@ export function TechStackInput({ value, onChange, error }: TechStackInputProps) 
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-      
+
       <p className="text-xs text-neutral-500">
         Press Enter to add custom tech or select from suggestions
       </p>

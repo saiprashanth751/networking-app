@@ -84,13 +84,13 @@ export function LexicalEditor({ onChange, initialContent, placeholder = 'Start w
 
     return (
         <LexicalComposer initialConfig={initialConfig}>
-            <div className="relative border border-neutral-800 rounded-lg bg-black">
+            <div className="relative border-border rounded-lg bg-card">
                 <EditorToolbar />
 
                 <div className="relative">
                     <RichTextPlugin
                         contentEditable={
-                            <ContentEditable className="min-h-[200px] max-h-[400px] overflow-y-auto px-4 py-3 outline-none text-white" />
+                            <ContentEditable className="min-h-[200px] max-h-[400px] overflow-y-auto px-4 py-3 outline-none text-foreground" />
                         }
                         placeholder={
                             <div className="absolute top-3 left-4 text-neutral-500 pointer-events-none text-base">

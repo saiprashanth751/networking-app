@@ -7,6 +7,8 @@ export const useCurrentUser = (options?: Omit<UseQueryOptions<{ user: User }, Er
   return useQuery({
     queryKey: queryKeys.user.current(),
     queryFn: userService.getCurrentUser,
+    retry: false, // Don't retry on auth errors
+    staleTime: 5 * 60 * 1000, // 5 minutes
     ...options,
   });
 };

@@ -37,7 +37,7 @@ export function CategorySelector({
 
     return (
         <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
+            <Label className="text-sm font-medium flex items-center gap-2 text-neutral-300">
                 <Layers className="h-4 w-4" />
                 Categories
             </Label>
@@ -71,7 +71,7 @@ export function CategorySelector({
                             {/* Selection Indicator */}
                             {isSelected && (
                                 <div
-                                    className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-white"
+                                    className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center text-foreground"
                                     style={{ backgroundColor: category.color }}
                                 >
                                     <Check className="h-3 w-3" />
@@ -84,14 +84,14 @@ export function CategorySelector({
                             </div>
 
                             {/* Name */}
-                            <div className="text-sm font-semibold text-left line-clamp-2">
+                            <div className="text-sm font-semibold text-left line-clamp-2 text-foreground">
                                 {category.name}
                             </div>
 
                             {/* Description (on hover) */}
                             {category.description && (
-                                <div className="absolute inset-x-0 bottom-0 p-3 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">
+                                <div className="absolute inset-x-0 bottom-0 p-3 bg-neutral-900 border-t border-neutral-700 rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                    <p className="text-xs text-neutral-300 line-clamp-2">
                                         {category.description}
                                     </p>
                                 </div>

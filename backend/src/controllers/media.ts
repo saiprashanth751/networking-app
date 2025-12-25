@@ -50,8 +50,32 @@ const uploadCompressedToCloudinary = (
 // ============================================================================
 
 export const uploadMedia = asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Production Workflow: Require postId
+    const { postId } = req.body;
+
+    console.log('🔍 [uploadMedia] Request file:', req.file);
+    console.log('🔍 [uploadMedia] Request body:', req.body);
+    console.log('🔍 [uploadMedia] postId:', postId);
+
     if (!req.file) {
         throw new CustomError('No file uploaded', 400);
+    }
+
+    if (!postId) {
+        throw new CustomError('postId is required - create draft post first', 400);
+    }
+
+    // Verify post exists and belongs to user
+    const post = await prisma.post.findFirst({
+        where: {
+            id: postId,
+            userId: req.id,
+            status: 'DRAFT', // Only allow uploads to draft posts
+        },
+    });
+
+    if (!post) {
+        throw new CustomError('Draft post not found or unauthorized', 404);
     }
 
     // Validate file type
@@ -126,8 +150,7 @@ export const uploadMedia = asyncHandler(async (req: AuthRequest, res: Response) 
                 width,
                 height,
                 order: 0,
-                // postId will be set when creating a post
-                postId: '', // Temporary - must be updated when attaching to post
+                postId, // Production workflow - linked from start
             },
         });
 

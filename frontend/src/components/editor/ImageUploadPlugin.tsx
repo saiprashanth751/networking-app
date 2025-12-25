@@ -143,7 +143,7 @@ export function ImageUploadPlugin({
                         variant="outline"
                         size="sm"
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full border-neutral-700 hover:bg-neutral-900 text-neutral-300"
+                        className="w-full bg-background border-border hover:bg-muted text-foreground"
                     >
                         <ImagePlus className="h-4 w-4 mr-2" />
                         Add Images ({previews.length}/{maxImages})

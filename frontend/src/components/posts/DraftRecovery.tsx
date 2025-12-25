@@ -175,7 +175,7 @@ export function DraftRecovery({
 
             {/* Draft Modal - Single Draft */}
             <Dialog open={showDraftsModal} onOpenChange={setShowDraftsModal}>
-                <DialogContent className="max-w-lg bg-black border border-neutral-800">
+                <DialogContent className="max-w-lg bg-card border-border">
                     <DialogHeader>
                         <DialogTitle>Your Draft</DialogTitle>
                         <DialogDescription>

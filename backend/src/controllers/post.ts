@@ -43,6 +43,136 @@ function extractHashtags(text: string): string[] {
 }
 
 // ============================================================================
+// CREATE DRAFT POST (Production Workflow - Step 1)
+// ============================================================================
+
+export const createDraft = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { title, content, categoryIds } = req.body;
+
+    if (!content) {
+        throw new CustomError('Content is required', 400);
+    }
+
+    // Extract plain text for search
+    const contentText = extractTextFromLexical(content);
+
+    // Create draft post
+    const post = await prisma.post.create({
+        data: {
+            title: title || null,
+            content,
+            contentText,
+            status: 'DRAFT',  // Production workflow
+            userId: req.id!,
+            // Create category relationships
+            categories: categoryIds && categoryIds.length > 0 ? {
+                create: categoryIds.map((catId: string) => ({
+                    categoryId: catId,
+                })),
+            } : undefined,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profile: { select: { profilePic: true } },
+                },
+            },
+            categories: {
+                include: {
+                    category: true,
+                },
+            },
+        },
+    });
+
+    return res.status(201).json({
+        message: 'Draft post created',
+        post,
+    });
+});
+
+// ============================================================================
+// PUBLISH POST (Production Workflow - Step 3)
+// ============================================================================
+
+export const publishPost = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { postId } = req.params;
+
+    // Verify post exists and belongs to user
+    const existingPost = await prisma.post.findFirst({
+        where: {
+            id: postId,
+            userId: req.id,
+            status: 'DRAFT',
+        },
+    });
+
+    if (!existingPost) {
+        throw new CustomError('Draft post not found or already published', 404);
+    }
+
+    // Extract hashtags from content
+    const contentText = extractTextFromLexical(existingPost.content);
+    const extractedHashtags = extractHashtags(contentText);
+
+    // Update post to published with hashtags
+    const post = await prisma.post.update({
+        where: { id: postId },
+        data: {
+            status: 'PUBLISHED',
+            publishedAt: new Date(),
+            // Create or connect tags
+            tags: extractedHashtags.length > 0 ? {
+                create: await Promise.all(
+                    extractedHashtags.map(async (tagName: string) => {
+                        // Find or create tag
+                        const tag = await prisma.tag.upsert({
+                            where: { slug: tagName },
+                            update: { usageCount: { increment: 1 } },
+                            create: {
+                                name: tagName,
+                                slug: tagName,
+                                usageCount: 1,
+                            },
+                        });
+                        return { tagId: tag.id };
+                    })
+                ),
+            } : undefined,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profile: { select: { profilePic: true } },
+                },
+            },
+            categories: {
+                include: {
+                    category: true,
+                },
+            },
+            tags: {
+                include: {
+                    tag: true,
+                },
+            },
+            media: true,
+        },
+    });
+
+    return res.status(200).json({
+        message: 'Post published successfully',
+        post,
+    });
+});
+
+// ============================================================================
 // CREATE POST
 // ============================================================================
 
@@ -72,7 +202,7 @@ export const createPost = asyncHandler(async (req: AuthRequest, res: Response) =
             title: title || null,
             content,
             contentText,
-            isDraft: false,
+            status: 'PUBLISHED',
             publishedAt: new Date(),
             userId: req.id!,
             // Create category relationships
@@ -159,7 +289,7 @@ export const getAllPosts = asyncHandler(async (req: Request, res: Response) => {
     const offset = (Number(page) - 1) * Number(limit);
 
     // Build where clause
-    const where: any = { isDraft: false };
+    const where: any = { status: 'PUBLISHED' };
 
     // Filter by category
     if (categorySlug) {
@@ -312,9 +442,78 @@ export const getUserPosts = asyncHandler(async (req: AuthRequest, res: Response)
     const userId = req.id!;
 
     const posts = await prisma.post.findMany({
-        where: { userId, isDraft: false },
+        where: { userId, status: 'PUBLISHED' },
         orderBy: { publishedAt: 'desc' },
         include: {
+            user: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true,
+                        },
+                    },
+                },
+            },
+            categories: {
+                include: {
+                    category: {
+                        select: { id: true, name: true, slug: true, icon: true, color: true },
+                    },
+                },
+            },
+            tags: {
+                include: {
+                    tag: { select: { id: true, name: true, slug: true } },
+                },
+            },
+            media: { orderBy: { order: 'asc' } },
+            _count: {
+                select: {
+                    likes: true,
+                    comments: true,
+                    bookmarks: true,
+                    shares: true,
+                },
+            },
+        },
+    });
+
+    return res.status(200).json({
+        message: 'Posts retrieved successfully',
+        posts,
+    });
+});
+
+// ============================================================================
+// GET POSTS BY USER ID (For viewing other users' profiles)
+// ============================================================================
+
+export const getPostsByUserId = asyncHandler(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+        throw new CustomError('User ID is required', 400);
+    }
+
+    const posts = await prisma.post.findMany({
+        where: { userId, status: 'PUBLISHED' },
+        orderBy: { publishedAt: 'desc' },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true,
+                        },
+                    },
+                },
+            },
             categories: {
                 include: {
                     category: {
