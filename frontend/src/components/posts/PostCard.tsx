@@ -26,14 +26,18 @@ interface PostCardProps {
     showActions?: boolean;
     showFollowButton?: boolean;
     onCommentClick?: () => void;
+    hideComments?: boolean; // Hide comment section (for post detail page)
 }
 
 export function PostCard({
     post,
     showActions = true,
     showFollowButton = false,
-    onCommentClick
+    onCommentClick,
+    hideComments = false
 }: PostCardProps) {
+    const navigate = useNavigate();
+
     // Get current logged-in user
     const { data: currentUserData } = useCurrentUser();
     const loggedInUserId = currentUserData?.user?.id;
@@ -195,13 +199,21 @@ export function PostCard({
 
                     {/* Title */}
                     {post.title && (
-                        <h3 className="font-bold text-lg mb-1 leading-tight">
+                        <h3
+                            className="font-bold text-lg mb-1 leading-tight cursor-pointer hover:underline"
+                            onClick={() => navigate(`/post/${post.id}`)}
+                        >
                             {post.title}
                         </h3>
                     )}
 
-                    {/* Content */}
-                    <PostContent content={post.content} className="mb-3" />
+                    {/* Content - Clickable to go to post detail */}
+                    <div
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/post/${post.id}`)}
+                    >
+                        <PostContent content={post.content} className="mb-3" />
+                    </div>
 
                     {/* Categories */}
                     {post.categories && post.categories.length > 0 && (
@@ -313,7 +325,7 @@ export function PostCard({
                             onCommentClick={handleCommentClick}
                         />
                     )}
-                    {showComments && (
+                    {showComments && !hideComments && (
                         <div className="mt-4 pt-4 border-t border-border">
                             <CommentSection postId={post.id} postOwnerId={post.userId} />
                         </div>

@@ -7,7 +7,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { queryClient } from './lib/queryClient';
 import { MainLayout } from './components/layout/MainLayout';
 
-// Importing pages
 import Signin from "./pages/Signin"
 import Signup from "./pages/Signup"
 import Dashboard from "./pages/Dashboard"
@@ -17,6 +16,7 @@ import UserProfile from "./pages/UserProfile"
 import Profile from "./pages/Profile"
 import Verify from "./pages/Verify"
 import ProjectDetail from "./pages/ProjectDetail"
+import PostDetail from "./pages/PostDetail"
 import Explore from "./pages/Explore"
 import Messages from "./pages/Messages"
 import Search from "./pages/Search"
@@ -77,6 +77,15 @@ function App() {
               element={
                 <MainLayout showRightSidebar={false}>
                   <ProjectDetail />
+                </MainLayout>
+              }
+            />
+
+            <Route
+              path="/post/:id"
+              element={
+                <MainLayout showRightSidebar={true}>
+                  <PostDetail />
                 </MainLayout>
               }
             />

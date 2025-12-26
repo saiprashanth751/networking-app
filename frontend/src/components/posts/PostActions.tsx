@@ -106,7 +106,6 @@ export function PostActions({
                 <div className="group-hover:bg-green-500/10 rounded-full p-2 transition-colors">
                     <Share2 className="h-[18px] w-[18px]" />
                 </div>
-                <span className="text-[13px]">{sharesCount || 0}</span>
             </button>
 
             {/* Like */}

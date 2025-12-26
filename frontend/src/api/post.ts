@@ -62,7 +62,7 @@ export const postService = {
 
   // Get single post by ID
   getPostById: async (postId: string): Promise<{ post: Post }> => {
-    const response = await apiClient.get(`/post/single/${postId}`);
+    const response = await apiClient.get(`/post/${postId}`);
     return response.data;
   },
 };

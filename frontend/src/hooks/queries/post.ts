@@ -32,3 +32,17 @@ export const useCurrentUserPosts = (options?: Omit<UseQueryOptions<{ posts: Post
     ...options,
   });
 };
+
+// Single post detail hook
+export const usePost = (
+  postId: string,
+  options?: Omit<UseQueryOptions<{ post: Post }, Error>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery({
+    queryKey: queryKeys.posts.detail(postId),
+    queryFn: () => postService.getPostById(postId),
+    enabled: !!postId,
+    staleTime: 2 * 60 * 1000, // Fresh for 2 minutes
+    ...options,
+  });
+};
