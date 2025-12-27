@@ -26,6 +26,7 @@ import {
 import { useCurrentUser } from "@/hooks/queries/user";
 import { useCurrentProfile } from '@/hooks/queries/profile';
 import { useUnreadCount } from '@/hooks/queries/conversation';
+import { useUnreadCount as useNotificationUnreadCount } from '@/hooks/queries/notification';
 import { CreatePostModal } from '../posts/CreatePostModal';
 
 interface NavItem {
@@ -45,16 +46,18 @@ export function LeftSidebar() {
   const { data: currentUserData } = useCurrentUser();
   const { data: currentProfileData } = useCurrentProfile();
   const { data: unreadData } = useUnreadCount();
+  const { data: notificationUnreadData } = useNotificationUnreadCount();
 
   const currentUser = currentUserData?.user;
   const currentProfile = currentProfileData?.profile;
   const unreadCount = unreadData?.unreadCount || 0;
+  const notificationUnreadCount = notificationUnreadData?.unread || 0;
 
   // Build NAV_ITEMS dynamically with unread count
   const NAV_ITEMS: NavItem[] = [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Explore', path: '/explore' },
-    { icon: Bell, label: 'Notifications', path: '/notifications', badge: 0 },
+    { icon: Bell, label: 'Notifications', path: '/notifications', badge: notificationUnreadCount },
     { icon: Mail, label: 'Messages', path: '/messages', badge: unreadCount },
     { icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
     { icon: Users, label: 'Network', path: '/network' },

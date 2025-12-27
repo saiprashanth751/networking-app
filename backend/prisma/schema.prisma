@@ -45,6 +45,11 @@ model User {
   searchHistory       SearchHistory[]
   postReports         PostReport[]
   filterPresets       FilterPreset[]
+  
+  // Notification system relations
+  notifications         Notification[]
+  notificationsAsActor  Notification[] @relation("NotificationActor")
+  notificationPreference NotificationPreference?
 }
 
 model Profile {
@@ -549,4 +554,71 @@ model FilterPreset {
 
   @@index([userId, isDefault])
   @@index([userId, createdAt])
+}
+
+// ============================================================================
+// NOTIFICATION SYSTEM
+// ============================================================================
+
+enum NotificationType {
+  NEW_FOLLOWER
+  POST_LIKE
+  POST_COMMENT
+  COMMENT_REPLY
+  POST_SHARE
+  MENTION
+  MESSAGE
+  CALL_MISSED
+  PROJECT_COLLABORATION
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type      NotificationType
+  title     String
+  message   String
+  
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull, name: "NotificationActor")
+  
+  entityId  String?
+  entityType String?
+  
+  read      Boolean  @default(false)
+  seen      Boolean  @default(false)
+  
+  data      Json?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+}
+
+model NotificationPreference {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Per-type notification toggles
+  newFollower     Boolean @default(true)
+  postLike        Boolean @default(true)
+  postComment     Boolean @default(true)
+  commentReply    Boolean @default(true)
+  postShare       Boolean @default(false)
+  mention         Boolean @default(true)
+  message         Boolean @default(true)
+  callMissed      Boolean @default(true)
+  
+  // Delivery channel preferences
+  emailEnabled    Boolean @default(false)
+  soundEnabled    Boolean @default(true)
+  desktopEnabled  Boolean @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

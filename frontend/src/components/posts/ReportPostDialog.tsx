@@ -36,8 +36,10 @@ export function ReportPostDialog({ postId, isOpen, onClose }: ReportPostDialogPr
     const queryClient = useQueryClient();
 
     const reportMutation = useMutation({
-        mutationFn: ({ postId, reason, description }: { postId: string; reason: ReportReason; description?: string }) =>
-            reportService.reportPost(postId, reason, description),
+        mutationFn: () => reportService.reportPost(postId, {
+            reason: selectedReason!,
+            description: description.trim() || undefined
+        }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['reports'] });
             handleClose();
@@ -53,7 +55,7 @@ export function ReportPostDialog({ postId, isOpen, onClose }: ReportPostDialogPr
 
     const handleSubmit = () => {
         if (!selectedReason) return;
-        reportMutation.mutate({ postId, reason: selectedReason, description: description || undefined });
+        reportMutation.mutate();
     };
 
     return (
@@ -79,12 +81,12 @@ export function ReportPostDialog({ postId, isOpen, onClose }: ReportPostDialogPr
                                     key={reason.value}
                                     onClick={() => setSelectedReason(reason.value)}
                                     className={`w-full p-3 rounded-lg border-2 text-left transition-all ${selectedReason === reason.value
-                                            ? 'border-red-500 bg-red-500/10'
-                                            : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                                        ? 'border-red-500 bg-red-500/10'
+                                        : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
                                         }`}
                                 >
                                     <div className="font-medium text-sm">{reason.label}</div>
-                                    <div className="text-xs text-muted-foreground mt-0.5">{reason.description}< /div>
+                                    <div className="text-xs text-muted-foreground mt-0.5">{reason.description}</div>
                                 </button>
                             ))}
                         </div>

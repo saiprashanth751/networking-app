@@ -16,6 +16,7 @@ import searchRouter from "./routes/search";
 import trendingRouter from "./routes/trending";
 import reportRouter from "./routes/report";
 import filterPresetRouter from "./routes/filterPreset";
+import notificationRouter from "./routes/notification";
 import prisma from "../prisma/prisma_client";
 import path from "path";
 import { errorMiddleware } from "./middleware/errorMiddleware";
@@ -68,6 +69,7 @@ app.use("/api/v1/search", searchRouter);
 app.use("/api/v1/trending", trendingRouter);
 app.use("/api/v1/report", reportRouter);
 app.use("/api/v1/filter-preset", filterPresetRouter);
+app.use("/api/v1/notification", notificationRouter);
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -111,6 +113,10 @@ io.use((socket, next) => {
     next();
   });
 });
+
+// Initialize socket utility for notifications
+import { initializeSocketIO } from './utils/socket';
+initializeSocketIO(io);
 
 // Socket.IO connection handler
 io.on("connection", (socket) => {

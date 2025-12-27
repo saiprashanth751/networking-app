@@ -2,35 +2,55 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { Request, Response } from "express";
 import prisma from "../../prisma/prisma_client";
 import CustomError from "../utils/customError";
+import { notificationService } from "../services/notificationService";
+import { emitNotification } from "../utils/socket";
 
 
-interface AuthRequest extends Request{
+interface AuthRequest extends Request {
     id?: string
 }
 
-export const followUser = asyncHandler(async (req:AuthRequest, res: Response) => {
+export const followUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.id as string
     const tofollow = req.query.id as string;
     const follow = await prisma.follow.create({
-        data:{
+        data: {
             followerId: userId,
             followingId: tofollow
         }
     })
 
-    if(!follow){
-        throw new CustomError("User already follwed", 400)
+    // Get follower details for notification
+    const follower = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true }
+    });
+
+    // Create notification for the followed user
+    if (follower) {
+        const notification = await notificationService.create({
+            userId: tofollow,
+            type: 'NEW_FOLLOWER',
+            title: 'New Follower',
+            message: `${follower.firstName} ${follower.lastName || ''} started following you`,
+            actorId: userId
+        });
+
+        // Emit real-time notification
+        if (notification) {
+            emitNotification(tofollow, notification);
+        }
     }
 
     return res.status(200).json({
-        message: "Follower Updated"
+        message: "Followed"
     })
 })
 
 export const unfollowUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.id as string
-    const tounfollow =  req.query.id as string
-    
+    const tounfollow = req.query.id as string
+
     await prisma.follow.delete({
         where: {
             followerId_followingId: {
@@ -39,13 +59,13 @@ export const unfollowUser = asyncHandler(async (req: AuthRequest, res: Response)
             }
         }
     })
-    
+
     return res.status(200).json({
         message: "User successfully unfollwed"
     })
 })
 
-export const getStatus = asyncHandler(async (req:AuthRequest, res: Response) => {
+export const getStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.id as string
     const tocheckId = req.query.id as string
 
@@ -88,17 +108,17 @@ export const getFollowers = asyncHandler(async (req: AuthRequest, res: Response)
     });
 
     return res.status(200).json({
-        followers: followers.map((follow) => follow.follower), 
+        followers: followers.map((follow) => follow.follower),
         count: followers.length,
     });
 });
 
-export const getNativeFollowers = asyncHandler(async (req: AuthRequest, res:Response) => {
+export const getNativeFollowers = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.query.id as string
-    
+
     // ✅ FIXED: Include user data in the query
     const followers = await prisma.follow.findMany({
-        where:{
+        where: {
             followingId: userId,
         },
         include: {
@@ -134,7 +154,7 @@ export const getFollowing = asyncHandler(async (req: AuthRequest, res: Response)
             followerId: userId,
         },
         include: {
-            following: { 
+            following: {
                 select: {
                     id: true,
                     firstName: true,
@@ -157,9 +177,9 @@ export const getFollowing = asyncHandler(async (req: AuthRequest, res: Response)
     });
 });
 
-export const getNativeFollowing = asyncHandler(async(req:AuthRequest, res:Response) => {
+export const getNativeFollowing = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.query.id as string
-    
+
     // ✅ FIXED: Include user data in the query
     const followingUsers = await prisma.follow.findMany({
         where: {
@@ -182,7 +202,7 @@ export const getNativeFollowing = asyncHandler(async(req:AuthRequest, res:Respon
             }
         }
     })
-    
+
     // ✅ FIXED: Map to return user objects, not Follow objects
     return res.status(200).json({
         following: followingUsers.map(follow => follow.following),  // Extract user data
