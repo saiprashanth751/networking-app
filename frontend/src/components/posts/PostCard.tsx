@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { MoreHorizontal, Loader2, ExternalLink, Pencil, Bookmark, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Loader2, Pencil, Trash2, Flag, ExternalLink } from 'lucide-react';
 import { Post } from '@/types/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +8,10 @@ import { PostContent } from './PostContent';
 import { CommentSection } from './CommentSection';
 import { useState } from 'react';
 import { EditPostModal } from './EditPostModal';
+import { ReportPostDialog } from './ReportPostDialog';
 import { PostActions } from './PostActions';
 import { PostMediaCarousel } from './PostMediaCarousel';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -84,9 +86,10 @@ export function PostCard({
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // STATE - Comment section and edit modal
+    // STATE - Comment section, edit modal, report dialog
     const [showComments, setShowComments] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
 
     const handleCommentClick = () => {
@@ -173,23 +176,24 @@ export function PostCard({
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     {isOwnPost && (
-                                        <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
-                                            <Pencil className="h-4 w-4 mr-2" />
-                                            Edit post
-                                        </DropdownMenuItem>
+                                        <>
+                                            <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+                                                <Pencil className="h-4 w-4 mr-2" />
+                                                Edit post
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-red-600">
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </>
                                     )}
-                                    <DropdownMenuItem>
-                                        <Bookmark className="h-4 w-4 mr-2" />
-                                        Save
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                        Share
-                                    </DropdownMenuItem>
-                                    {isOwnPost && (
-                                        <DropdownMenuItem className="text-red-600">
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Delete
+                                    {!isOwnPost && (
+                                        <DropdownMenuItem
+                                            className="text-red-600"
+                                            onClick={() => setIsReportDialogOpen(true)}
+                                        >
+                                            <Flag className="h-4 w-4 mr-2" />
+                                            Report post
                                         </DropdownMenuItem>
                                     )}
                                 </DropdownMenuContent>
@@ -272,7 +276,7 @@ export function PostCard({
                         </div>
                     )}
 
-                    {/* Media Gallery - IMPROVED */}
+                    {/* Media Gallery - OPTIMIZED */}
                     {post.media && post.media.length > 0 && (
                         <div className={cn(
                             'grid gap-1 mb-3 rounded-xl overflow-hidden border border-border',
@@ -293,15 +297,17 @@ export function PostCard({
                                         setCarouselIndex(index);
                                     }}
                                 >
-                                    <img
+                                    <OptimizedImage
                                         src={item.url}
                                         alt={`Post image ${index + 1} of ${post.media.length}`}
-                                        className="w-full h-full object-cover"
+                                        width={post.media.length === 1 ? 800 : 400}
+                                        className="w-full h-full"
+                                        objectFit="cover"
                                         onError={(e) => handleImageError(e, index)}
                                     />
                                     {/* Show +N overlay for 4+ images */}
                                     {index === 3 && post.media.length > 4 && (
-                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
                                             <span className="text-white text-xl font-bold">
                                                 +{post.media.length - 4}
                                             </span>
@@ -338,6 +344,13 @@ export function PostCard({
                 post={post}
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
+            />
+
+            {/* Report Post Dialog */}
+            <ReportPostDialog
+                postId={post.id}
+                isOpen={isReportDialogOpen}
+                onClose={() => setIsReportDialogOpen(false)}
             />
 
             {/* Media Carousel */}

@@ -2,11 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, Loader2, User, FileText, Briefcase, Hash, ArrowRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from '@/hooks/useDebounce';
 import { useGlobalSearch, useTrendingTopics } from '@/hooks/queries/search';
-import { cn } from '@/lib/utils';
+import { RecommendedUsers } from '@/components/widgets/RecommendedUsers';
 
 /**
  * RightSidebar - Search and Trending Panel
@@ -263,14 +262,7 @@ export function RightSidebar() {
       </div>
 
       {/* You might like - Only show when not searching */}
-      {!showSearchResults && (
-        <div className="bg-neutral-900 rounded-2xl mb-4 overflow-hidden">
-          <h2 className="font-bold text-xl px-4 py-3">You might like</h2>
-          <div className="px-4 py-8 text-center">
-            <p className="text-neutral-500 text-sm">Coming soon...</p>
-          </div>
-        </div>
-      )}
+      {!showSearchResults && <RecommendedUsers />}
 
       {/* Trending Topics */}
       {!showSearchResults && (

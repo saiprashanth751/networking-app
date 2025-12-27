@@ -1,6 +1,7 @@
 import express from "express"
 import { authMiddleware } from "../middleware/authMiddleware"
 import { followUser, getFollowers, getFollowing, getNativeFollowers, getNativeFollowing, getStatus, unfollowUser } from "../controllers/follow"
+import { getRecommendedUsers } from "../controllers/followRecommendations"
 
 const app = express.Router()
 
@@ -13,5 +14,7 @@ app.get("/following", authMiddleware, getFollowing)
 
 app.get("/userFollowers", authMiddleware, getNativeFollowers)
 app.get("/userFollowing", authMiddleware, getNativeFollowing)
+
+app.get("/recommended", authMiddleware, getRecommendedUsers)
 
 export default app;

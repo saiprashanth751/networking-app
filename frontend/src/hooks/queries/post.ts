@@ -1,7 +1,7 @@
 import { postService } from "@/api/post";
 import { queryKeys } from "@/lib/queryClient";
 import { Post } from "@/types/types";
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, UseQueryOptions } from "@tanstack/react-query";
 
 
 export const useAllPosts = (options?: Omit<UseQueryOptions<{ posts: Post[] }, Error>, 'queryKey' | 'queryFn'>) => {
@@ -42,7 +42,35 @@ export const usePost = (
     queryKey: queryKeys.posts.detail(postId),
     queryFn: () => postService.getPostById(postId),
     enabled: !!postId,
-    staleTime: 2 * 60 * 1000, // Fresh for 2 minutes
+    staleTime: 2 * 60 * 1000,
+    ...options,
+  });
+};
+
+// ============================================================================
+// INFINITE SCROLL FEED
+// ============================================================================
+
+export const useInfinitePosts = (
+  filters?: {
+    categorySlugs?: string[];
+    tagSlugs?: string[];
+    followingOnly?: boolean;
+    type?: 'all' | 'posts' | 'projects' | 'jobs';
+    sort?: 'recent' | 'popular' | 'trending';
+  },
+  options?: Omit<any, 'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'>
+) => {
+  return useInfiniteQuery({
+    queryKey: queryKeys.posts.list(filters),
+    queryFn: async ({ pageParam = null }) => {
+      return postService.getInfinitePosts({ ...filters, cursor: pageParam });
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage: any) => {
+      return lastPage.nextCursor ?? undefined;
+    },
+    staleTime: 30 * 1000, // 30 seconds
     ...options,
   });
 };

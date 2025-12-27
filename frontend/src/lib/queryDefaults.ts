@@ -1,21 +1,6 @@
-/**
- * Default React Query configurations for different query types
- * 
- * Usage:
- * useQuery({
- *   queryKey: ['posts'],
- *   queryFn: fetchPosts,
- *   ...queryDefaults.list,
- * });
- */
+
 
 export const queryDefaults = {
-    /**
-     * For list queries (posts feed, projects list, users list)
-     * - Moderate caching
-     * - Auto-refetch on focus/reconnect
-     * - Retry on network errors
-     */
     list: {
         staleTime: 5 * 60 * 1000, // 5 minutes
         gcTime: 10 * 60 * 1000, // Garbage collect after 10 minutes
@@ -25,11 +10,7 @@ export const queryDefaults = {
         refetchOnReconnect: true,
     },
 
-    /**
-     * For detail queries (single post, user profile, project detail)
-     * - Longer caching (details change less frequently)
-     * - Auto-refetch on focus/reconnect
-     */
+
     detail: {
         staleTime: 10 * 60 * 1000, // 10 minutes
         gcTime: 15 * 60 * 1000, // 15 minutes
@@ -39,12 +20,6 @@ export const queryDefaults = {
         refetchOnReconnect: true,
     },
 
-    /**
-     * For real-time data (notifications, messages, online status)
-     * - Short caching
-     * - Frequent refetching
-     * - More aggressive retries
-     */
     realtime: {
         staleTime: 30 * 1000, // 30 seconds
         gcTime: 2 * 60 * 1000, // 2 minutes
@@ -55,12 +30,6 @@ export const queryDefaults = {
         refetchInterval: 60 * 1000, // Refetch every minute
     },
 
-    /**
-     * For search/autocomplete queries
-     * - Very short caching
-     * - No auto-refetch (user controls via input)
-     * - Fewer retries (fast failure for UX)
-     */
     search: {
         staleTime: 2 * 60 * 1000, // 2 minutes
         gcTime: 5 * 60 * 1000, // 5 minutes
@@ -70,11 +39,6 @@ export const queryDefaults = {
         refetchOnReconnect: false,
     },
 
-    /**
-     * For static/rarely changing data (categories, tags, departments)
-     * - Long caching
-     * - Minimal refetching
-     */
     static: {
         staleTime: 30 * 60 * 1000, // 30 minutes
         gcTime: 60 * 60 * 1000, // 1 hour
@@ -85,17 +49,10 @@ export const queryDefaults = {
     },
 };
 
-/**
- * Error handler for queries
- * Logs errors for debugging without showing toast (let components decide UX)
- */
 export const queryErrorHandler = (error: Error, queryKey: unknown) => {
     console.error(`Query failed [${JSON.stringify(queryKey)}]:`, error);
 };
 
-/**
- * Success handler for queries (optional, for debugging)
- */
 export const querySuccessHandler = (data: unknown, queryKey: unknown) => {
     if (process.env.NODE_ENV === 'development') {
         console.log(`Query success [${JSON.stringify(queryKey)}]:`, data);

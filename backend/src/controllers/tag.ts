@@ -3,6 +3,57 @@ import prisma from '../../prisma/prisma_client';
 import { asyncHandler } from '../middleware/asyncHandler';
 import CustomError from '../utils/customError';
 
+// ============================================================================
+// GET ALL TAGS
+// ============================================================================
+
+/**
+ * Get all tags with optional pagination and filtering
+ * Used for: Filter UI, tag selection, general tag browsing
+ * 
+ * Query params:
+ * - limit: Max tags to return (default: 50, max: 100)
+ * - minUsageCount: Filter tags with at least N uses (default: 0)
+ * 
+ * Edge cases handled:
+ * - Empty tag table
+ * - Very large tag lists (pagination)
+ * - Unused tags (minUsageCount filter)
+ */
+export const getAllTags = asyncHandler(async (req: Request, res: Response) => {
+    const { limit = 50, minUsageCount = 0 } = req.query;
+
+    // Validate and cap limit to prevent abuse
+    const validLimit = Math.min(Number(limit), 100);
+    const validMinUsage = Math.max(Number(minUsageCount), 0);
+
+    const tags = await prisma.tag.findMany({
+        where: {
+            usageCount: {
+                gte: validMinUsage,
+            },
+        },
+        take: validLimit,
+        orderBy: { usageCount: 'desc' }, // Most popular first
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+            usageCount: true,
+        },
+    });
+
+    return res.status(200).json({
+        message: 'Tags retrieved successfully',
+        tags,
+        count: tags.length,
+    });
+});
+
+// ============================================================================
+// SEARCH TAGS
+// ============================================================================
+
 // Search tags for autocomplete
 export const searchTags = asyncHandler(async (req: Request, res: Response) => {
     const { q = '', limit = 10 } = req.query;
