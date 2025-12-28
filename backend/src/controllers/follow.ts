@@ -210,4 +210,144 @@ export const getNativeFollowing = asyncHandler(async (req: AuthRequest, res: Res
     })
 })
 
+// Get mutual connections between current user and target user
+export const getMutualConnections = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { userId: targetUserId } = req.params;
+    const currentUserId = req.id!;
 
+    // Can't get mutual connections with yourself
+    if (currentUserId === targetUserId) {
+        return res.status(400).json({
+            message: 'Cannot get mutual connections with yourself',
+        });
+    }
+
+    // Verify target user exists
+    const targetUser = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true, firstName: true, lastName: true }
+    });
+
+    if (!targetUser) {
+        throw new CustomError('User not found', 404);
+    }
+
+    // Get users that current user follows
+    const currentUserFollowing = await prisma.follow.findMany({
+        where: { followerId: currentUserId },
+        select: { followingId: true }
+    });
+    const currentUserFollowingIds = currentUserFollowing.map(f => f.followingId);
+
+    // Get users that target user follows
+    const targetUserFollowing = await prisma.follow.findMany({
+        where: { followerId: targetUserId },
+        select: { followingId: true }
+    });
+    const targetUserFollowingIds = targetUserFollowing.map(f => f.followingId);
+
+    // Find intersection - mutual follows (both users follow these people)
+    const mutualFollowingIds = currentUserFollowingIds.filter(id =>
+        targetUserFollowingIds.includes(id)
+    );
+
+    // Get users that follow current user
+    const currentUserFollowers = await prisma.follow.findMany({
+        where: { followingId: currentUserId },
+        select: { followerId: true }
+    });
+    const currentUserFollowerIds = currentUserFollowers.map(f => f.followerId);
+
+    // Get users that follow target user
+    const targetUserFollowers = await prisma.follow.findMany({
+        where: { followingId: targetUserId },
+        select: { followerId: true }
+    });
+    const targetUserFollowerIds = targetUserFollowers.map(f => f.followerId);
+
+    // Find mutual followers (people who follow both users)
+    const mutualFollowerIds = currentUserFollowerIds.filter(id =>
+        targetUserFollowerIds.includes(id)
+    );
+
+    // Combine and deduplicate
+    const allMutualIds = [...new Set([...mutualFollowingIds, ...mutualFollowerIds])];
+
+    // Fetch user details for mutual connections
+    const mutualConnections = await prisma.user.findMany({
+        where: {
+            id: { in: allMutualIds }
+        },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profile: {
+                select: {
+                    profilePic: true,
+                    bio: true
+                }
+            }
+        },
+        take: 20 // Limit to 20 for performance
+    });
+
+    // Determine connection path
+    let connectionPath: string[] = ['You'];
+    let connectionType: 'direct' | 'mutual' | 'none' = 'none';
+
+    // Check if current user follows target user (direct connection)
+    const isDirectConnection = currentUserFollowingIds.includes(targetUserId);
+
+    if (isDirectConnection) {
+        connectionPath.push(targetUser.firstName);
+        connectionType = 'direct';
+    } else if (mutualConnections.length > 0) {
+        // Connection through mutual friend
+        connectionPath.push(mutualConnections[0].firstName);
+        connectionPath.push(targetUser.firstName);
+        connectionType = 'mutual';
+    } else {
+        connectionPath.push('No connection');
+        connectionType = 'none';
+    }
+
+    return res.status(200).json({
+        message: 'Mutual connections retrieved successfully',
+        mutualConnections,
+        count: allMutualIds.length,
+        showing: mutualConnections.length,
+        connectionPath,
+        connectionType,
+        isFollowing: isDirectConnection
+    });
+});
+
+// Remove a follower (someone who follows you)
+export const removeFollower = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const currentUserId = req.id!;
+    const { followerId } = req.params;
+
+    // Verify the follow relationship exists (follower follows current user)
+    const followRelationship = await prisma.follow.findFirst({
+        where: {
+            followerId: followerId,
+            followingId: currentUserId
+        }
+    });
+
+    if (!followRelationship) {
+        throw new CustomError('This user is not following you', 404);
+    }
+
+    // Delete the follow relationship
+    await prisma.follow.delete({
+        where: {
+            id: followRelationship.id
+        }
+    });
+
+    return res.status(200).json({
+        message: 'Follower removed successfully'
+    });
+});

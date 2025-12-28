@@ -19,6 +19,9 @@ import {
 import { PostCard } from '@/components/posts/PostCard';
 import { FollowList } from '@/components/FollowList';
 import MessageBox from '@/pages/MessageBox';
+import DefaultCover from '../assets/illustrations/default-cover.jpg';
+import DefaultProfile from '../assets/illustrations/default-profile.jpg';
+import { MutualConnections } from '@/components/profile/MutualConnections';
 import { H2, Body, Small } from '@/components/ui/typography';
 import { useCurrentProfile } from '@/hooks/queries/profile';
 import { useCurrentUser } from '@/hooks/queries/user';
@@ -216,6 +219,7 @@ const UserProfilePage = () => {
                             users={followers}
                             count={followersData?.count || 0}
                             onMessageClick={setSelectedUserId}
+                            showRemoveButton={true}
                         />
                     </div>
                 </div>

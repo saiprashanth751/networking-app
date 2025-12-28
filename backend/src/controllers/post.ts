@@ -520,6 +520,12 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
                 },
             },
             media: { orderBy: { order: 'asc' } },
+            likes: {
+                select: { userId: true },
+            },
+            bookmarks: {
+                select: { userId: true },
+            },
             _count: {
                 select: {
                     likes: true,
@@ -541,9 +547,18 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
         data: { viewsCount: { increment: 1 } },
     });
 
+    // Transform to include isLiked and isBookmarked
+    const transformedPost = {
+        ...post,
+        isLiked: (req as any).id ? (post.likes?.some((like: any) => like.userId === (req as any).id) || false) : false,
+        isBookmarked: (req as any).id ? (post.bookmarks?.some((bookmark: any) => bookmark.userId === (req as any).id) || false) : false,
+        likes: undefined,
+        bookmarks: undefined,
+    };
+
     return res.status(200).json({
         message: 'Post retrieved successfully',
-        post,
+        post: transformedPost,
     });
 });
 

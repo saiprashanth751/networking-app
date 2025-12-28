@@ -19,15 +19,36 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, MessageSquare, User, Users } from "lucide-react";
+import { Search, MessageSquare, User, Users, UserMinus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SPACING, Small, Caption, LAYOUT } from "@/components/layout";
+import { useRemoveFollower } from '@/hooks/queries/connection';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName?: string;
+  profile?: {
+    profilePic?: string;
+  };
+}
 
 interface FollowListProps {
   title: string;
-  users: any[];
-  onMessageClick: (userId: string) => void;
-  count?: number;
+  users: User[];
+  count: number;
+  onMessageClick?: (userId: string) => void;
+  showRemoveButton?: boolean; // New prop for followers list
 }
 
 /**
@@ -38,11 +59,14 @@ export function FollowList({
   title,
   users,
   onMessageClick,
-  count
+  count,
+  showRemoveButton = false
 }: FollowListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [userToRemove, setUserToRemove] = useState<User | null>(null);
   const navigate = useNavigate();
+  const removeFollowerMutation = useRemoveFollower();
 
   // Filter users based on search query
   const filteredUsers = users.filter(user => {
@@ -61,6 +85,17 @@ export function FollowList({
   const handleUserClick = (userId: string) => {
     setIsOpen(false); // Close the modal
     navigate(`/profile/${userId}`); // Navigate to user's profile
+  };
+
+  const handleRemoveFollower = (user: User) => {
+    setUserToRemove(user);
+  };
+
+  const confirmRemove = () => {
+    if (userToRemove) {
+      removeFollowerMutation.mutate(userToRemove.id);
+      setUserToRemove(null);
+    }
   };
 
   return (
@@ -153,26 +188,75 @@ export function FollowList({
                     </div>
                   </button>
 
-                  {/* Message Button */}
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMessageClick(user.id);
-                      setIsOpen(false);
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className={`${SPACING.inline.xs} shrink-0`}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Message</span>
-                  </Button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 shrink-0">
+                    {onMessageClick && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMessageClick(user.id);
+                          setIsOpen(false);
+                        }}
+                        className="h-8 px-3"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Message
+                      </Button>
+                    )}
+
+                    {showRemoveButton && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFollower(user);
+                        }}
+                        className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                      >
+                        <UserMinus className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </ScrollArea>
       </DialogContent>
+
+      {/* Confirmation Dialog for Remove Follower */}
+      <AlertDialog open={!!userToRemove} onOpenChange={() => setUserToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Follower?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <span className="font-semibold">{userToRemove?.firstName} {userToRemove?.lastName}</span> from your followers?
+              They won't be notified.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemove}
+              disabled={removeFollowerMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {removeFollowerMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                'Remove'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

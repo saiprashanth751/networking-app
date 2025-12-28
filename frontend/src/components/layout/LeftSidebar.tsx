@@ -179,6 +179,10 @@ export function LeftSidebar() {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings/notifications')}>
+                  <Bell className="mr-2 h-4 w-4" />
+                  <span>Notification Preferences</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleSignOut}

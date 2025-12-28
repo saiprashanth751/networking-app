@@ -553,11 +553,23 @@ export const getUserBookmarks = asyncHandler(async (req: AuthRequest, res: Respo
                         },
                     },
                     media: { orderBy: { order: 'asc' } },
+                    tags: {
+                        include: {
+                            tag: { select: { id: true, name: true, slug: true } },
+                        },
+                    },
+                    likes: {
+                        select: { userId: true }
+                    },
+                    bookmarks: {
+                        select: { userId: true }
+                    },
                     _count: {
                         select: {
                             likes: true,
                             comments: true,
                             bookmarks: true,
+                            shares: true,
                         },
                     },
                 },
@@ -567,9 +579,21 @@ export const getUserBookmarks = asyncHandler(async (req: AuthRequest, res: Respo
 
     const total = await prisma.bookmark.count({ where });
 
+    // Transform posts to include isLiked and isBookmarked flags
+    const bookmarksWithFlags = bookmarks.map(bookmark => ({
+        ...bookmark,
+        post: {
+            ...bookmark.post,
+            isLiked: bookmark.post.likes?.some((like: any) => like.userId === userId) || false,
+            isBookmarked: bookmark.post.bookmarks?.some((bm: any) => bm.userId === userId) || false,
+            likes: undefined,
+            bookmarks: undefined,
+        }
+    }));
+
     return res.status(200).json({
         message: 'Bookmarks retrieved successfully',
-        bookmarks,
+        bookmarks: bookmarksWithFlags,
         pagination: {
             total,
             page: Number(page),
@@ -583,31 +607,63 @@ export const getUserBookmarks = asyncHandler(async (req: AuthRequest, res: Respo
 // SHARES
 // ============================================================================
 
-// Record share
+// Record post share
 export const recordShare = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { postId } = req.params;
     const { platform } = req.body;
     const userId = req.id!;
 
-    const post = await prisma.post.findUnique({ where: { id: postId } });
+    // Verify post exists and get author
+    const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { id: true, userId: true }
+    });
+
     if (!post) {
         throw new CustomError('Post not found', 404);
     }
 
+    // Record the share
     await prisma.postShare.create({
         data: {
             postId,
             userId,
-            platform: platform || null,
+            platform: platform || 'link',
         },
     });
 
+    // Increment share counter
     await prisma.post.update({
         where: { id: postId },
         data: { sharesCount: { increment: 1 } },
     });
 
+    // Create notification for post author (don't notify if sharing own post)
+    if (post.userId !== userId) {
+        const sharer = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { firstName: true, lastName: true }
+        });
+
+        if (sharer) {
+            const notification = await notificationService.create({
+                userId: post.userId,
+                type: 'POST_SHARE',
+                title: 'Post Shared',
+                message: `${sharer.firstName} ${sharer.lastName || ''} shared your post`,
+                actorId: userId,
+                entityId: postId,
+                entityType: 'post'
+            });
+
+            if (notification) {
+                emitNotification(post.userId, notification);
+            }
+        }
+    }
+
+
     return res.status(201).json({
-        message: 'Share recorded',
+        message: 'Share recorded successfully',
     });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Bookmark, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToggleLike, useToggleBookmark, useRecordShare } from '@/hooks/mutations/engagement';
@@ -28,6 +28,15 @@ export function PostActions({
     const [bookmarked, setBookmarked] = useState(isBookmarked);
     const [currentLikes, setCurrentLikes] = useState(likesCount);
     const [currentBookmarks, setCurrentBookmarks] = useState(bookmarksCount);
+
+    // Sync state with props when they change
+    useEffect(() => {
+        setLiked(isLiked);
+    }, [isLiked]);
+
+    useEffect(() => {
+        setBookmarked(isBookmarked);
+    }, [isBookmarked]);
 
     const toggleLikeMutation = useToggleLike();
     const toggleBookmarkMutation = useToggleBookmark();

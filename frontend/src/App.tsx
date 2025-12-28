@@ -22,6 +22,8 @@ import Explore from "./pages/Explore";
 import Messages from "./pages/Messages";
 import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
+import NotificationSettings from "./pages/NotificationSettings";
+import Bookmarks from "./pages/Bookmarks";
 
 function App() {
   return (
@@ -116,6 +118,24 @@ function App() {
                 element={
                   <MainLayout showRightSidebar={false}>
                     <Notifications />
+                  </MainLayout>
+                }
+              />
+
+              <Route
+                path="/settings/notifications"
+                element={
+                  <MainLayout showRightSidebar={false}>
+                    <NotificationSettings />
+                  </MainLayout>
+                }
+              />
+
+              <Route
+                path="/bookmarks"
+                element={
+                  <MainLayout showRightSidebar={true}>
+                    <Bookmarks />
                   </MainLayout>
                 }
               />
