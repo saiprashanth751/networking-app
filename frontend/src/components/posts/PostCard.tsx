@@ -106,11 +106,11 @@ export function PostCard({
     };
 
     return (
-        <article className="px-4 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors border-b border-neutral-200 dark:border-neutral-800">
-            <div className="flex gap-3">
+        <article className="mx-2 my-2 px-6 py-5 rounded-xl hover:bg-neutral-900/30 transition-all duration-150 border border-neutral-800/50">
+            <div className="flex gap-4">
                 {/* Avatar */}
                 <Link to={profileLink} className="shrink-0">
-                    <Avatar className="h-10 w-10 hover:opacity-80 transition-opacity">
+                    <Avatar className="h-11 w-11 hover:opacity-80 transition-opacity">
                         <AvatarImage
                             src={profilePic}
                             alt={`${post.user.firstName} ${post.user.lastName}`}
@@ -124,19 +124,19 @@ export function PostCard({
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
                             <Link
                                 to={profileLink}
-                                className="hover:underline font-bold text-[15px] truncate"
+                                className="hover:underline font-semibold text-[15px] truncate"
                             >
                                 {post.user.firstName} {post.user.lastName}
                             </Link>
-                            <span className="text-muted-foreground text-[15px] truncate">
+                            <span className="text-muted-foreground text-sm truncate">
                                 @{post.user.firstName?.toLowerCase()}
                             </span>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="text-muted-foreground text-[13px]">
+                            <span className="text-muted-foreground text-sm">·</span>
+                            <span className="text-muted-foreground text-sm">
                                 {formatDate(post.publishedAt || post.createdAt)}
                             </span>
                         </div>
@@ -164,7 +164,7 @@ export function PostCard({
                             )}
 
                             {/* More Options */}
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <button
                                         className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
@@ -204,7 +204,7 @@ export function PostCard({
                     {/* Title */}
                     {post.title && (
                         <h3
-                            className="font-bold text-lg mb-1 leading-tight cursor-pointer hover:underline"
+                            className="font-bold text-lg mb-2 leading-tight cursor-pointer hover:underline"
                             onClick={() => navigate(`/post/${post.id}`)}
                         >
                             {post.title}
@@ -216,21 +216,21 @@ export function PostCard({
                         className="cursor-pointer"
                         onClick={() => navigate(`/post/${post.id}`)}
                     >
-                        <PostContent content={post.content} className="mb-3" />
+                        <PostContent content={post.content} className="mb-4" />
                     </div>
 
                     {/* Categories */}
                     {post.categories && post.categories.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-4">
                             {post.categories.map(({ category }) => (
                                 <Badge
                                     key={category.id}
                                     variant="secondary"
-                                    className="font-medium text-xs cursor-pointer transition-all hover:scale-105"
+                                    className="font-medium text-xs cursor-pointer transition-all duration-150 hover:scale-105 rounded-full"
                                     style={{
-                                        backgroundColor: `${category.color}20`,
+                                        backgroundColor: `${category.color}15`,
                                         color: category.color,
-                                        borderColor: `${category.color}40`,
+                                        borderColor: `${category.color}30`,
                                     }}
                                 >
                                     <span className="mr-1">{category.icon}</span>
@@ -242,7 +242,7 @@ export function PostCard({
 
                     {/* Tags */}
                     {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-4">
                             {post.tags.map(({ tag }) => (
                                 <Link
                                     key={tag.id}

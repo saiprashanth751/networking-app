@@ -35,7 +35,7 @@ app.use(
   cors({
     origin: [
       process.env.ORIGIN_URL || 'http://localhost:5173',
-      'http://10.203.232.89:5173'
+      'http://10.200.3.89:5173'
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

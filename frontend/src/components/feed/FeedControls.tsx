@@ -75,16 +75,16 @@ export function FeedControls({ filters, onFiltersChange }: FeedControlsProps) {
 
     return (
         <>
-            <div className="border-b border-neutral-800 bg-black sticky top-[53px] z-10">
+            <div className="border-b border-neutral-800/30 bg-background/95 backdrop-blur-md sticky top-[57px] z-10">
                 {/* Sort & Filter Row */}
-                <div className="px-4 py-3 flex items-center justify-between gap-3">
+                <div className="px-6 py-3 flex items-center justify-between gap-3">
                     {/* Left: Sort Dropdown */}
                     <div className="relative">
                         <button
                             onClick={() => setShowSortDropdown(!showSortDropdown)}
-                            className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-neutral-900"
+                            className="flex items-center gap-2 text-sm font-medium hover:text-foreground transition-all duration-150 px-3 py-1.5 rounded-md hover:bg-neutral-800"
                         >
-                            <span className="font-medium">{currentSort?.label}</span>
+                            <span>{currentSort?.label}</span>
                             <ChevronDown className="h-4 w-4" />
                         </button>
 
@@ -215,8 +215,8 @@ export function FeedControls({ filters, onFiltersChange }: FeedControlsProps) {
                                                 key={category.id}
                                                 onClick={() => handleCategoryToggle(category.slug)}
                                                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${isSelected
-                                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                                                        : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
+                                                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white'
                                                     }`}
                                             >
                                                 {category.icon && <span className="mr-1.5">{category.icon}</span>}

@@ -144,18 +144,6 @@ function App() {
               <Route path="/messages" element={<Messages />} />
 
               <Route
-                path="/bookmarks"
-                element={
-                  <MainLayout showRightSidebar={true}>
-                    <div className="p-8 text-center">
-                      <h1 className="text-2xl font-bold mb-2">Bookmarks</h1>
-                      <p className="text-neutral-500">Coming soon...</p>
-                    </div>
-                  </MainLayout>
-                }
-              />
-
-              <Route
                 path="/network"
                 element={
                   <MainLayout showRightSidebar={true}>

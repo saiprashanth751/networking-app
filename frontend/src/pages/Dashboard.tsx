@@ -47,8 +47,8 @@ export default function Dashboard() {
             />
 
             {/* Page Header - Sticky */}
-            <div className="sticky top-0 z-10 backdrop-blur-md bg-black/80 border-b border-neutral-800">
-                <div className="px-4 py-3">
+            <div className="sticky top-0 z-10 backdrop-blur-md bg-background/95 border-b border-neutral-800/30">
+                <div className="px-6 py-4">
                     <h1 className="text-xl font-bold">Home</h1>
                 </div>
             </div>
@@ -59,20 +59,20 @@ export default function Dashboard() {
                 onFiltersChange={(newFilters) => setFilters(newFilters)}
             />
 
-            {/* Create Post Prompt - Twitter Style */}
-            <div className="border-b border-neutral-800 px-4 py-3">
-                <div className="flex gap-3">
-                    <Avatar className="h-10 w-10 shrink-0">
+            {/* Create Post Prompt */}
+            <div className="border-b border-neutral-800/30 px-6 py-5 hover:bg-neutral-900/20 transition-all duration-150">
+                <div className="flex gap-4">
+                    <Avatar className="h-11 w-11 shrink-0">
                         <AvatarImage src={currentProfile?.profilePic} />
-                        <AvatarFallback className="bg-muted text-xs">
+                        <AvatarFallback className="bg-neutral-800 text-xs">
                             {getUserInitials()}
                         </AvatarFallback>
                     </Avatar>
                     <button
                         onClick={() => setIsCreatePostOpen(true)}
-                        className="flex-1 text-left text-neutral-500 text-[20px] py-2 hover:text-white transition-colors"
+                        className="flex-1 text-left text-muted-foreground text-base py-3 px-5 rounded-full bg-neutral-900 hover:bg-neutral-800 transition-all duration-150 border border-neutral-800"
                     >
-                        What's happening?
+                        What's on your mind?
                     </button>
                 </div>
             </div>

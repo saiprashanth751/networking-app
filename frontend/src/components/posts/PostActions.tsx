@@ -92,27 +92,27 @@ export function PostActions({
     };
 
     return (
-        <div className="flex items-center justify-between text-muted-foreground mt-3">
+        <div className="flex items-center justify-between text-muted-foreground mt-4 pt-3 border-t border-neutral-800/50">
             {/* Comment */}
             <button
                 onClick={handleCommentClick}
-                className="flex items-center gap-1 hover:text-blue-500 transition-colors group"
+                className="flex items-center gap-2 hover:text-blue-500 transition-all duration-150 group"
                 aria-label="Comment on post"
             >
-                <div className="group-hover:bg-blue-500/10 rounded-full p-2 transition-colors">
+                <div className="group-hover:bg-blue-500/10 rounded-full p-2 transition-all duration-150">
                     <MessageCircle className="h-[18px] w-[18px]" />
                 </div>
-                <span className="text-[13px]">{commentsCount || 0}</span>
+                <span className="text-sm text-muted-foreground">{commentsCount || 0}</span>
             </button>
 
             {/* Repost */}
             <button
                 onClick={() => handleShare()}
                 disabled={recordShareMutation.isPending}
-                className="flex items-center gap-1 hover:text-green-500 transition-colors group"
+                className="flex items-center gap-2 hover:text-green-500 transition-all duration-150 group"
                 aria-label="Share post"
             >
-                <div className="group-hover:bg-green-500/10 rounded-full p-2 transition-colors">
+                <div className="group-hover:bg-green-500/10 rounded-full p-2 transition-all duration-150">
                     <Share2 className="h-[18px] w-[18px]" />
                 </div>
             </button>
@@ -122,18 +122,18 @@ export function PostActions({
                 onClick={handleLike}
                 disabled={toggleLikeMutation.isPending}
                 className={cn(
-                    "flex items-center gap-1 transition-colors group",
+                    "flex items-center gap-2 transition-all duration-150 group",
                     liked ? "text-red-500" : "hover:text-red-500"
                 )}
                 aria-label={liked ? "Unlike post" : "Like post"}
             >
                 <div className={cn(
-                    "rounded-full p-2 transition-colors",
+                    "rounded-full p-2 transition-all duration-150",
                     liked ? "bg-red-500/10" : "group-hover:bg-red-500/10"
                 )}>
                     <Heart className={cn("h-[18px] w-[18px]", liked && "fill-current")} />
                 </div>
-                <span className="text-[13px]">{currentLikes}</span>
+                <span className="text-sm text-muted-foreground">{currentLikes}</span>
             </button>
 
             {/* Bookmark */}
@@ -141,13 +141,13 @@ export function PostActions({
                 onClick={handleBookmark}
                 disabled={toggleBookmarkMutation.isPending}
                 className={cn(
-                    "transition-colors group",
+                    "transition-all duration-150 group",
                     bookmarked ? "text-blue-500" : "hover:text-blue-500"
                 )}
                 aria-label={bookmarked ? "Remove bookmark" : "Bookmark post"}
             >
                 <div className={cn(
-                    "rounded-full p-2 transition-colors",
+                    "rounded-full p-2 transition-all duration-150",
                     bookmarked ? "bg-blue-500/10" : "group-hover:bg-blue-500/10"
                 )}>
                     <Bookmark className={cn("h-[18px] w-[18px]", bookmarked && "fill-current")} />
