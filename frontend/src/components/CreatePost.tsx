@@ -2,8 +2,20 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { useCreatePost } from '@/hooks/mutations/post';
 import { CreatePostInput, PostLabel } from '@/types/types';
+import { useCurrentUser } from "@/hooks/queries/user";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Image, Link2, X, Sparkles } from "lucide-react";
+import { useCurrentProfile } from '@/hooks/queries/profile';
+import { SPACING, Small, Caption } from "@/components/layout";
 
-const labelsList : PostLabel[] = [
+const labelsList: PostLabel[] = [
     "Achievements",
     "Study Resources",
     "Collaboration Requests",
@@ -12,31 +24,30 @@ const labelsList : PostLabel[] = [
     "Research & Innovations",
     "Bounty",
     "Contribution",
-]
+];
 
-function Label({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
+function LabelSelector({ 
+    selectedLabels, 
+    onLabelClick 
+}: { 
+    selectedLabels: PostLabel[]; 
+    onLabelClick: (label: PostLabel) => void 
+}) {
     return (
-        <button
-            onClick={onClick}
-            className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                selected ? "bg-blue-500 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-        >
-            {label}
-        </button>
-    );
-}
-
-function LabelSelector({ selectedLabels, onLabelClick }: { selectedLabels: PostLabel[]; onLabelClick: (label: PostLabel) => void }) {
-    return (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className={`flex flex-wrap ${SPACING.inline.sm}`}>
             {labelsList.map((label) => (
-                <Label
+                <Badge
                     key={label}
-                    label={label}
-                    selected={selectedLabels.includes(label)}
+                    variant={selectedLabels.includes(label) ? "default" : "outline"}
+                    className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-all hover:scale-105 ${
+                        selectedLabels.includes(label)
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                            : "hover:bg-accent hover:text-accent-foreground"
+                    }`}
                     onClick={() => onLabelClick(label)}
-                />
+                >
+                    {label}
+                </Badge>
             ))}
         </div>
     );
@@ -48,9 +59,16 @@ export function CreatePost() {
     const [description, setDescription] = useState('');
     const [labels, setLabels] = useState<PostLabel[]>([]);
     const [photos, setPhotos] = useState<File[]>([]);
-    const [links, setLinks] = useState<string[]>([]);
+    const [links, setLinks] = useState<string[]>(['']);
+    
+    // Get current user
+    const { data: currentUserData } = useCurrentUser();
+    const currentUser = currentUserData?.user;
 
-    //  Use the mutation hook
+    const { data: currentProfileData } = useCurrentProfile();
+    const currentProfile = currentProfileData?.profile;
+
+    // Use the mutation hook
     const createPostMutation = useCreatePost();
 
     const handleLabelClick = (label: PostLabel) => {
@@ -61,22 +79,46 @@ export function CreatePost() {
         }
     };
 
+    const handleLinkChange = (index: number, value: string) => {
+        const newLinks = [...links];
+        newLinks[index] = value;
+        setLinks(newLinks);
+    };
+
+    const addLinkField = () => {
+        setLinks([...links, '']);
+    };
+
+    const removeLinkField = (index: number) => {
+        if (links.length > 1) {
+            const newLinks = links.filter((_, i) => i !== index);
+            setLinks(newLinks);
+        }
+    };
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        setPhotos(files);
+    };
+
+    const removePhoto = (index: number) => {
+        setPhotos(photos.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = async () => {
         if (!title.trim() || !description.trim()) {
             toast.warning('Title and description are required.');
             return;
         }
 
-        // Prepare the data according to CreatePostInput type
         const postData: CreatePostInput = {
             title: title.trim(),
             description: description.trim(),
             labels,
-            links: links.filter(link => link.trim() !== ''), // Filter empty links
-            photos, // File array
+            links: links.filter(link => link.trim() !== ''),
+            photos,
         };
 
-        // ✅ Use mutation - it handles success/error automatically
         createPostMutation.mutate(postData, {
             onSuccess: () => {
                 // Reset form after successful post
@@ -85,97 +127,222 @@ export function CreatePost() {
                 setDescription('');
                 setLabels([]);
                 setPhotos([]);
-                setLinks([]);
+                setLinks(['']);
             },
-            // Error handling is already done globally in queryClient.ts
-            // But you can add custom error handling here if needed
         });
     };
 
+    const getUserInitials = () => {
+        if (!currentUser) return "U";
+        return `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}`.toUpperCase();
+    };
+
     return (
-        <div className="bg-gray-900 text-white p-4 rounded-lg shadow-md mb-6">
-            {!isFormVisible ? (
-                <input
-                    type="text"
-                    placeholder="What's on your mind?"
-                    onClick={() => setIsFormVisible(true)}
-                    className="w-full p-2 mb-4 border border-gray-700 rounded bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            ) : (
-                <div className="transition-all duration-300 ease-in-out">
-                    <h3 className="text-xl font-bold mb-4">Create Post</h3>
-                    
-                    <input
-                        type="text"
-                        placeholder="Title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full p-2 mb-4 border border-gray-700 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    
-                    <textarea
-                        placeholder="Description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full p-2 mb-4 border border-gray-700 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={4}
-                    />
-                    
-                    <LabelSelector selectedLabels={labels} onLabelClick={handleLabelClick} />
-                    
-                    <div className="mb-4">
-                        <label className="block mb-2 text-sm font-medium">Photos (optional)</label>
-                        <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={(e) => setPhotos(Array.from(e.target.files || []))}
-                            className="w-full p-2 border border-gray-700 rounded bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {photos.length > 0 && (
-                            <p className="text-sm text-gray-400 mt-1">
-                                {photos.length} file{photos.length > 1 ? 's' : ''} selected
-                            </p>
-                        )}
-                    </div>
-                    
-                    <div className="mb-4">
-                        <label className="block mb-2 text-sm font-medium">Links (optional)</label>
-                        <input
-                            type="text"
-                            placeholder="Add links separated by commas"
-                            value={links.join(', ')}
-                            onChange={(e) => setLinks(e.target.value.split(',').map(link => link.trim()))}
-                            className="w-full p-2 border border-gray-700 rounded bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-                    
-                    <div className="flex justify-end gap-2">
+        <Card className="border-border bg-card shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className={SPACING.container.sm}>
+                {!isFormVisible ? (
+                    /* Collapsed State - Mobile First */
+                    <div className={`flex items-center ${SPACING.inline.sm}`}>
+                        <Avatar className="h-10 w-10 border-2 border-border shrink-0">
+                            <AvatarImage 
+                                src={currentProfile?.profilePic} 
+                                alt={currentUser?.firstName}
+                            />
+                            <AvatarFallback className="bg-muted text-muted-foreground">
+                                {getUserInitials()}
+                            </AvatarFallback>
+                        </Avatar>
                         <button
-                            onClick={() => {
-                                setIsFormVisible(false);
-                                // Reset form on cancel
-                                setTitle('');
-                                setDescription('');
-                                setLabels([]);
-                                setPhotos([]);
-                                setLinks([]);
-                            }}
-                            disabled={createPostMutation.isPending}
-                            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setIsFormVisible(true)}
+                            className="flex-1 text-left px-4 py-2.5 rounded-full border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all text-sm font-medium"
                         >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={createPostMutation.isPending}
-                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
-                        >
-                            {createPostMutation.isPending ? 'Posting...' : 'Post'}
+                            Share something...
                         </button>
                     </div>
-                </div>
-            )}
-        </div>
+                ) : (
+                    /* Expanded State - Full Form */
+                    <div className={`${SPACING.stack.md} animate-in`}>
+                        {/* Header */}
+                        <div className={`flex items-center ${SPACING.inline.sm}`}>
+                            <Avatar className="h-10 w-10 border-2 border-border shrink-0">
+                                <AvatarImage 
+                                    src={currentProfile?.profilePic} 
+                                    alt={currentUser?.firstName}
+                                />
+                                <AvatarFallback className="bg-muted text-muted-foreground">
+                                    {getUserInitials()}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                                <Small className="font-semibold">
+                                    {currentUser?.firstName} {currentUser?.lastName}
+                                </Small>
+                                <Caption>Create a post</Caption>
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Title Input */}
+                        <div className={SPACING.stack.sm}>
+                            <Label htmlFor="title" className="text-sm font-medium">
+                                Title
+                            </Label>
+                            <Input
+                                id="title"
+                                type="text"
+                                placeholder="Give your post a title..."
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="border-border focus-visible:ring-2"
+                            />
+                        </div>
+
+                        {/* Description Textarea */}
+                        <div className={SPACING.stack.sm}>
+                            <Label htmlFor="description" className="text-sm font-medium">
+                                Description
+                            </Label>
+                            <Textarea
+                                id="description"
+                                placeholder="Share your thoughts, ideas, or updates..."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="border-border resize-none min-h-[100px] md:min-h-[120px] focus-visible:ring-2"
+                                rows={5}
+                            />
+                        </div>
+
+                        {/* Labels */}
+                        <div className={SPACING.stack.sm}>
+                            <Label className="text-sm font-medium flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-primary" />
+                                Categories (optional)
+                            </Label>
+                            <LabelSelector 
+                                selectedLabels={labels} 
+                                onLabelClick={handleLabelClick} 
+                            />
+                        </div>
+
+                        {/* Photo Upload */}
+                        <div className={SPACING.stack.sm}>
+                            <Label htmlFor="photos" className="text-sm font-medium flex items-center gap-2">
+                                <Image className="h-4 w-4 text-primary" />
+                                Photos (optional)
+                            </Label>
+                            <Input
+                                id="photos"
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handlePhotoChange}
+                                className="border-border file:mr-4 file:px-4 file:py-2 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                            />
+                            {photos.length > 0 && (
+                                <div className={`flex flex-wrap ${SPACING.inline.sm} mt-2`}>
+                                    {photos.map((photo, index) => (
+                                        <div 
+                                            key={index}
+                                            className="relative group"
+                                        >
+                                            <div className="h-20 w-20 rounded-lg border-2 border-border overflow-hidden bg-muted">
+                                                <img
+                                                    src={URL.createObjectURL(photo)}
+                                                    alt={`Preview ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => removePhoto(index)}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Links */}
+                        <div className={SPACING.stack.sm}>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium flex items-center gap-2">
+                                    <Link2 className="h-4 w-4 text-primary" />
+                                    Links (optional)
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={addLinkField}
+                                    className="h-8 text-xs"
+                                >
+                                    + Add Link
+                                </Button>
+                            </div>
+                            <div className={SPACING.stack.sm}>
+                                {links.map((link, index) => (
+                                    <div key={index} className={`flex ${SPACING.inline.sm}`}>
+                                        <Input
+                                            type="url"
+                                            placeholder="https://example.com"
+                                            value={link}
+                                            onChange={(e) => handleLinkChange(index, e.target.value)}
+                                            className="border-border"
+                                        />
+                                        {links.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeLinkField(index)}
+                                                className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Action Buttons - Mobile Optimized */}
+                        <div className={`flex flex-col-reverse sm:flex-row justify-end ${SPACING.inline.sm}`}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsFormVisible(false);
+                                    setTitle('');
+                                    setDescription('');
+                                    setLabels([]);
+                                    setPhotos([]);
+                                    setLinks(['']);
+                                }}
+                                disabled={createPostMutation.isPending}
+                                className="w-full sm:w-auto"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={createPostMutation.isPending}
+                                className="w-full sm:w-auto"
+                            >
+                                {createPostMutation.isPending ? 'Posting...' : 'Post'}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 }

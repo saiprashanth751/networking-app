@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -23,6 +20,7 @@ model User {
   isOnline Boolean @default(false)
   profile Profile?
   posts Post[]
+  projects Project[]  // NEW: User can have multiple projects
   createdAt DateTime @default(now())
 
   messageSent Message[] @relation("MessageSent")
@@ -58,7 +56,7 @@ model Follow {
   @@unique([followerId, followingId])
 }
 
-model Post{
+model Post {
   id String @id @default(uuid())
   title String
   description String
@@ -70,7 +68,7 @@ model Post{
   createdAt DateTime @default(now())
 }
 
-model Message{
+model Message {
   id String @id @default(uuid())
   senderId String
   receiverId String
@@ -81,5 +79,37 @@ model Message{
   sender User @relation("MessageSent", fields: [senderId], references: [id])
   receiver User @relation("MessageReceived", fields: [receiverId], references: [id])
 
-  @@index([senderId,receiverId])
+  @@index([senderId, receiverId])
+}
+
+model Project {
+  id String @id @default(uuid())
+
+  title String
+  description String
+  tagline String?
+
+  coverImage String?
+  images String[]
+
+  techStack String[]
+  category String?
+
+  repositoryUrl String?
+  liveUrl String?
+  demoVideoUrl String?
+
+  featured Boolean @default(false)
+  status String @default("completed")
+  startDate DateTime?
+  endDate DateTime?
+  
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([featured, userId])
 }

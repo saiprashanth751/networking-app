@@ -74,6 +74,14 @@ export const getFollowers = asyncHandler(async (req: AuthRequest, res: Response)
                 select: {
                     id: true,
                     firstName: true,
+                    lastName: true,  // ✅ ADD THIS
+                    profile: {        // ✅ ADD THIS
+                        select: {
+                            profilePic: true,
+                            bio: true,
+                            department: true,
+                        }
+                    }
                 },
             },
         },
@@ -84,17 +92,36 @@ export const getFollowers = asyncHandler(async (req: AuthRequest, res: Response)
         count: followers.length,
     });
 });
+
 export const getNativeFollowers = asyncHandler(async (req: AuthRequest, res:Response) => {
     const userId = req.query.id as string
+    
+    // ✅ FIXED: Include user data in the query
     const followers = await prisma.follow.findMany({
         where:{
             followingId: userId,
+        },
+        include: {
+            follower: {  // ✅ Include the actual follower user data
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true,
+                            bio: true,
+                            department: true,
+                        }
+                    }
+                }
+            }
         }
     })
 
-
+    // ✅ FIXED: Map to return user objects, not Follow objects
     return res.status(200).json({
-        followers,
+        followers: followers.map(follow => follow.follower),  // Extract user data
         count: followers.length
     })
 })
@@ -111,6 +138,14 @@ export const getFollowing = asyncHandler(async (req: AuthRequest, res: Response)
                 select: {
                     id: true,
                     firstName: true,
+                    lastName: true,  // ✅ ADD THIS
+                    profile: {        // ✅ ADD THIS
+                        select: {
+                            profilePic: true,
+                            bio: true,
+                            department: true,
+                        }
+                    }
                 },
             },
         },
@@ -124,17 +159,35 @@ export const getFollowing = asyncHandler(async (req: AuthRequest, res: Response)
 
 export const getNativeFollowing = asyncHandler(async(req:AuthRequest, res:Response) => {
     const userId = req.query.id as string
+    
+    // ✅ FIXED: Include user data in the query
     const followingUsers = await prisma.follow.findMany({
         where: {
             followerId: userId,
+        },
+        include: {
+            following: {  // ✅ Include the actual following user data
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profile: {
+                        select: {
+                            profilePic: true,
+                            bio: true,
+                            department: true,
+                        }
+                    }
+                }
+            }
         }
     })
     
+    // ✅ FIXED: Map to return user objects, not Follow objects
     return res.status(200).json({
-        followingUsers,
+        following: followingUsers.map(follow => follow.following),  // Extract user data
         count: followingUsers.length
     })
-
 })
 
 
