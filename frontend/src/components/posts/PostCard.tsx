@@ -106,16 +106,16 @@ export function PostCard({
     };
 
     return (
-        <article className="mx-2 my-2 px-6 py-5 rounded-xl hover:bg-neutral-900/30 transition-all duration-150 border border-neutral-800/50">
-            <div className="flex gap-4">
+        <article className="mx-2 my-2 px-5 py-4 rounded-xl hover:bg-neutral-900/30 transition-all duration-150 border border-neutral-800/50">
+            <div className="flex gap-2.5">
                 {/* Avatar */}
                 <Link to={profileLink} className="shrink-0">
-                    <Avatar className="h-11 w-11 hover:opacity-80 transition-opacity">
+                    <Avatar className="h-10 w-10 hover:opacity-80 transition-opacity">
                         <AvatarImage
                             src={profilePic}
                             alt={`${post.user.firstName} ${post.user.lastName}`}
                         />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
                             {getUserInitials()}
                         </AvatarFallback>
                     </Avatar>

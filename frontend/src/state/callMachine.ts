@@ -245,10 +245,52 @@ export const createCallMachine = () =>
             target: 'ending'
           },
 
+          // ✅ FIX: Go to reconnecting instead of ending on connection failure
           WEBRTC_FAILED: {
-            target: 'ending',
+            target: 'reconnecting',
             actions: assign(({ event }) => ({
               connectionError: event.error || 'Connection lost'
+            }))
+          }
+        }
+      },
+
+      // ============================================================
+      // RECONNECTING - ✅ NEW STATE
+      // ============================================================
+      reconnecting: {
+        entry: () => {
+          logger.info('STATE: Entered reconnecting, will attempt recovery');
+          console.log('[CallMachine] Attempting to reconnect...');
+        },
+
+        after: {
+          // 10 second timeout for reconnection
+          10000: {
+            target: 'ending',
+            actions: assign({
+              connectionError: 'Failed to reconnect'
+            })
+          }
+        },
+
+        on: {
+          WEBRTC_CONNECTED: {
+            target: 'active',
+            actions: assign({
+              connectionError: null,
+              isConnected: true
+            })
+          },
+
+          CALL_END: {
+            target: 'ending'
+          },
+
+          WEBRTC_FAILED: {
+            // Stay in reconnecting, let timeout handle
+            actions: assign(({ event }) => ({
+              connectionError: event.error || 'Reconnection failed'
             }))
           }
         }

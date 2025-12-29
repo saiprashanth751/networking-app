@@ -18,7 +18,6 @@ export function PostActions({
     postId,
     likesCount,
     commentsCount,
-    sharesCount,
     bookmarksCount,
     isLiked = false,
     isBookmarked = false,

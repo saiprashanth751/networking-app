@@ -90,8 +90,35 @@ const activeCallStates = new Map<string, {
   state: 'ringing' | 'active';
   callerId: string;
   receiverId: string;
+  createdAt: number;  // ✅ Added for TTL tracking
   timeout?: NodeJS.Timeout;
 }>();
+
+// ✅ FIX: TTL cleanup for activeCallStates to prevent memory leak
+// Runs every 60 seconds, removes calls older than 2 minutes
+setInterval(() => {
+  const now = Date.now();
+  let cleanedCount = 0;
+
+  activeCallStates.forEach((state, callId) => {
+    const age = now - state.createdAt;
+    if (age > 120000) {  // 2 minutes
+      console.log(`[CLEANUP] Removing stale call state: ${callId}, age: ${Math.floor(age / 1000)}s`);
+
+      // Clear timeout if exists
+      if (state.timeout) {
+        clearTimeout(state.timeout);
+      }
+
+      activeCallStates.delete(callId);
+      cleanedCount++;
+    }
+  });
+
+  if (cleanedCount > 0) {
+    console.log(`[CLEANUP] Cleaned ${cleanedCount} stale call states, remaining: ${activeCallStates.size}`);
+  }
+}, 60000);  // Run every 60 seconds
 
 // Authenticate Socket.IO connections
 io.use((socket, next) => {
@@ -510,12 +537,22 @@ io.on("connection", (socket) => {
       logger.info('Call record created', { callId: callRecord.id, callerId: senderId, receiverId, callType });
       console.log(`[CALL] Call record created: ${callRecord.id}`);
 
+      // ✅ Analytics: Log call initiation
+      console.log('[ANALYTICS] Call initiated', {
+        callId: callRecord.id,
+        callerId: senderId,
+        receiverId,
+        type: callType,
+        timestamp: new Date().toISOString()
+      });
+
       // Store call state for idempotency
       activeCallStates.set(callRecord.id, {
         callId: callRecord.id,
         state: 'ringing',
         callerId: senderId,
-        receiverId: receiverId
+        receiverId: receiverId,
+        createdAt: Date.now()  // ✅ Added for TTL tracking
       });
 
       logger.info('SOCKET EMIT: incomingCall', { callId: callRecord.id, receiverId, callerName: `${caller.firstName} ${caller.lastName || ''}`.trim() });
@@ -560,7 +597,7 @@ io.on("connection", (socket) => {
             console.error("[CALL] Error handling timeout:", error);
           }
         }
-      }, 31000); // 30 seconds
+      }, 30000); // \u2705 Backend timeout authority: 30 seconds
 
       // Store timeout handle
       const state = activeCallStates.get(callRecord.id);

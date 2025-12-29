@@ -393,7 +393,7 @@ export function ChatThread({ userId, onBack, socket }: ChatThreadProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-black">
       <ChatHeader user={otherUser} socket={socket} onBack={onBack} />
 
       {/* 🔥 OFFLINE INDICATOR */}

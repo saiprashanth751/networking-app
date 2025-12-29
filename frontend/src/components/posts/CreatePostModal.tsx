@@ -15,9 +15,9 @@ import { CategorySelector } from './CategorySelector';
 import { DraftRecovery } from './DraftRecovery';
 import { useCategories } from '@/hooks/queries/category';
 import { useCreatePost } from '@/hooks/mutations/post';
-import { CreatePostInput } from '@/types/types';
+// import { CreatePostInput } from '@/types/types';
 import { toast } from 'react-toastify';
-import { mediaService } from '@/api/media';
+import { mediaService } from '@/api/media'
 import { postService } from '@/api/post';
 
 interface CreatePostModalProps {
