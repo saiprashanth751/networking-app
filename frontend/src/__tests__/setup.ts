@@ -23,12 +23,23 @@ global.navigator.mediaDevices = {
     enumerateDevices: vi.fn().mockResolvedValue([])
 } as any;
 
-// Mock BroadcastChannel
-global.BroadcastChannel = vi.fn().mockImplementation(() => ({
-    postMessage: vi.fn(),
-    close: vi.fn(),
-    onmessage: null
-})) as any;
+// Mock BroadcastChannel - FIXED
+class MockBroadcastChannel {
+    name: string;
+    onmessage: ((event: any) => void) | null = null;
+
+    constructor(name: string) {
+        this.name = name;
+    }
+
+    postMessage = vi.fn();
+    close = vi.fn();
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
+    dispatchEvent = vi.fn();
+}
+
+global.BroadcastChannel = MockBroadcastChannel as any;
 
 // ✅ Hard-mock SimplePeer to prevent instantiation
 vi.mock('simple-peer', () => ({
@@ -41,6 +52,13 @@ vi.mock('simple-peer', () => ({
             getStats: vi.fn().mockResolvedValue(new Map())
         }
     }))
+}));
+
+// Mock errorTracker
+vi.mock('@/lib/errorTracker', () => ({
+    errorTracker: {
+        track: vi.fn()
+    }
 }));
 
 /**

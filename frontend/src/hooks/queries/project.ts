@@ -3,11 +3,21 @@ import { queryKeys } from "@/lib/queryClient";
 import { Project } from "@/types/types";
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 
-// Get all projects
-export const useAllProjects = (options?: Omit<UseQueryOptions<{ projects: Project[] }, Error>, 'queryKey' | 'queryFn'>) => {
+// Get projects with optional parameters
+export const useProjects = (
+  params?: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    search?: string;
+    sortBy?: string;
+    featured?: boolean;
+  },
+  options?: Omit<UseQueryOptions<{ projects: Project[] }, Error>, 'queryKey' | 'queryFn'>
+) => {
   return useQuery({
-    queryKey: queryKeys.projects.all,
-    queryFn: projectService.getAllProjects,
+    queryKey: queryKeys.projects.list(params),
+    queryFn: () => projectService.getAllProjects(params),
     ...options,
   });
 };

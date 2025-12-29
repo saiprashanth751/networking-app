@@ -47,8 +47,8 @@ export function ProjectList({ projects, showActions = false, emptyStateAction }:
                 </div>
             )}
 
-            {/* Project Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Project List */}
+            <div className="flex flex-col gap-4">
                 {projects.map((project) => (
                     <ProjectCard
                         key={project.id}

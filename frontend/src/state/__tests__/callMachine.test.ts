@@ -3,6 +3,19 @@ import { createCallMachine } from '../callMachine';
 import { createActor } from 'xstate';
 import type { CallParticipant } from '@/types/types';
 
+/**
+ * Call State Machine Tests
+ * 
+ * These tests protect call flow invariants (transitions, timeouts, error states).
+ * Other layers (hooks, UI, WebRTC) are intentionally untested due to:
+ * - Async/media complexity
+ * - Mock instability  
+ * - System still evolving
+ * 
+ * Revisit full test coverage when the system stabilizes (~2-3 weeks).
+ */
+
+
 describe('Call State Machine', () => {
     const mockCallDetails = {
         id: 'call-123',

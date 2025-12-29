@@ -63,6 +63,24 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
     const [existingCoverImage, setExistingCoverImage] = useState<string | undefined>(project?.coverImage);
     const [existingImages, setExistingImages] = useState<string[]>(project?.images || []);
 
+    // Wrapper to log state changes
+    const setCoverImageWithLog = (files: File[]) => {
+        console.log('🖼️ [ProjectForm] Cover image state updated:', {
+            count: files.length,
+            fileName: files[0]?.name,
+            fileType: files[0]?.constructor?.name,
+        });
+        setCoverImage(files);
+    };
+
+    const setImagesWithLog = (files: File[]) => {
+        console.log('🖼️ [ProjectForm] Images state updated:', {
+            count: files.length,
+            firstFileName: files[0]?.name,
+        });
+        setImages(files);
+    };
+
     const { mutate: createProject, isPending: isCreating } = useCreateProject({
         onSuccess: () => {
             onOpenChange(false);
@@ -128,16 +146,43 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
     }, [project, open, setValue]);
 
     const onSubmit = (data: ProjectFormData) => {
-        const submitData = {
-            ...data,
-            coverImage: coverImage[0],
-            images: images,
+        // Prepare the submission data with proper file handling
+        const submitData: any = {
+            title: data.title,
+            description: data.description,
+            tagline: data.tagline,
+            techStack: data.techStack,
+            category: data.category,
+            status: data.status,
+            repositoryUrl: data.repositoryUrl,
+            liveUrl: data.liveUrl,
+            demoVideoUrl: data.demoVideoUrl,
+            startDate: data.startDate,
+            endDate: data.endDate,
         };
 
+        // Add coverImage only if a new file was selected
+        // Note: After compression, files become Blob objects, not File objects
+        if (coverImage.length > 0 && coverImage[0] instanceof Blob) {
+            submitData.coverImage = coverImage[0];
+        }
+
+        // Add images only if new files were selected
+        if (images.length > 0 && images.every(img => img instanceof Blob)) {
+            submitData.images = images;
+        }
+
+        console.log('🔍 [Submit Data]', {
+            hasCoverImage: !!submitData.coverImage,
+            coverImageType: submitData.coverImage?.constructor?.name,
+            imagesCount: submitData.images?.length || 0,
+            firstImageType: submitData.images?.[0]?.constructor?.name,
+        });
+
         if (isEditMode) {
-            updateProject(submitData as any);
+            updateProject(submitData);
         } else {
-            createProject(submitData as any);
+            createProject(submitData);
         }
     };
 
@@ -263,7 +308,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                         label="Cover Image"
                         multiple={false}
                         maxFiles={1}
-                        onImagesChange={setCoverImage}
+                        onImagesChange={setCoverImageWithLog}
                         existingImages={existingCoverImage ? [existingCoverImage] : []}
                         onRemoveExisting={() => setExistingCoverImage(undefined)}
                     />
@@ -273,7 +318,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                         label="Additional Images (Optional)"
                         multiple={true}
                         maxFiles={6}
-                        onImagesChange={setImages}
+                        onImagesChange={setImagesWithLog}
                         existingImages={existingImages}
                         onRemoveExisting={(url) => setExistingImages(prev => prev.filter(img => img !== url))}
                     />

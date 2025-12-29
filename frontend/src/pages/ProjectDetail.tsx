@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,6 +34,9 @@ import {
     Share2,
     Loader2,
     Briefcase,
+    Code,
+    FileText,
+    User,
 } from "lucide-react";
 import { useProject } from '@/hooks/queries/project';
 import { useCurrentUser } from '@/hooks/queries/user';
@@ -66,11 +70,22 @@ export default function ProjectDetail() {
         : project?.images || [];
 
     const formatDate = (dateString?: string) => {
-        if (!dateString) return null;
+        if (!dateString) return 'Present';
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             year: 'numeric',
         });
+    };
+
+    const getStatusColor = (status?: string) => {
+        switch (status) {
+            case 'completed':
+                return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+            case 'in-progress':
+                return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+            default:
+                return 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20';
+        }
     };
 
     const handleShare = async () => {
@@ -86,7 +101,6 @@ export default function ProjectDetail() {
             }
         } else {
             navigator.clipboard.writeText(window.location.href);
-            // Could add toast notification here
         }
     };
 
@@ -125,38 +139,37 @@ export default function ProjectDetail() {
     return (
         <>
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-sm border-b border-neutral-800">
-                <div className="flex items-center justify-between px-4 h-[53px]">
-                    <div className="flex items-center gap-8">
-                        <button
+            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
+                <div className="flex items-center justify-between px-6 h-14">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => navigate(-1)}
-                            className="hover:bg-neutral-900 rounded-full p-2 transition-colors"
+                            className="h-8 w-8"
                         >
-                            <ArrowLeft className="h-5 w-5" />
-                        </button>
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
                         <div className="flex flex-col">
-                            <h1 className="font-bold text-xl line-clamp-1">{project.title}</h1>
-                            <span className="text-neutral-500 text-[13px]">
+                            <span className="text-sm font-semibold text-foreground line-clamp-1">
+                                {project.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
                                 {project.user.firstName} {project.user.lastName}
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleShare}
-                            className="rounded-full"
-                        >
-                            <Share2 className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8">
+                            <Share2 className="h-4 w-4" />
                         </Button>
 
                         {isOwner && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="rounded-full">
-                                        <MoreHorizontal className="h-5 w-5" />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
@@ -183,191 +196,236 @@ export default function ProjectDetail() {
             </div>
 
             {/* Content */}
-            <div className="max-w-4xl mx-auto pb-8">
-                {/* Image Gallery */}
-                {allImages.length > 0 && (
-                    <div className="mb-6">
-                        {/* Main Image */}
-                        <div className="aspect-video bg-neutral-900 overflow-hidden">
-                            <img
-                                src={allImages[selectedImageIndex]}
-                                alt={project.title}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-
-                        {/* Thumbnail Navigation */}
-                        {allImages.length > 1 && (
-                            <div className="flex gap-2 mt-2 px-4 overflow-x-auto pb-2">
-                                {allImages.map((img, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setSelectedImageIndex(index)}
-                                        className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${selectedImageIndex === index
-                                            ? 'border-blue-500'
-                                            : 'border-transparent opacity-60 hover:opacity-100'
-                                            }`}
-                                    >
-                                        <img
-                                            src={img}
-                                            alt={`Thumbnail ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div className="px-4 space-y-6">
-                    {/* Title and Badges */}
-                    <div>
-                        <div className="flex items-start justify-between gap-4 mb-3">
-                            <div>
-                                <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
-                                {project.tagline && (
-                                    <p className="text-lg text-neutral-400">{project.tagline}</p>
-                                )}
-                            </div>
-                            <div className="flex gap-2 flex-shrink-0">
-                                {project.featured && (
-                                    <Badge className="bg-yellow-500/90 text-black border-0 gap-1">
-                                        <Star className="h-3 w-3 fill-current" />
-                                        Featured
-                                    </Badge>
-                                )}
-                                <Badge
-                                    variant="secondary"
-                                    className={`${project.status === 'completed'
-                                        ? 'bg-green-500/10 text-green-500'
-                                        : project.status === 'in-progress'
-                                            ? 'bg-blue-500/10 text-blue-500'
-                                            : 'bg-neutral-500/10 text-neutral-500'
-                                        }`}
-                                >
-                                    {project.status}
-                                </Badge>
-                            </div>
-                        </div>
-
-                        {/* Date Range */}
-                        {(project.startDate || project.endDate) && (
-                            <div className="flex items-center gap-2 text-sm text-neutral-500 mb-4">
-                                <Calendar className="h-4 w-4" />
-                                <span>
-                                    {formatDate(project.startDate)}
-                                    {project.endDate && ` - ${formatDate(project.endDate)}`}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                        <h2 className="text-xl font-bold mb-3">About</h2>
-                        <p className="text-neutral-300 leading-relaxed whitespace-pre-wrap">
-                            {project.description}
-                        </p>
-                    </div>
-
-                    {/* Tech Stack */}
-                    {project.techStack && project.techStack.length > 0 && (
-                        <div>
-                            <h2 className="text-xl font-bold mb-3">Tech Stack</h2>
-                            <div className="flex flex-wrap gap-2">
-                                {project.techStack.map((tech, index) => (
-                                    <Badge
-                                        key={index}
-                                        variant="outline"
-                                        className="bg-blue-500/10 text-blue-500 border-blue-500/20"
-                                    >
-                                        {tech}
-                                    </Badge>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Links */}
-                    {(project.repositoryUrl || project.liveUrl || project.demoVideoUrl) && (
-                        <div>
-                            <h2 className="text-xl font-bold mb-3">Links</h2>
-                            <div className="flex flex-wrap gap-3">
-                                {project.repositoryUrl && (
-                                    <a
-                                        href={project.repositoryUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-colors"
-                                    >
-                                        <Github className="h-5 w-5" />
-                                        <span>Source Code</span>
-                                        <ExternalLink className="h-4 w-4" />
-                                    </a>
-                                )}
-                                {project.liveUrl && (
-                                    <a
-                                        href={project.liveUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
-                                    >
-                                        <ExternalLink className="h-5 w-5" />
-                                        <span>Live Demo</span>
-                                    </a>
-                                )}
-                                {project.demoVideoUrl && (
-                                    <a
-                                        href={project.demoVideoUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-500/90 hover:bg-red-500 rounded-lg transition-colors"
-                                    >
-                                        <Play className="h-5 w-5" />
-                                        <span>Watch Demo</span>
-                                        <ExternalLink className="h-4 w-4" />
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Author Section */}
-                    <div className="pt-6 border-t border-neutral-800">
-                        <h2 className="text-xl font-bold mb-4">Created By</h2>
-                        <div className="flex items-center justify-between">
-                            <button
-                                onClick={() => navigate(`/${profileURL}`)}
-                                className="flex items-center gap-3 hover:bg-neutral-900 p-3 rounded-lg transition-colors"
-                            >
-                                <Avatar className="h-12 w-12">
-                                    <AvatarImage src={project.user.profile?.profilePic} />
-                                    <AvatarFallback className="bg-muted">
-                                        {project.user.firstName[0]}
-                                        {project.user.lastName?.[0]}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="text-left">
-                                    <div className="font-bold">
-                                        {project.user.firstName} {project.user.lastName}
-                                    </div>
-                                    {project.user.profile?.department && (
-                                        <div className="text-sm text-neutral-500">
-                                            {project.user.profile.department}
-                                        </div>
-                                    )}
-                                </div>
-                            </button>
-
-                            {!isOwner && (
-                                <Button onClick={() => navigate(`/profile/${project.user.id}`)}>
-                                    View Profile
-                                </Button>
+            <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+                {/* Title and Meta */}
+                <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                            <h1 className="text-4xl font-bold text-foreground mb-2 leading-tight">
+                                {project.title}
+                            </h1>
+                            {project.tagline && (
+                                <p className="text-lg text-muted-foreground leading-relaxed">
+                                    {project.tagline}
+                                </p>
                             )}
                         </div>
+                        {project.featured && (
+                            <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 gap-1.5 px-3 py-1 flex-shrink-0">
+                                <Star className="h-3 w-3 fill-current" />
+                                Featured
+                            </Badge>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                                {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                            </span>
+                        </div>
+                        <Badge variant="outline" className={getStatusColor(project.status)}>
+                            {project.status}
+                        </Badge>
                     </div>
                 </div>
+
+                {/* Image Gallery */}
+                {allImages.length > 0 && (
+                    <Card>
+                        <CardContent className="p-0">
+                            <div className="aspect-video bg-muted overflow-hidden rounded-t-lg">
+                                <img
+                                    src={allImages[selectedImageIndex]}
+                                    alt={project.title}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+
+                            {allImages.length > 1 && (
+                                <div className="flex gap-2 p-4 border-t border-border overflow-x-auto">
+                                    {allImages.map((img, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setSelectedImageIndex(index)}
+                                            className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${selectedImageIndex === index
+                                                    ? 'border-blue-600'
+                                                    : 'border-border opacity-60 hover:opacity-100'
+                                                }`}
+                                        >
+                                            <img
+                                                src={img}
+                                                alt={`View ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Tabbed Content */}
+                <Tabs defaultValue="overview" className="space-y-4">
+                    <TabsList className="grid w-full grid-cols-3 h-10">
+                        <TabsTrigger value="overview" className="text-sm">
+                            Overview
+                        </TabsTrigger>
+                        <TabsTrigger value="tech" className="text-sm">
+                            Tech Stack
+                        </TabsTrigger>
+                        <TabsTrigger value="author" className="text-sm">
+                            Author
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* Overview Tab */}
+                    <TabsContent value="overview" className="space-y-4">
+                        {/* Description */}
+                        <Card>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-600" />
+                                    <h2 className="text-lg font-semibold text-foreground">
+                                        About This Project
+                                    </h2>
+                                </div>
+                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                                    {project.description}
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Links */}
+                        {(project.repositoryUrl || project.liveUrl || project.demoVideoUrl) && (
+                            <Card>
+                                <CardContent className="p-6 space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <ExternalLink className="h-5 w-5 text-emerald-600" />
+                                        <h2 className="text-lg font-semibold text-foreground">
+                                            Project Links
+                                        </h2>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {project.repositoryUrl && (
+                                            <a
+                                                href={project.repositoryUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 px-4 py-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors text-sm font-medium"
+                                            >
+                                                <Github className="h-4 w-4" />
+                                                Source Code
+                                            </a>
+                                        )}
+                                        {project.liveUrl && (
+                                            <a
+                                                href={project.liveUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                                Live Demo
+                                            </a>
+                                        )}
+                                        {project.demoVideoUrl && (
+                                            <a
+                                                href={project.demoVideoUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm font-medium"
+                                            >
+                                                <Play className="h-4 w-4" />
+                                                Watch Demo
+                                            </a>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+
+                    {/* Tech Stack Tab */}
+                    <TabsContent value="tech">
+                        <Card>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <Code className="h-5 w-5 text-purple-600" />
+                                    <h2 className="text-lg font-semibold text-foreground">
+                                        Technology Stack
+                                    </h2>
+                                </div>
+                                {project.techStack && project.techStack.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {project.techStack.map((tech, index) => (
+                                            <Badge
+                                                key={index}
+                                                variant="outline"
+                                                className="bg-blue-500/10 text-blue-600 border-blue-500/20 px-3 py-1.5 text-sm"
+                                            >
+                                                {tech}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        No technologies listed
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Author Tab */}
+                    <TabsContent value="author">
+                        <Card>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <User className="h-5 w-5 text-blue-600" />
+                                    <h2 className="text-lg font-semibold text-foreground">
+                                        Project Creator
+                                    </h2>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        onClick={() => navigate(`/${profileURL}`)}
+                                        className="flex items-center gap-3 hover:bg-muted/50 p-3 rounded-lg transition-colors"
+                                    >
+                                        <Avatar className="h-12 w-12">
+                                            <AvatarImage src={project.user.profile?.profilePic || undefined} />
+                                            <AvatarFallback className="bg-blue-500/10 text-blue-600">
+                                                {project.user.firstName[0]}
+                                                {project.user.lastName?.[0]}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="text-left">
+                                            <div className="text-sm font-semibold text-foreground">
+                                                {project.user.firstName} {project.user.lastName}
+                                            </div>
+                                            {project.user.profile?.department && (
+                                                <div className="text-xs text-muted-foreground">
+                                                    {project.user.profile.department}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    {!isOwner && (
+                                        <Button
+                                            onClick={() => navigate(`/profile/${project.user.id}`)}
+                                            size="sm"
+                                        >
+                                            View Profile
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
 
             {/* Edit Dialog */}
@@ -383,8 +441,7 @@ export default function ProjectDetail() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Project</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete "{project.title}"? This action cannot be
-                            undone.
+                            Are you sure you want to delete "{project.title}"? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

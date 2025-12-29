@@ -10,36 +10,34 @@ cloudinary.config({
 });
 
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
     storage,
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB max per file
+        fileSize: 10 * 1024 * 1024, // 10MB max per file
+        files: 10, // Max 10 files total
     },
     fileFilter: (req, file, cb) => {
-        // Allow images, PDFs, and documents
+        // Only allow images for project uploads
         const allowedMimes = [
             'image/jpeg',
             'image/jpg',
             'image/png',
             'image/gif',
             'image/webp',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ];
-        
+
         if (allowedMimes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Only images and documents are allowed'));
+            cb(new Error(`Invalid file type: ${file.mimetype}. Only images (JPEG, PNG, GIF, WebP) are allowed.`));
         }
     }
 });
 
 // Helper function to upload single file to Cloudinary
 const uploadToCloudinaryHelper = (
-    buffer: Buffer, 
-    folder: string, 
+    buffer: Buffer,
+    folder: string,
     resourceType: 'auto' | 'image' | 'video' | 'raw' = 'auto'
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -104,7 +102,7 @@ export const uploadToCloudinary = (...fieldNames: string[]) => {
                     uploadToCloudinaryHelper(file.buffer, 'project-images', 'auto')
                 );
                 const imageUrls = await Promise.all(uploadPromises);
-                
+
                 files.images = files.images.map((file, index) => ({
                     ...file,
                     cloudinaryUrl: imageUrls[index],

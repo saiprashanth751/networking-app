@@ -5,7 +5,6 @@ import {
   Search,
   Bell,
   Mail,
-  Users,
   Bookmark,
   User,
   MoreHorizontal,
@@ -15,7 +14,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Briefcase,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -81,14 +79,12 @@ export function LeftSidebar() {
   const PRIMARY_NAV: NavItem[] = [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Explore', path: '/explore' },
-    { icon: Users, label: 'Network', path: '/network' },
     { icon: Bell, label: 'Notifications', path: '/notifications', badge: notificationUnreadCount },
     { icon: Mail, label: 'Messages', path: '/messages', badge: unreadCount },
   ];
 
-  const ACADEMIC_NAV: NavItem[] = [
+  const LIBRARY_NAV: NavItem[] = [
     { icon: Briefcase, label: 'Projects', path: '/projects' },
-    { icon: Calendar, label: 'Events', path: '/events' },
     { icon: Bookmark, label: 'Bookmarks', path: '/bookmarks' },
   ];
 
@@ -222,9 +218,9 @@ export function LeftSidebar() {
 
             <Separator className="bg-neutral-800" />
 
-            {/* Academic Section */}
-            <NavSection title="Academic" isCollapsed={isCollapsed}>
-              {ACADEMIC_NAV.map((item) => (
+            {/* Library Section */}
+            <NavSection title="Library" isCollapsed={isCollapsed}>
+              {LIBRARY_NAV.map((item) => (
                 <NavItem
                   key={item.path}
                   {...item}

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,7 +17,8 @@ import {
     Star,
     Trash2,
     Edit,
-    Calendar
+    Calendar,
+    Code,
 } from "lucide-react";
 import { Project } from '@/types/types';
 import { ProjectFormDialog } from './ProjectFormDialog';
@@ -34,10 +34,11 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getOptimizedCloudinaryUrl } from '@/utils/cloudinaryOptimizer';
 
 interface ProjectCardProps {
     project: Project;
-    showActions?: boolean; // Show edit/delete actions (only on own profile)
+    showActions?: boolean;
 }
 
 export function ProjectCard({ project, showActions = false }: ProjectCardProps) {
@@ -64,6 +65,15 @@ export function ProjectCard({ project, showActions = false }: ProjectCardProps) 
         toggleFeatured();
     };
 
+    const handleCardClick = () => {
+        navigate(`/project/${project.id}`);
+    };
+
+    // Optimize cover image for card display (300x200px)
+    const optimizedCoverImage = project.coverImage
+        ? getOptimizedCloudinaryUrl(project.coverImage, 300, 200)
+        : null;
+
     const formatDate = (dateString?: string) => {
         if (!dateString) return null;
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -73,204 +83,189 @@ export function ProjectCard({ project, showActions = false }: ProjectCardProps) 
     };
 
     return (
-        <Card className="group hover:bg-neutral-900/30 transition-all duration-200 overflow-hidden border-neutral-800"
-            onClick={() => navigate(`/project/${project.id}`)}
-        >
-            {/* Cover Image */}
-            <div className="relative h-48 bg-neutral-900 overflow-hidden">
-                {project.coverImage && !imageError ? (
-                    <img
-                        src={project.coverImage}
-                        alt={project.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={() => setImageError(true)}
-                    />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-purple-500/20">
-                        <div className="text-6xl">💻</div>
-                    </div>
-                )}
+        <>
+            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group border-neutral-800">
+                <div className="grid md:grid-cols-[250px_1fr] gap-0">
+                    {/* Project Image */}
+                    <div
+                        className="relative h-48 md:h-full bg-neutral-900 overflow-hidden"
+                        onClick={handleCardClick}
+                    >
+                        {optimizedCoverImage && !imageError ? (
+                            <img
+                                src={optimizedCoverImage}
+                                alt={`${project.title} cover`}
+                                loading="lazy"
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                onError={() => setImageError(true)}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <div className="text-5xl opacity-50">💻</div>
+                            </div>
+                        )}
 
-                {/* Featured Badge */}
-                {project.featured && (
-                    <div className="absolute top-3 left-3">
-                        <Badge className="bg-yellow-500/90 text-black border-0 gap-1">
-                            <Star className="h-3 w-3 fill-current" />
-                            Featured
-                        </Badge>
+                        {/* Featured Badge Overlay */}
+                        {project.featured && (
+                            <div className="absolute top-2 left-2">
+                                <Badge className="bg-yellow-500/90 text-black border-0 gap-1 shadow-lg">
+                                    <Star className="h-3 w-3 fill-current" />
+                                    Featured
+                                </Badge>
+                            </div>
+                        )}
                     </div>
-                )}
 
-                {/* Actions Dropdown (Own Profile Only) */}
-                {showActions && isOwner && (
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                    {/* Content */}
+                    <div className="p-5" onClick={handleCardClick}>
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                                <h3 className="text-lg font-semibold text-foreground line-clamp-1 group-hover:text-blue-500 transition-colors">
+                                    {project.title}
+                                </h3>
+                                {project.tagline && (
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                                        {project.tagline}
+                                    </p>
+                                )}
+                            </div>
+
+                            {isOwner && showActions && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mt-1">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={handleToggleFeatured}>
+                                            <Star className="mr-2 h-4 w-4" />
+                                            {project.featured ? 'Unfeature' : 'Feature'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditDialogOpen(true);
+                                        }}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteDialogOpen(true);
+                                            }}
+                                            className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
+
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-4">
+                            {project.description}
+                        </p>
+
+                        {/* Tech Stack */}
+                        {project.techStack && project.techStack.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                {project.techStack.slice(0, 4).map((tech, index) => (
+                                    <Badge
+                                        key={index}
+                                        variant="secondary"
+                                        className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 py-0.5"
+                                    >
+                                        {tech}
+                                    </Badge>
+                                ))}
+                                {project.techStack.length > 4 && (
+                                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                        +{project.techStack.length - 4}
+                                    </Badge>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Meta Info */}
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+                            {(project.startDate || project.endDate) && (
+                                <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{formatDate(project.startDate) || 'Present'}</span>
+                                </div>
+                            )}
+                            <Badge
+                                variant="outline"
+                                className={`text-xs ${project.status === 'completed'
+                                    ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                    : project.status === 'in-progress'
+                                        ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                        : 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20'
+                                    }`}
+                            >
+                                {project.status}
+                            </Badge>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                            {project.liveUrl && (
                                 <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full bg-black/70 hover:bg-black/90"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={handleToggleFeatured}>
-                                    <Star className="mr-2 h-4 w-4" />
-                                    {project.featured ? 'Unfeature' : 'Feature'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditDialogOpen(true);
-                                }}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1.5 text-xs h-8 bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setDeleteDialogOpen(true);
+                                        window.open(project.liveUrl, '_blank');
                                     }}
-                                    className="text-destructive focus:text-destructive"
                                 >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                )}
-            </div>
-
-            <CardContent className="p-4">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg leading-tight mb-1 truncate">
-                            {project.title}
-                        </h3>
-                        {project.tagline && (
-                            <p className="text-sm text-neutral-500 line-clamp-1">
-                                {project.tagline}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Status Badge */}
-                    <Badge
-                        variant="secondary"
-                        className={`ml-2 shrink-0 ${project.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                            project.status === 'in-progress' ? 'bg-blue-500/10 text-blue-500' :
-                                'bg-neutral-500/10 text-neutral-500'
-                            }`}
-                    >
-                        {project.status}
-                    </Badge>
-                </div>
-
-                {/* Description */}
-                <p className="text-sm text-neutral-400 mb-3 line-clamp-2 leading-relaxed">
-                    {project.description}
-                </p>
-
-                {/* Tech Stack */}
-                {project.techStack && project.techStack.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                        {project.techStack.slice(0, 4).map((tech, index) => (
-                            <Badge
-                                key={index}
-                                variant="outline"
-                                className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/20"
-                            >
-                                {tech}
-                            </Badge>
-                        ))}
-                        {project.techStack.length > 4 && (
-                            <Badge variant="outline" className="text-xs">
-                                +{project.techStack.length - 4}
-                            </Badge>
-                        )}
-                    </div>
-                )}
-
-                {/* Date Range */}
-                {(project.startDate || project.endDate) && (
-                    <div className="flex items-center gap-1 text-xs text-neutral-500 mb-3">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                            {formatDate(project.startDate)}
-                            {project.endDate && ` - ${formatDate(project.endDate)}`}
-                        </span>
-                    </div>
-                )}
-
-                {/* Links */}
-                <div className="flex items-center gap-2">
-                    {project.repositoryUrl && (
-                        <a
-                            href={project.repositoryUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition-colors"
-                        >
-                            <Github className="h-4 w-4" />
-                            <span className="hidden sm:inline">Code</span>
-                        </a>
-                    )}
-
-                    {project.liveUrl && (
-                        <a
-                            href={project.liveUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1 text-xs text-neutral-400 hover:text-blue-500 transition-colors"
-                        >
-                            <ExternalLink className="h-4 w-4" />
-                            <span className="hidden sm:inline">Live</span>
-                        </a>
-                    )}
-
-                    {project.demoVideoUrl && (
-                        <a
-                            href={project.demoVideoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1 text-xs text-neutral-400 hover:text-red-500 transition-colors"
-                        >
-                            <Play className="h-4 w-4" />
-                            <span className="hidden sm:inline">Demo</span>
-                        </a>
-                    )}
-                </div>
-
-                {/* Author (Show only on other users' profiles) */}
-                {!showActions && project.user && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-800">
-                        <Avatar className="h-6 w-6">
-                            <AvatarImage src={project.user.profile?.profilePic} />
-                            <AvatarFallback className="text-xs bg-muted">
-                                {project.user.firstName[0]}{project.user.lastName?.[0]}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="text-xs">
-                            <span className="text-neutral-500">by </span>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/profile/${project.user.id}`);
-                                }}
-                                className="text-white hover:underline"
-                            >
-                                {project.user.firstName} {project.user.lastName}
-                            </button>
+                                    <ExternalLink className="h-3 w-3" />
+                                    Live Demo
+                                </Button>
+                            )}
+                            {project.repositoryUrl && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1.5 text-xs h-8 bg-transparent"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(project.repositoryUrl, '_blank');
+                                    }}
+                                >
+                                    <Github className="h-3 w-3" />
+                                    Code
+                                </Button>
+                            )}
+                            {project.demoVideoUrl && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1.5 text-xs h-8 bg-transparent"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(project.demoVideoUrl, '_blank');
+                                    }}
+                                >
+                                    <Play className="h-3 w-3" />
+                                    Video
+                                </Button>
+                            )}
                         </div>
                     </div>
-                )}
-            </CardContent>
+                </div>
+            </Card>
+
+            {/* Edit Dialog */}
+            <ProjectFormDialog
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
+                project={project}
+            />
+
+            {/* Delete Dialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -290,12 +285,6 @@ export function ProjectCard({ project, showActions = false }: ProjectCardProps) 
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            <ProjectFormDialog
-                open={editDialogOpen}
-                onOpenChange={setEditDialogOpen}
-                project={project}
-            />
-        </Card>
-
+        </>
     );
 }

@@ -64,6 +64,15 @@ export function ImageUploader({
       setPreviews(prev => [...prev, ...newPreviews]);
       const newFiles = [...files, ...compressedFiles];
       setFiles(newFiles);
+
+      console.log('📁 [ImageUploader] File selected:', {
+        label,
+        newFilesCount: compressedFiles.length,
+        totalFiles: newFiles.length,
+        firstFileName: newFiles[0]?.name,
+        firstFileType: newFiles[0]?.constructor?.name,
+      });
+
       onImagesChange(newFiles);
     } catch (error) {
       console.error('Error processing images:', error);
