@@ -223,13 +223,13 @@ const ProfilePage = () => {
                             title="Following"
                             users={following}
                             count={followingData?.count || 0}
-                            onMessageClick={() => { }} // Empty since it's another user's profile
+                            showUnfollowButton={false}
                         />
                         <FollowList
                             title="Followers"
                             users={followers}
                             count={followersData?.count || 0}
-                            onMessageClick={() => { }} // Empty since it's another user's profile
+                            showRemoveButton={false}
                         />
                         <div className="text-sm">
                             <span className="font-bold text-foreground">{posts.length}</span>

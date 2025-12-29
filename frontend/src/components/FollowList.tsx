@@ -19,10 +19,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, MessageSquare, User, Users, UserMinus, Loader2 } from "lucide-react";
+import { Search, User, Users, UserMinus, UserX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SPACING, Small, Caption, LAYOUT } from "@/components/layout";
 import { useRemoveFollower } from '@/hooks/queries/connection';
+import { useUnfollowUser } from '@/hooks/mutations/follow';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,8 +39,11 @@ interface User {
   id: string;
   firstName: string;
   lastName?: string;
+  department?: string; // Can be at top level for compact view
   profile?: {
     profilePic?: string;
+    bio?: string;
+    department?: string;
   };
 }
 
@@ -47,8 +51,8 @@ interface FollowListProps {
   title: string;
   users: User[];
   count: number;
-  onMessageClick?: (userId: string) => void;
-  showRemoveButton?: boolean; // New prop for followers list
+  showRemoveButton?: boolean; // For followers list - allows removing followers
+  showUnfollowButton?: boolean; // For following list - allows unfollowing
 }
 
 /**
@@ -58,15 +62,17 @@ interface FollowListProps {
 export function FollowList({
   title,
   users,
-  onMessageClick,
   count,
-  showRemoveButton = false
+  showRemoveButton = false,
+  showUnfollowButton = false
 }: FollowListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<User | null>(null);
+  const [userToUnfollow, setUserToUnfollow] = useState<User | null>(null);
   const navigate = useNavigate();
   const removeFollowerMutation = useRemoveFollower();
+  const unfollowMutation = useUnfollowUser();
 
   // Filter users based on search query
   const filteredUsers = users.filter(user => {
@@ -95,6 +101,17 @@ export function FollowList({
     if (userToRemove) {
       removeFollowerMutation.mutate(userToRemove.id);
       setUserToRemove(null);
+    }
+  };
+
+  const handleUnfollow = (user: User) => {
+    setUserToUnfollow(user);
+  };
+
+  const confirmUnfollow = () => {
+    if (userToUnfollow) {
+      unfollowMutation.mutate(userToUnfollow.id);
+      setUserToUnfollow(null);
     }
   };
 
@@ -190,19 +207,18 @@ export function FollowList({
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 shrink-0">
-                    {onMessageClick && (
+                    {showUnfollowButton && (
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onMessageClick(user.id);
-                          setIsOpen(false);
+                          handleUnfollow(user);
                         }}
                         className="h-8 px-3"
                       >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Message
+                        <UserX className="h-4 w-4 mr-1" />
+                        Unfollow
                       </Button>
                     )}
 
@@ -257,6 +273,35 @@ export function FollowList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmation Dialog for Unfollow */}
+      <AlertDialog open={!!userToUnfollow} onOpenChange={() => setUserToUnfollow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unfollow User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unfollow <span className="font-semibold">{userToUnfollow?.firstName} {userToUnfollow?.lastName}</span>?
+              You can follow them again anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmUnfollow}
+              disabled={unfollowMutation.isPending}
+            >
+              {unfollowMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Unfollowing...
+                </>
+              ) : (
+                'Unfollow'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
@@ -268,7 +313,6 @@ export function FollowList({
 export function FollowListCompact({
   title,
   users,
-  onMessageClick,
   count
 }: FollowListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false); // ✅ ADD STATE
@@ -331,17 +375,6 @@ export function FollowListCompact({
                       </Caption>
                     )}
                   </div>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation(); // ✅ Prevent profile navigation
-                      onMessageClick(user.id);
-                    }}
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
                 </button>
               ))}
 
@@ -365,7 +398,6 @@ export function FollowListCompact({
         <FollowList
           title={title}
           users={users}
-          onMessageClick={onMessageClick}
           count={displayCount}
         />
       )}

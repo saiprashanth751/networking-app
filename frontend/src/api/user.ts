@@ -1,4 +1,4 @@
-import { SearchUsersResponse, User } from '@/types/types';
+import { SearchUsersResponse, User, UserWithProfile } from '@/types/types';
 import { apiClient } from '../lib/apiClient';
 
 
@@ -28,8 +28,8 @@ export const userService = {
   },
 
   // Get users by minor
-  getUsersByMinor: async (minor: string): Promise<{ users: User[] }> => {
-    const response = await apiClient.get(`/user/bulk/?minor=${minor}`);
+  getUsersByDepartment: async (department: string): Promise<{ users: UserWithProfile[] }> => {
+    const response = await apiClient.get(`/user/bulk/?department=${department}`);
     return response.data;
   },
 };

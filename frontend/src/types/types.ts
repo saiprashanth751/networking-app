@@ -355,7 +355,7 @@ export interface SearchUsersParams {
 
 // For general user search (basic User type)
 export interface SearchUsersResponse {
-  users: User[];
+  users: UserWithProfile[];
 }
 
 // ============================================================================

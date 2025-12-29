@@ -197,13 +197,12 @@ const UserProfilePage = () => {
                             title="Following"
                             users={following}
                             count={followingData?.count || 0}
-                            onMessageClick={setSelectedUserId}
+                            showUnfollowButton={true}
                         />
                         <FollowList
                             title="Followers"
                             users={followers}
                             count={followersData?.count || 0}
-                            onMessageClick={setSelectedUserId}
                             showRemoveButton={true}
                         />
                         <div className="text-sm">
