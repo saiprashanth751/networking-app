@@ -25,6 +25,9 @@ model User {
   projects  Project[]
   createdAt DateTime  @default(now())
 
+  // Push notification tokens (user can have multiple devices)
+  fcmTokens String[]
+
   messageSent     Message[] @relation("MessageSent")
   messageReceived Message[] @relation("MessageReceived")
   followers       Follow[]  @relation(name: "followers")
@@ -415,6 +418,7 @@ model Message {
   receiver User @relation("MessageReceived", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@index([senderId, receiverId, timestamp])
+  @@index([receiverId, senderId, timestamp]) // For reverse queries
   @@index([receiverId, read])
   @@index([timestamp])
 }

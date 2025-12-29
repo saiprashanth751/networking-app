@@ -1,5 +1,5 @@
 // src/components/messaging/ConversationList.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useConversations, useSearchUsers } from '@/hooks/queries/conversation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,9 @@ import { Search, Loader2, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { createCallLogger } from '@/utils/callLogger';
+import { useSocket } from '@/contexts/SocketContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryClient';
 
 interface ConversationListProps {
   onSelectUser: (userId: string) => void;
@@ -20,8 +23,32 @@ const logger = createCallLogger({ file: 'components/messaging/ConversationList.t
 export function ConversationList({ onSelectUser, selectedUserId }: ConversationListProps) {
   logger.info("Rendering ConversationList with selectedUserId", { selectedUserId });
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
+  const { socket } = useSocket();
   const { data: conversationsData, isLoading: conversationsLoading } = useConversations();
   const { data: searchData, isLoading: searchLoading } = useSearchUsers(searchQuery);
+
+  // 🔥 RECONNECTION SYNC: Refetch conversations when socket reconnects
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleReconnect = () => {
+      console.log('[ConversationList] 🔄 Socket reconnected - syncing conversations');
+
+      // Invalidate and refetch conversations
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.list
+      });
+
+      console.log('[ConversationList] ✅ Conversations synced after reconnection');
+    };
+
+    socket.on('connect', handleReconnect);
+
+    return () => {
+      socket.off('connect', handleReconnect);
+    };
+  }, [socket, queryClient]);
 
   const conversations = conversationsData?.conversations || [];
   const searchResults = searchData?.users || [];

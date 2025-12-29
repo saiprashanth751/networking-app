@@ -8,7 +8,9 @@ import {
     markAsSeen,
     deleteNotification,
     getPreferences,
-    updatePreferences
+    updatePreferences,
+    registerFCMToken,
+    removeFCMToken
 } from "../controllers/notification";
 
 const app = express.Router();
@@ -24,5 +26,9 @@ app.delete("/:id", authMiddleware, deleteNotification);
 // Preferences
 app.get("/preferences", authMiddleware, getPreferences);
 app.put("/preferences", authMiddleware, updatePreferences);
+
+// FCM Push Notifications
+app.post("/register", authMiddleware, registerFCMToken);
+app.post("/unregister", authMiddleware, removeFCMToken);
 
 export default app;

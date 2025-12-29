@@ -26,6 +26,7 @@ import cors from "cors";
 import { authMiddleware } from "./middleware/authMiddleware";
 import { v2 as cloudinary } from 'cloudinary';
 import { createCallLogger } from "./utils/callLogger";
+import { messaging } from './services/firebase';
 
 const logger = createCallLogger({ file: 'index.ts' });
 
@@ -59,7 +60,7 @@ app.use("/api/v1/post", postRouter);
 app.use("/api/v1/project", projectRouter);
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/conversation", conversationRouter);
-app.use("/api/v1/callhistory", callHistoryRouter);
+app.use("/api/v1/call-history", callHistoryRouter);
 app.use("/api/v1/category", categoryRouter);
 app.use("/api/v1/tag", tagRouter);
 app.use("/api/v1/draft", draftRouter);
@@ -136,14 +137,44 @@ io.on("connection", (socket) => {
   socket.join(senderId);
   console.log(`✅ User ${senderId} joined their personal room`);
 
-  // Update user status to online
+  // Update user status to online + notify only relevant users
   prisma.user
     .update({
       where: { id: senderId },
-      data: { isOnline: true },
+      data: { isOnline: true, lastSeen: new Date() },
     })
-    .then(() => {
-      io.emit("updateUserStatus", { userId: senderId, isOnline: true });
+    .then(async () => {
+      // ✅ FIX: Only notify users who have conversations with this user
+      const conversations = await prisma.conversation.findMany({
+        where: {
+          OR: [
+            { user1Id: senderId },
+            { user2Id: senderId }
+          ]
+        },
+        select: {
+          user1Id: true,
+          user2Id: true
+        }
+      });
+
+      // Get unique user IDs (excluding self)
+      const relevantUsers = new Set<string>();
+      conversations.forEach(conv => {
+        if (conv.user1Id !== senderId) relevantUsers.add(conv.user1Id);
+        if (conv.user2Id !== senderId) relevantUsers.add(conv.user2Id);
+      });
+
+      // Emit only to relevant users
+      relevantUsers.forEach(userId => {
+        io.to(userId).emit("updateUserStatus", {
+          userId: senderId,
+          isOnline: true,
+          lastSeen: new Date()
+        });
+      });
+
+      console.log(`✅ Online status sent to ${relevantUsers.size} relevant users`);
     })
     .catch((error) => {
       console.error("Error updating user status to online:", error);
@@ -174,7 +205,7 @@ io.on("connection", (socket) => {
       });
   });
 
-  socket.on("sendMessage", async ({ receiverId, content }) => {
+  socket.on("sendMessage", async ({ receiverId, content, tempId }) => {
     if (!receiverId || !content) {
       console.error("Receiver ID or content not provided.");
       return;
@@ -186,24 +217,233 @@ io.on("connection", (socket) => {
     }
 
     try {
+      // Create message
       const message = await prisma.message.create({
         data: { senderId, receiverId, content, read: false },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              profile: {
+                select: { profilePic: true }
+              }
+            }
+          }
+        }
       });
       console.log("Message saved to database:", message);
 
+      // Update or create conversation
+      const [user1Id, user2Id] = [senderId, receiverId].sort();
+      await prisma.conversation.upsert({
+        where: {
+          user1Id_user2Id: { user1Id, user2Id }
+        },
+        create: {
+          user1Id,
+          user2Id,
+          lastMessageId: message.id,
+          lastMessageContent: content.substring(0, 100),
+          lastMessageAt: message.timestamp,
+          user1UnreadCount: user1Id === receiverId ? 1 : 0,
+          user2UnreadCount: user2Id === receiverId ? 1 : 0,
+        },
+        update: {
+          lastMessageId: message.id,
+          lastMessageContent: content.substring(0, 100),
+          lastMessageAt: message.timestamp,
+          ...(user1Id === receiverId
+            ? { user1UnreadCount: { increment: 1 } }
+            : { user2UnreadCount: { increment: 1 } }
+          ),
+        },
+      });
+
       const room = [senderId, receiverId].sort().join("_");
 
-      socket.to(room).emit("receiveMessage", message);
-      console.log(`Message sent to room ${room}:`, message);
+      // ✅ PRODUCTION FIX: Emit to personal rooms (auto-joined on connect)
+      // This ensures delivery regardless of conversation open/closed state
+      const payload = {
+        message,
+        tempId, // For optimistic UI matching
+        conversationId: room // So frontend knows which conversation to update
+      };
 
-      io.in(room)
-        .fetchSockets()
-        .then((sockets) => {
-          console.log(`Users in room ${room}:`, sockets.map((s) => s.data.userId));
+      console.log(`[EMIT] Emitting receiveMessage to personal rooms:`, {
+        messageId: message.id,
+        tempId,
+        content: content.substring(0, 30),
+        toReceiver: receiverId,
+        toSender: senderId
+      });
+
+      // Send to receiver's personal room
+      io.to(receiverId).emit("receiveMessage", payload);
+
+      // Send to sender's personal room (for optimistic UI confirmation)
+      io.to(senderId).emit("receiveMessage", payload);
+
+      // Debug: Check who's in personal rooms
+      const receiverSockets = await io.in(receiverId).fetchSockets();
+      const senderSockets = await io.in(senderId).fetchSockets();
+
+      console.log(`[ROOMS] Receiver ${receiverId} has ${receiverSockets.length} socket(s)`);
+      console.log(`[ROOMS] Sender ${senderId} has ${senderSockets.length} socket(s)`);
+
+      if (receiverSockets.length === 0) {
+        console.warn(`⚠️ Receiver ${receiverId} not connected - will rely on push notification`);
+      }
+
+      // 🔥 PUSH NOTIFICATION: Send to offline users
+      try {
+        const receiver = await prisma.user.findUnique({
+          where: { id: receiverId },
+          select: {
+            isOnline: true,
+            fcmTokens: true,
+            firstName: true,
+            lastName: true
+          }
         });
+
+        // Only send push notification if receiver is offline and has FCM tokens
+        if (!receiver?.isOnline && receiver?.fcmTokens && receiver.fcmTokens.length > 0) {
+          const sender = await prisma.user.findUnique({
+            where: { id: senderId },
+            select: { firstName: true, lastName: true }
+          });
+
+          const senderName = `${sender?.firstName} ${sender?.lastName || ''}`.trim();
+
+          // Send to all user's devices
+          const notificationPromises = receiver.fcmTokens.map(async (token) => {
+            try {
+              await messaging.send({
+                token,
+                notification: {
+                  title: senderName,
+                  body: content.substring(0, 100),
+                },
+                data: {
+                  userId: senderId,
+                  type: 'message',
+                  messageId: message.id,
+                },
+                webpush: {
+                  fcmOptions: {
+                    link: `/messages?userId=${senderId}`
+                  },
+                  notification: {
+                    icon: '/logo.png',
+                    badge: '/badge.png'
+                  }
+                }
+              });
+              console.log(`📨 Push notification sent to ${receiver.firstName}`);
+            } catch (error: any) {
+              // Handle invalid tokens
+              if (error.code === 'messaging/invalid-registration-token' ||
+                error.code === 'messaging/registration-token-not-registered') {
+                console.log(`❌ Invalid token, will remove: ${token.substring(0, 20)}...`);
+                // Remove invalid token
+                await prisma.user.update({
+                  where: { id: receiverId },
+                  data: {
+                    fcmTokens: receiver.fcmTokens.filter(t => t !== token)
+                  }
+                });
+              } else {
+                console.error('❌ Error sending push notification:', error);
+              }
+            }
+          });
+
+          await Promise.allSettled(notificationPromises);
+        }
+      } catch (error) {
+        console.error('❌ Error in push notification logic:', error);
+        // Don't fail the message if push notification fails
+      }
     } catch (error) {
       console.error("Error sending message:", error);
+      // Send error back to sender
+      socket.emit("messageError", {
+        tempId,
+        error: "Failed to send message"
+      });
     }
+  });
+
+  // ============================================
+  // READ RECEIPTS (Real-time)
+  // ============================================
+  socket.on("markMessagesAsRead", async ({ senderId: messageSenderId }) => {
+    if (!messageSenderId) {
+      console.error("Sender ID not provided for read receipts");
+      return;
+    }
+
+    try {
+      // Mark all unread messages from this sender as read
+      const updatedMessages = await prisma.message.updateMany({
+        where: {
+          senderId: messageSenderId,
+          receiverId: senderId,
+          read: false,
+        },
+        data: {
+          read: true,
+          readAt: new Date(),
+        },
+      });
+
+      console.log(`Marked ${updatedMessages.count} messages as read`);
+
+      // Update conversation unread count
+      const [user1Id, user2Id] = [senderId, messageSenderId].sort();
+      await prisma.conversation.update({
+        where: {
+          user1Id_user2Id: { user1Id, user2Id }
+        },
+        data: {
+          ...(user1Id === senderId
+            ? { user1UnreadCount: 0 }
+            : { user2UnreadCount: 0 }
+          ),
+        },
+      });
+
+      // Notify the sender that their messages were read
+      io.to(messageSenderId).emit("messagesRead", {
+        readBy: senderId,
+        count: updatedMessages.count,
+        readAt: new Date(),
+      });
+
+      console.log(`Read receipt sent to ${messageSenderId}`);
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  });
+
+  // ============================================
+  // TYPING INDICATOR (Real-time)
+  // ============================================
+  socket.on("typing", ({ receiverId, isTyping }: { receiverId: string; isTyping: boolean }) => {
+    if (!receiverId) {
+      console.error("Receiver ID not provided for typing indicator");
+      return;
+    }
+
+    console.log(`[TYPING] ${senderId} is ${isTyping ? 'typing' : 'stopped typing'} to ${receiverId}`);
+
+    // Emit typing status to receiver's personal room
+    io.to(receiverId).emit("typing", {
+      userId: senderId,
+      isTyping
+    });
   });
 
   // ============================================
@@ -544,6 +784,7 @@ io.on("connection", (socket) => {
 
     if (senderId) {
       try {
+        // Update user status to offline
         await prisma.user.update({
           where: { id: senderId },
           data: {
@@ -551,7 +792,38 @@ io.on("connection", (socket) => {
             lastSeen: new Date()
           },
         });
-        io.emit("updateUserStatus", { userId: senderId, isOnline: false });
+
+        // ✅ FIX: Only notify users who have conversations with this user
+        const conversations = await prisma.conversation.findMany({
+          where: {
+            OR: [
+              { user1Id: senderId },
+              { user2Id: senderId }
+            ]
+          },
+          select: {
+            user1Id: true,
+            user2Id: true
+          }
+        });
+
+        // Get unique user IDs (excluding self)
+        const relevantUsers = new Set<string>();
+        conversations.forEach(conv => {
+          if (conv.user1Id !== senderId) relevantUsers.add(conv.user1Id);
+          if (conv.user2Id !== senderId) relevantUsers.add(conv.user2Id);
+        });
+
+        // Emit only to relevant users
+        relevantUsers.forEach(userId => {
+          io.to(userId).emit("updateUserStatus", {
+            userId: senderId,
+            isOnline: false,
+            lastSeen: new Date()
+          });
+        });
+
+        console.log(`✅ Offline status sent to ${relevantUsers.size} relevant users`);
       } catch (error) {
         console.error("Error updating user status to offline:", error);
       }

@@ -32,26 +32,24 @@ export const conversationService = {
     return response.data;
   },
 
-  // ✅ This correctly handles both paginated and non-paginated
+  // 🔥 OPTIMIZED: Always use paginated endpoint with cursor-based queries
   getMessages: async (
     userId: string,
     cursor?: string,
     limit: number = 50
   ): Promise<PaginatedMessages> => {
-    const endpoint = cursor ? `/message/paginated/${userId}` : `/message/${userId}`;
-    const response = await apiClient.get(endpoint, {
-      params: cursor ? { cursor, limit } : undefined,
+    const response = await apiClient.get(`/message/paginated/${userId}`, {
+      params: {
+        ...(cursor && { cursor }),
+        limit
+      },
     });
 
-    if (response.data.messages && !response.data.nextCursor) {
-      return {
-        messages: response.data.messages,
-        nextCursor: null,
-        hasMore: false,
-      };
-    }
-
-    return response.data;
+    return {
+      messages: response.data.messages || [],
+      nextCursor: response.data.nextCursor || null,
+      hasMore: response.data.hasMore || false,
+    };
   },
 
   sendMessage: async (data: SendMessageInput) => {
