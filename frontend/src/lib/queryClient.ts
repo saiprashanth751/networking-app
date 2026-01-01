@@ -124,4 +124,13 @@ export const queryKeys = {
     byUser: (userId: string) => [...queryKeys.projects.all, 'byUser', userId] as const,
     currentUser: () => [...queryKeys.projects.all, 'currentUser'] as const,
   },
+
+  conversations: {
+    all: ['conversations'] as const,
+    list: ['conversations', 'list'] as const,
+    unreadCount: ['conversations', 'unreadCount'] as const,
+    search: (query: string) => ['conversations', 'search', query] as const,
+    detail: (userId: string) => ['conversations', 'detail', userId] as const,
+  },
+  
 } as const;

@@ -11,8 +11,6 @@ import {
     GraduationCap,
     Link as LinkIcon,
     Loader2,
-    Settings,
-    ExternalLink,
     MessageSquare,
     Users,
     ArrowLeft,

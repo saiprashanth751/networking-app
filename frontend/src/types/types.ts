@@ -1,4 +1,4 @@
-// src/types/index.ts
+// src/types/types.ts
 
 // ============================================================================
 // USER TYPES
@@ -10,8 +10,15 @@ export interface User {
   lastName: string;
   email: string;
   verified?: boolean;
+  isOnline: boolean;
+  lastSeen: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface UserWithStatus extends User {
+  isOnline: boolean;
+  lastSeen: string;
 }
 
 export interface Profile {
@@ -113,12 +120,88 @@ export interface Message {
   receiverId: string;
   content: string;
   timestamp: string;
-  read?: boolean;
+  read: boolean;
+  readAt?: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video' | 'document';
+  fileName?: string;
+  fileSize?: number;
+  deleted: boolean;
+  editedAt?: string;
 }
 
 export interface SendMessageInput {
   receiverId: string;
   content: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  fileSize?: number;
+}
+
+// Conversation Types
+export interface Conversation {
+  id: string;
+  otherUser: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    isOnline: boolean;
+    lastSeen: string;
+    profile: {
+      profilePic: string | null;
+    } | null;
+  };
+  lastMessage: {
+    content: string | null;
+    timestamp: string;
+  };
+  unreadCount: number;
+  lastMessageAt: string;
+}
+
+export interface ConversationResponse {
+  conversations: Conversation[];
+}
+
+export interface UnreadCountResponse {
+  unreadCount: number;
+}
+
+// RENAMED: For messaging search (includes online status)
+export interface MessageSearchUsersResponse {
+  users: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    isOnline: boolean;
+    profile: {
+      profilePic: string | null;
+      department: string;
+    } | null;
+  }[];
+}
+
+// WebSocket Events
+export interface SocketMessage extends Message {
+  // Same as Message but for real-time
+}
+
+export interface TypingEvent {
+  userId: string;
+  isTyping: boolean;
+}
+
+export interface UserStatusEvent {
+  userId: string;
+  isOnline: boolean;
+}
+
+// Pagination
+export interface PaginatedMessages {
+  messages: Message[];
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 
 // ============================================================================
@@ -199,6 +282,7 @@ export interface SearchUsersParams {
   limit?: number;
 }
 
+// For general user search (basic User type)
 export interface SearchUsersResponse {
   users: User[];
 }
@@ -292,4 +376,117 @@ export interface CreateProjectInput {
   endDate?: string;
 }
 
-export interface UpdateProjectInput extends Partial<CreateProjectInput> {}
+export interface UpdateProjectInput extends Partial<CreateProjectInput> { }
+
+// ============================================================================
+// CALL TYPES - UNIFIED VERSION
+// ============================================================================
+
+// Core call types
+export type CallType = 'audio' | 'video';
+export type CallDirection = 'incoming' | 'outgoing';
+export type CallStatus = 'idle' | 'ringing' | 'connecting' | 'active' | 'ending' | 'ended';
+export type CallConnectionStatus = 'completed' | 'missed' | 'declined' | 'no-answer' | 'failed';
+
+// Call participant
+export interface CallParticipant {
+  id: string;
+  name: string;
+  avatar: string | null;
+  isOnline: boolean;
+}
+
+// Call details
+export interface CallDetails {
+  callId: string;
+  type: CallType;
+  direction: CallDirection;
+  participants: {
+    local: CallParticipant;
+    remote: CallParticipant;
+  };
+  startTime: number | null;
+  endTime: number | null;
+  duration: number;
+}
+
+// Socket events
+export interface IncomingCallEvent {
+  callId: string;
+  callerId: string;
+  callerName: string;
+  callerAvatar: string | null;
+  callType: CallType;
+  room: string; // Add this for WebRTC room
+}
+
+export interface CallHistory {
+  id: string;
+  type: CallType;
+  status: CallConnectionStatus;
+  duration: number | null;
+  startedAt: string;
+  endedAt: string | null;
+  isIncoming: boolean;
+  otherUser: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+}
+
+// WebRTC signaling
+export interface WebRTCSignal {
+  type: 'offer' | 'answer' | 'candidate' | 'end';
+  data: any;
+  timestamp: number;
+  senderId: string;
+}
+
+// State machine context
+export interface CallContext {
+  // Current call
+  callDetails: CallDetails | null;
+  
+  // Media streams
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  
+  // Connection state
+  isConnected: boolean;
+  connectionError: string | null;
+  
+  // Media controls
+  isMuted: boolean;
+  isVideoOff: boolean;
+  isScreenSharing: boolean;
+  
+  // WebRTC
+  pendingSignals: WebRTCSignal[];
+  peerConnection: any | null;
+  
+  // Timing
+  ringingStartTime: number | null;
+  callStartTime: number | null;
+  
+  // UI state
+  isRinging: boolean;
+}
+
+// State machine events
+export type CallEvent =
+  | { type: 'CALL_INITIATE'; remoteUser: CallParticipant; callType: CallType }
+  | { type: 'CALL_RECEIVED'; callId: string; callerId: string; callerName: string; callerAvatar: string | null; callType: CallType; room: string }
+  | { type: 'CALL_ACCEPT' }
+  | { type: 'CALL_REJECT' }
+  | { type: 'CALL_END' }
+  | { type: 'WEBRTC_OFFER'; offer: any; senderId: string }
+  | { type: 'WEBRTC_ANSWER'; answer: any; senderId: string }
+  | { type: 'WEBRTC_CANDIDATE'; candidate: any; senderId: string }
+  | { type: 'WEBRTC_CONNECTED' }
+  | { type: 'WEBRTC_FAILED'; error: string }
+  | { type: 'MEDIA_TOGGLE_MUTE' }
+  | { type: 'MEDIA_TOGGLE_VIDEO' }
+  | { type: 'MEDIA_TOGGLE_SCREEN_SHARE' }
+  | { type: 'SOCKET_DISCONNECTED' }
+  | { type: 'TIMEOUT' };

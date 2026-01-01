@@ -113,18 +113,23 @@ export const getUser = asyncHandler(async (req:AuthRequest, res:Response) => {
 })
 
 export const getUserProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
-   
     const id = req.query.id as string
     const user = await prisma.user.findUnique({
-        where: {
-            id
+        where: { id },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            verified: true,
+            isOnline: true,
+            lastSeen: true,
+            createdAt: true,
+            profile: true 
         }
     })
 
-    return res.status(200).json({
-        user
-    })
-     
+    return res.status(200).json({ user })
 })
 
 export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {

@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import imageCompression from 'browser-image-compression';
 
 interface ImageUploaderProps {

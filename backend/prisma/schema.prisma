@@ -1,14 +1,17 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+        
 
 model User {
   id String @id @default(uuid())
@@ -18,15 +21,20 @@ model User {
   password String
   verified Boolean @default(false)
   isOnline Boolean @default(false)
+  lastSeen DateTime @default(now()) // NEW: For "last seen 2 hours ago"
   profile Profile?
   posts Post[]
-  projects Project[]  // NEW: User can have multiple projects
+  projects Project[]
   createdAt DateTime @default(now())
 
   messageSent Message[] @relation("MessageSent")
   messageReceived Message[] @relation("MessageReceived")
   followers Follow[] @relation(name: "followers")
   following Follow[] @relation(name: "following")
+  
+  // NEW: Call history relations
+  callsMade CallHistory[] @relation("CallsMade")
+  callsReceived CallHistory[] @relation("CallsReceived")
 }
 
 model Profile {
@@ -75,11 +83,64 @@ model Message {
   content String
   timestamp DateTime @default(now())
   read Boolean @default(false)
+  readAt DateTime?
+  
+  mediaUrl String?
+  mediaType String?
+  fileName String? 
+  fileSize Int? 
+  
+  deleted Boolean @default(false)
+  editedAt DateTime?
+  
+  sender User @relation("MessageSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceived", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  sender User @relation("MessageSent", fields: [senderId], references: [id])
-  receiver User @relation("MessageReceived", fields: [receiverId], references: [id])
+  @@index([senderId, receiverId, timestamp])
+  @@index([receiverId, read])
+  @@index([timestamp])
+}
 
-  @@index([senderId, receiverId])
+model Conversation {
+  id String @id @default(uuid())
+  user1Id String            //change names later to sender and receiver
+  user2Id String
+  
+  lastMessageId String?
+  lastMessageContent String? // Denormalized for quick preview
+  lastMessageAt DateTime @default(now())
+  
+  user1UnreadCount Int @default(0)
+  user2UnreadCount Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([user1Id, user2Id]) // One conversation per pair
+  @@index([user1Id, lastMessageAt]) // For fetching user's conversations
+  @@index([user2Id, lastMessageAt])
+}
+
+model CallHistory {
+  id String @id @default(uuid())
+  callerId String
+  receiverId String
+  
+  type String // "audio" | "video"
+  status String // "completed" | "missed" | "declined" | "no-answer" | "failed"
+  
+  duration Int? // In seconds (null if not answered)
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  
+  // NEW: For reconnection attempts and quality metrics
+  connectionAttempts Int @default(1)
+  
+  caller User @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver User @relation("CallsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@index([callerId, startedAt])
+  @@index([receiverId, startedAt])
 }
 
 model Project {

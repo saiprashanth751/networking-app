@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -18,6 +18,7 @@ import Profile from "./pages/Profile"
 import Verify from "./pages/Verify"
 import ProjectDetail from "./pages/ProjectDetail"
 import Explore from "./pages/Explore"
+import Messages from "./pages/Messages"
 
 function App() {
   return (
@@ -100,17 +101,8 @@ function App() {
               }
             />
 
-            <Route
-              path="/messages"
-              element={
-                <MainLayout showRightSidebar={false}>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold mb-2">Messages</h1>
-                    <p className="text-neutral-500">Coming soon...</p>
-                  </div>
-                </MainLayout>
-              }
-            />
+            {/* Messages - Custom Layout (No MainLayout wrapper) */}
+            <Route path="/messages" element={<Messages />} />
 
             <Route
               path="/bookmarks"
@@ -148,11 +140,12 @@ function App() {
           pauseOnFocusLoss
           draggable
           pauseOnHover
+          theme="dark"
         />
 
-        {import.meta.env.DEV && (
+        {/* {import.meta.env.DEV && (
           <ReactQueryDevtools initialIsOpen={false} />
-        )}
+        )} */}
       </QueryClientProvider>
     </>
   )
