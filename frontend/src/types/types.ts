@@ -56,33 +56,104 @@ export type PostLabel =
   | "Bounty"
   | "Contribution";
 
+export interface CreatePostInput {
+  title?: string | null;
+  content: any;  // Lexical JSON
+  categoryIds?: string[];
+  tags?: string[];
+  mediaIds?: string[];  // Media uploaded first, then IDs sent
+}
+
 export interface Post {
   id: string;
   userId: string;
-  title: string;
-  description: string;
-  labels: PostLabel[];
-  links: string[];
-  photos: string[];
+  title: string | null;
+  content: any; // Lexical JSON
+  contentText: string;
+  isDraft: boolean;
+  publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+
+  // Links support
+  links?: string[];
+
+  // User engagement status
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+
+  // Engagement counters
+  likesCount: number;
+  commentsCount: number;
+  sharesCount: number;
+  bookmarksCount: number;
+  viewsCount: number;
+
+  // User info
   user: {
     id: string;
     firstName: string;
     lastName: string;
-    department?: string;
+    profile?: {
+      profilePic?: string;
+      department?: string;
+    };
+  };
+
+  // Categories
+  categories: Array<{
+    category: {
+      id: string;
+      name: string;
+      slug: string;
+      icon: string;
+      color: string;
+    };
+  }>;
+
+  // Tags
+  tags: Array<{
+    tag: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }>;
+
+  // Media
+  media: Array<{
+    id: string;
+    type: 'IMAGE' | 'VIDEO';
+    url: string;
+    fileName: string;
+    order: number;
+  }>;
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  parentId?: string | null;
+  content: string;
+  likesCount?: number;
+  repliesCount?: number;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
     profile?: {
       profilePic?: string;
     };
   };
-}
-
-export interface CreatePostInput {
-  title: string;
-  description: string;
-  labels: PostLabel[];
-  links?: string[];
-  photos?: File[];
+  _count?: {
+    likes: number;
+    replies: number;
+  };
+  replies?: Comment[];
+  isLiked?: boolean;
 }
 
 // ============================================================================
@@ -447,28 +518,28 @@ export interface WebRTCSignal {
 export interface CallContext {
   // Current call
   callDetails: CallDetails | null;
-  
+
   // Media streams
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
-  
+
   // Connection state
   isConnected: boolean;
   connectionError: string | null;
-  
+
   // Media controls
   isMuted: boolean;
   isVideoOff: boolean;
   isScreenSharing: boolean;
-  
+
   // WebRTC
   pendingSignals: WebRTCSignal[];
   peerConnection: any | null;
-  
+
   // Timing
   ringingStartTime: number | null;
   callStartTime: number | null;
-  
+
   // UI state
   isRinging: boolean;
 }

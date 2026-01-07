@@ -30,7 +30,7 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
-logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id});
+  logger.info("Rendering ChatHeader with user and socket: ", { user, id: socket?.id });
 
   const navigate = useNavigate();
   const { initiateAudioCall, initiateVideoCall } = useCallInitiation();
@@ -55,7 +55,7 @@ logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id
       const now = new Date();
       const diffMs = now.getTime() - lastSeen.getTime();
       const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMins / 60);  
+      const diffHours = Math.floor(diffMins / 60);
       const diffDays = Math.floor(diffHours / 24);
 
       if (diffMins < 1) return 'Just now';
@@ -78,9 +78,9 @@ logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id
 
   const handleAudioCall = () => {
     const participant = createCallParticipant();
-    logger.info('→ handleAudioCall() - User clicked audio call button', { 
-      userId: participant.id, 
-      userName: participant.name 
+    logger.info('→ handleAudioCall() - User clicked audio call button', {
+      userId: participant.id,
+      userName: participant.name
     });
     console.log('[ChatHeader] Audio call button clicked', {
       participant,
@@ -97,9 +97,9 @@ logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id
 
   const handleVideoCall = () => {
     const participant = createCallParticipant();
-    logger.info('→ handleVideoCall() - User clicked video call button', { 
-      userId: participant.id, 
-      userName: participant.name 
+    logger.info('→ handleVideoCall() - User clicked video call button', {
+      userId: participant.id,
+      userName: participant.name
     });
     console.log('[ChatHeader] Video call button clicked', {
       participant,
@@ -156,14 +156,14 @@ logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id
           </div>
         </button>
 
-        {/* Action Buttons */}  
+        {/* Action Buttons */}
         <div className="flex items-center gap-1">
           {/* Audio Call Button */}
           <Button
             onClick={handleAudioCall}
             variant="ghost"
             size="icon"
-            className="text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             title={user.isOnline ? "Audio call" : "User is offline"}
             disabled={!user.isOnline}
             aria-label={`Call ${user.firstName}`}
@@ -176,7 +176,7 @@ logger.info("Rendering ChatHeader with user and socket: ", {user, id: socket?.id
             onClick={handleVideoCall}
             variant="ghost"
             size="icon"
-            className="text-neutral-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             title={user.isOnline ? "Video call" : "User is offline"}
             disabled={!user.isOnline}
             aria-label={`Video call ${user.firstName}`}

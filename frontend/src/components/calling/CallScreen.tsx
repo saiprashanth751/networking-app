@@ -42,6 +42,7 @@ export function CallScreen({
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const [callDuration, setCallDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -57,6 +58,17 @@ export function CallScreen({
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
+
+  // Set up audio stream for audio-only calls
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream && callType === 'audio') {
+      console.log('[CallScreen] Attaching remote audio stream');
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(err => {
+        console.error('[CallScreen] Failed to play remote audio:', err);
+      });
+    }
+  }, [remoteStream, callType]);
 
   // Call duration timer
   useEffect(() => {
@@ -118,7 +130,7 @@ export function CallScreen({
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Remote Video/Audio Stream (Main View) */}
-      <div className="flex-1 relative bg-neutral-900 flex items-center justify-center">
+      <div className="relative bg-neutral-900 flex items-center justify-center" style={{ flexGrow: 1, minHeight: 0 }}>
         {callType === 'video' && remoteStream ? (
           <video
             ref={remoteVideoRef}
@@ -189,7 +201,7 @@ export function CallScreen({
       </div>
 
       {/* Control Panel */}
-      <div className="p-6 bg-black/90 backdrop-blur-sm border-t border-neutral-800">
+      <div className="flex-shrink-0 p-6 bg-black/90 backdrop-blur-sm border-t border-neutral-800">
         <div className="flex items-center justify-center gap-4">
           {/* Mute/Unmute */}
           <Button
@@ -255,6 +267,17 @@ export function CallScreen({
           </Button>
         </div>
       </div>
+
+      {/* Hidden Audio Element for Remote Audio Stream */}
+      {callType === 'audio' && (
+        <audio
+          ref={remoteAudioRef}
+          autoPlay
+          playsInline
+          className="hidden"
+          aria-label={`Audio from ${callerName}`}
+        />
+      )}
 
       <style>{`
         .mirror {

@@ -18,6 +18,7 @@ export function CallManager({ socket }: CallManagerProps) {
   logger.info('→ CallManager rendering', { hasSocket: !!socket });
 
   const {
+    callState,
     activeCall,
     incomingCall,
     isRinging,
@@ -92,7 +93,8 @@ export function CallManager({ socket }: CallManagerProps) {
   // ---------------------------------------------------------------------------
   // UI visibility logic (SAFE, DERIVED, STABLE)
   // ---------------------------------------------------------------------------
-
+  logger.info("callState.value is this", { callStateValue: callState })
+  logger.info("callState.value ", { callStateValue: callState })
   const shouldShowIncomingCallModal =
     !!incomingCall && isRinging && !isConnected;
 

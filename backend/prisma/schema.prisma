@@ -1,7 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,89 +10,380 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-        
 
 model User {
-  id String @id @default(uuid())
+  id        String    @id @default(uuid())
   firstName String
-  lastName String?
-  email String @unique
-  password String
-  verified Boolean @default(false)
-  isOnline Boolean @default(false)
-  lastSeen DateTime @default(now()) // NEW: For "last seen 2 hours ago"
-  profile Profile?
-  posts Post[]
-  projects Project[]
-  createdAt DateTime @default(now())
+  lastName  String?
+  email     String    @unique
+  password  String
+  verified  Boolean   @default(false)
+  isOnline  Boolean   @default(false)
+  lastSeen  DateTime  @default(now())
+  profile   Profile?
+  posts     Post[]
+  projects  Project[]
+  createdAt DateTime  @default(now())
 
-  messageSent Message[] @relation("MessageSent")
+  messageSent     Message[] @relation("MessageSent")
   messageReceived Message[] @relation("MessageReceived")
-  followers Follow[] @relation(name: "followers")
-  following Follow[] @relation(name: "following")
-  
-  // NEW: Call history relations
-  callsMade CallHistory[] @relation("CallsMade")
+  followers       Follow[]  @relation(name: "followers")
+  following       Follow[]  @relation(name: "following")
+
+  // Call history relations
+  callsMade     CallHistory[] @relation("CallsMade")
   callsReceived CallHistory[] @relation("CallsReceived")
+
+  // Post system relations
+  postLikes           PostLike[]
+  comments            Comment[]
+  commentLikes        CommentLike[]
+  bookmarks           Bookmark[]
+  bookmarkCollections BookmarkCollection[]
+  postShares          PostShare[]
+  postDrafts          PostDraft[]
 }
 
 model Profile {
-  id String @id @default(uuid())
-  bio String?
-  profilePic String?
-  department String
+  id             String   @id @default(uuid())
+  bio            String?
+  profilePic     String?
+  department     String
   graduationYear Int
-  minor String
-  linkedin String?
-  github String?
-  leetcode String?
-  codeforces String?
-  geekforgeeks String?
-  user User @relation(fields: [userId], references: [id])
-  userId String @unique
-  createdAt DateTime @default(now())
+  minor          String
+  linkedin       String?
+  github         String?
+  leetcode       String?
+  codeforces     String?
+  geekforgeeks   String?
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String   @unique
+  createdAt      DateTime @default(now())
 }
 
 model Follow {
-  id String @id @default(uuid())
-  follower User @relation(fields: [followerId] , references: [id], name: "followers")
-  followerId String
-  following User @relation(fields: [followingId], references: [id], name: "following")
+  id          String @id @default(uuid())
+  follower    User   @relation(fields: [followerId], references: [id], name: "followers")
+  followerId  String
+  following   User   @relation(fields: [followingId], references: [id], name: "following")
   followingId String
 
   @@unique([followerId, followingId])
 }
 
+// ============================================================================
+// POST SYSTEM MODELS
+// ============================================================================
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  icon        String?
+  color       String?
+
+  postsCount Int     @default(0)
+  isActive   Boolean @default(true)
+
+  posts PostCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Tag {
+  id         String @id @default(uuid())
+  name       String @unique
+  slug       String @unique
+  usageCount Int    @default(0)
+
+  posts     PostTag[]
+  createdAt DateTime  @default(now())
+
+  @@index([usageCount])
+  @@index([slug])
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model Post {
   id String @id @default(uuid())
-  title String
-  description String
-  labels String[]
-  photos String[]
-  links String[]
+
+  // Content
+  title       String?
+  content     Json
+  contentText String
+
+  // Categorization
+  categories PostCategory[]
+  tags       PostTag[]
+
+  // Media
+  media PostMedia[]
+
+  // Engagement counters (denormalized)
+  likesCount     Int @default(0)
+  commentsCount  Int @default(0)
+  sharesCount    Int @default(0)
+  bookmarksCount Int @default(0)
+  viewsCount     Int @default(0)
+
+  // Relations
+  likes     PostLike[]
+  comments  Comment[]
+  bookmarks Bookmark[]
+  shares    PostShare[]
+
+  // Publishing
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?
+
+  // Edit history
+  editHistory PostEdit[]
+  editedAt    DateTime?
+
+  // Author
   userId String
-  user User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([publishedAt])
+}
+
+model PostCategory {
+  id         String @id @default(uuid())
+  postId     String
+  categoryId String
+
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, categoryId])
+  @@index([postId])
+  @@index([categoryId])
+}
+
+model PostTag {
+  id     String @id @default(uuid())
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, tagId])
+  @@index([postId])
+  @@index([tagId])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  PDF
+}
+
+model PostMedia {
+  id     String  @id @default(uuid())
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  type      MediaType
+  url       String
+  thumbnail String?
+
+  fileName String
+  fileSize Int
+  mimeType String
+
+  width    Int?
+  height   Int?
+  duration Int?
+
+  order Int @default(0)
+
+  uploadedAt DateTime @default(now())
+
+  @@index([postId, order])
+}
+
+// ============================================================================
+// ENGAGEMENT MODELS
+// ============================================================================
+
+model PostLike {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@index([postId])
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  postId  String
+  userId  String
+  content String
+
+  // Threading
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  likesCount Int           @default(0)
+  likes      CommentLike[]
+
+  editedAt DateTime?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId, createdAt])
+  @@index([userId])
+}
+
+model CommentLike {
+  id        String @id @default(uuid())
+  commentId String
+  userId    String
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId])
+  @@index([userId])
+}
+
+model Bookmark {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+
+  collectionId String?
+  collection   BookmarkCollection? @relation(fields: [collectionId], references: [id])
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model BookmarkCollection {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  isPrivate   Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bookmarks Bookmark[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model PostShare {
+  id       String  @id @default(uuid())
+  postId   String
+  userId   String
+  platform String?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([userId])
+}
+
+// ============================================================================
+// DRAFT & HISTORY MODELS
+// ============================================================================
+
+model PostEdit {
+  id     String @id @default(uuid())
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  title   String?
+  content Json?
+
+  editedBy String
+  reason   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+
+model PostDraft {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String?
+  content     Json?
+  contentText String?
+  categoryIds String[]
+  tags        String[]
+
+  mediaFiles Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  @@index([userId, updatedAt])
 }
 
 model Message {
-  id String @id @default(uuid())
-  senderId String
+  id         String    @id @default(uuid())
+  senderId   String
   receiverId String
-  content String
-  timestamp DateTime @default(now())
-  read Boolean @default(false)
-  readAt DateTime?
-  
-  mediaUrl String?
+  content    String
+  timestamp  DateTime  @default(now())
+  read       Boolean   @default(false)
+  readAt     DateTime?
+
+  mediaUrl  String?
   mediaType String?
-  fileName String? 
-  fileSize Int? 
-  
-  deleted Boolean @default(false)
+  fileName  String?
+  fileSize  Int?
+
+  deleted  Boolean   @default(false)
   editedAt DateTime?
-  
-  sender User @relation("MessageSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  sender   User @relation("MessageSent", fields: [senderId], references: [id], onDelete: Cascade)
   receiver User @relation("MessageReceived", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@index([senderId, receiverId, timestamp])
@@ -102,43 +392,43 @@ model Message {
 }
 
 model Conversation {
-  id String @id @default(uuid())
-  user1Id String            //change names later to sender and receiver
+  id      String @id @default(uuid())
+  user1Id String //change names later to sender and receiver
   user2Id String
-  
-  lastMessageId String?
+
+  lastMessageId      String?
   lastMessageContent String? // Denormalized for quick preview
-  lastMessageAt DateTime @default(now())
-  
+  lastMessageAt      DateTime @default(now())
+
   user1UnreadCount Int @default(0)
   user2UnreadCount Int @default(0)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@unique([user1Id, user2Id]) // One conversation per pair
   @@index([user1Id, lastMessageAt]) // For fetching user's conversations
   @@index([user2Id, lastMessageAt])
 }
 
 model CallHistory {
-  id String @id @default(uuid())
-  callerId String
+  id         String @id @default(uuid())
+  callerId   String
   receiverId String
-  
-  type String // "audio" | "video"
+
+  type   String // "audio" | "video"
   status String // "completed" | "missed" | "declined" | "no-answer" | "failed"
-  
-  duration Int? // In seconds (null if not answered)
-  startedAt DateTime @default(now())
-  endedAt DateTime?
-  
+
+  duration  Int? // In seconds (null if not answered)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
   // NEW: For reconnection attempts and quality metrics
   connectionAttempts Int @default(1)
-  
-  caller User @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
+
+  caller   User @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
   receiver User @relation("CallsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
-  
+
   @@index([callerId, startedAt])
   @@index([receiverId, startedAt])
 }
@@ -146,31 +436,31 @@ model CallHistory {
 model Project {
   id String @id @default(uuid())
 
-  title String
+  title       String
   description String
-  tagline String?
+  tagline     String?
 
   coverImage String?
-  images String[]
+  images     String[]
 
   techStack String[]
-  category String?
+  category  String?
 
   repositoryUrl String?
-  liveUrl String?
-  demoVideoUrl String?
+  liveUrl       String?
+  demoVideoUrl  String?
 
-  featured Boolean @default(false)
-  status String @default("completed")
+  featured  Boolean   @default(false)
+  status    String    @default("completed")
   startDate DateTime?
-  endDate DateTime?
-  
+  endDate   DateTime?
+
   userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@index([featured, userId])
 }

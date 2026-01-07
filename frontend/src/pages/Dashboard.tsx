@@ -1,299 +1,147 @@
-import { useState, useMemo } from 'react';
-import { Post } from '../components/Post';
-import { AppBar } from '../components/AppBar';
-import { CreatePost } from '../components/CreatePost';
-import { User } from '../components/User';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Filter, TrendingUp, Users, AlertCircle } from "lucide-react";
-
-// Import design system
-import { 
-  PageLayout, 
-  H3, 
-  Body, 
-  Small,
-  SPACING, 
-  LAYOUT 
-} from '@/components/layout';
-
-// Import React Query hooks
-import { useCurrentProfile } from '@/hooks/queries/profile';
-import { useUsersByMinor } from '@/hooks/queries/user';
+import { useState, useEffect } from 'react';
+import { Sparkles } from 'lucide-react';
+import { PostCard } from '@/components/posts/PostCard';
+import { CreatePostModal } from '@/components/posts/CreatePostModal';
 import { useAllPosts } from '@/hooks/queries/post';
-import { useFollowing } from '@/hooks/queries/follow';
-import { PostLabel } from '@/types/types';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCurrentUser } from '@/hooks/queries/user';
+import { useCurrentProfile } from '@/hooks/queries/profile';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-    const [selectedLabel, setSelectedLabel] = useState<PostLabel | null>(null);
+    const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+    const navigate = useNavigate();
 
-    // Fetch all data with React Query
-    const { 
-        data: profileData, 
-        isLoading: profileLoading, 
-        isError: profileError 
-    } = useCurrentProfile();
+    // Fetch data
+    const { data: postsData, isLoading: postsLoading, isError: postsError } = useAllPosts();
+    const { data: currentUserData, error: userError } = useCurrentUser();
+    const { data: currentProfileData } = useCurrentProfile();
 
-    const { 
-        data: usersData, 
-        isLoading: usersLoading 
-    } = useUsersByMinor(
-        profileData?.profile?.minor || '',
-        { enabled: !!profileData?.profile?.minor }
-    );
+    // Handle auth errors - redirect to login
+    useEffect(() => {
+        if (userError) {
+            const axiosError = userError as any;
+            if (axiosError?.response?.status === 401 || axiosError?.response?.status === 403) {
+                localStorage.removeItem('token');
+                navigate('/signin');
+            }
+        }
+    }, [userError, navigate]);
 
-    const { 
-        data: postsData, 
-        isLoading: postsLoading, 
-        isError: postsError 
-    } = useAllPosts();
+    const posts = postsData?.posts || [];
+    const currentUser = currentUserData?.user;
+    const currentProfile = currentProfileData?.profile;
 
-    const { data: followingData } = useFollowing();
-
-    // Filter users who are not already followed
-    const recommendedUsers = useMemo(() => {
-        if (!usersData?.users || !followingData?.following) return [];
-        
-        const followedUserIds = followingData.following.map((user: any) => user.id);
-        return usersData.users.filter(
-            (user: any) => !followedUserIds.includes(user.id)
-        );
-    }, [usersData, followingData]);
-
-    // Filter posts by selected label
-    const filteredPosts = useMemo(() => {
-        if (!postsData?.posts) return [];
-        if (!selectedLabel) return postsData.posts;
-        
-        return postsData.posts.filter((post) => 
-            post.labels.includes(selectedLabel)
-        );
-    }, [postsData, selectedLabel]);
-
-    // Get unique labels from all posts
-    const allLabels = useMemo(() => {
-        if (!postsData?.posts) return [];
-        return Array.from(new Set(postsData.posts.flatMap((post) => post.labels)));
-    }, [postsData]);
-
-    // Combined loading and error states
-    const isLoading = profileLoading || postsLoading || usersLoading;
-    const hasError = profileError || postsError;
-
-    // Error State
-    if (hasError) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                <Card className="max-w-md w-full">
-                    <CardContent className={SPACING.container.lg}>
-                        <div className={`text-center ${SPACING.stack.md}`}>
-                            <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-                            <H3>Failed to Load Dashboard</H3>
-                            <Body className="text-muted-foreground">
-                                We couldn't load your dashboard. Please try refreshing the page.
-                            </Body>
-                            <Button onClick={() => window.location.reload()}>
-                                Refresh Page
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    // Loading State with Proper Skeletons
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background">
-                {/* <AppBar /> */}
-                <PageLayout containerSize="lg" spacing="normal">
-                    <div className={`${LAYOUT.grid.cols3} ${SPACING.inline.lg}`}>
-                        {/* Main Feed Skeleton */}
-                        <div className={`lg:col-span-2 ${SPACING.stack.lg}`}>
-                            <Skeleton className="h-32 w-full rounded-lg" />
-                            <Skeleton className="h-64 w-full rounded-lg" />
-                            <Skeleton className="h-64 w-full rounded-lg" />
-                        </div>
-                        {/* Sidebar Skeleton - Hidden on mobile */}
-                        <div className="hidden lg:block">
-                            <Skeleton className="h-96 w-full rounded-lg" />
-                        </div>
-                    </div>
-                </PageLayout>
-            </div>
-        );
-    }
+    const getUserInitials = () => {
+        if (!currentUser) return 'U';
+        return `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}`.toUpperCase();
+    };
 
     return (
-        <div className="min-h-screen bg-background">
-            {/* Fixed AppBar */}
-            <AppBar />
+        <>
+            {/* Create Post Modal */}
+            <CreatePostModal
+                open={isCreatePostOpen}
+                onClose={() => setIsCreatePostOpen(false)}
+            />
 
-            {/* Main Content with PageLayout System */}
-            <PageLayout containerSize="lg" spacing="normal">
-                
-                <div className={`${LAYOUT.grid.cols3} ${SPACING.inline.lg}`}>
-                    
-                    {/* Main Feed - 2/3 width on desktop, full width on mobile */}
-                    <div className={`lg:col-span-2 ${SPACING.stack.lg}`}>
-                        
-                        {/* Filter Chips Card */}
-                        <Card className="border-border bg-card">
-                            <CardHeader className="pb-3">
-                                <div className={LAYOUT.flex.between}>
-                                    <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
-                                        <Filter className="h-4 w-4 text-primary" />
-                                        <span>Filter Posts</span>
-                                    </CardTitle>
-                                    {selectedLabel && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setSelectedLabel(null)}
-                                            className="h-8 text-xs"
-                                        >
-                                            Clear
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="w-full">
-                                    <div className={`flex ${SPACING.inline.sm} pb-2`}>
-                                        <Badge
-                                            variant={!selectedLabel ? "default" : "outline"}
-                                            className="cursor-pointer whitespace-nowrap hover:scale-105 transition-transform text-xs"
-                                            onClick={() => setSelectedLabel(null)}
-                                        >
-                                            All Posts
-                                        </Badge>
-                                        {allLabels.map((label, index) => (
-                                            <Badge
-                                                key={index}
-                                                variant={selectedLabel === label ? "default" : "outline"}
-                                                className="cursor-pointer whitespace-nowrap hover:scale-105 transition-transform text-xs"
-                                                onClick={() => setSelectedLabel(label)}
-                                            >
-                                                {label}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
-
-                        {/* Create Post Card */}
-                        <CreatePost />
-
-                        {/* Posts Feed */}
-                        <div className={SPACING.stack.lg}>
-                            {filteredPosts.length === 0 ? (
-                                <Card className="border-border bg-card">
-                                    <CardContent className={`py-12 text-center ${SPACING.stack.md}`}>
-                                        <div className="text-4xl mb-4">🔭</div>
-                                        <H3>No Posts Found</H3>
-                                        <Body className="text-muted-foreground">
-                                            {selectedLabel 
-                                                ? `No posts with the "${selectedLabel}" label yet.`
-                                                : "Be the first to share something!"
-                                            }
-                                        </Body>
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                filteredPosts.map((post) => (
-                                    <Post key={post.id} post={post} showFollowButton={true} />
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Right Sidebar - 1/3 width, hidden on mobile/tablet */}
-                    <div className={`hidden lg:block ${SPACING.stack.lg}`}>
-                        
-                        {/* Trending Topics Card */}
-                        <Card className="border-border bg-card top-20">
-                            <CardHeader className="pb-3">
-                                <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
-                                    <TrendingUp className="h-4 w-4 text-primary" />
-                                    <span>Trending Topics</span>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className={SPACING.stack.sm}>
-                                    {allLabels.length === 0 ? (
-                                        <div className={`text-center py-4 ${SPACING.stack.sm}`}>
-                                            <Small className="text-muted-foreground">
-                                                No trending topics yet
-                                            </Small>
-                                        </div>
-                                    ) : (
-                                        allLabels.slice(0, 5).map((label, index) => {
-                                            const count = postsData?.posts?.filter(
-                                                (post) => post.labels.includes(label)
-                                            ).length || 0;
-                                            
-                                            return (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => setSelectedLabel(label)}
-                                                    className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors group"
-                                                >
-                                                    <div className={LAYOUT.flex.between}>
-                                                        <Small className="font-medium text-foreground group-hover:text-primary transition-colors">
-                                                            {label}
-                                                        </Small>
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            {count}
-                                                        </Badge>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* People You May Know Card */}
-                        <Card className="border-border bg-card">
-                            <CardHeader className="pb-3">
-                                <div className={SPACING.stack.xs}>
-                                    <CardTitle className={`text-base font-semibold flex items-center ${SPACING.inline.sm}`}>
-                                        <Users className="h-4 w-4 text-primary" />
-                                        <span>People You May Know</span>
-                                    </CardTitle>
-                                    <Small className="text-muted-foreground">
-                                        Based on your {profileData?.profile?.minor || 'interests'}
-                                    </Small>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-[500px] pr-4">
-                                    {recommendedUsers.length === 0 ? (
-                                        <div className={`text-center py-8 ${SPACING.stack.sm}`}>
-                                            <Users className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-                                            <Small className="text-muted-foreground">
-                                                No recommendations yet
-                                            </Small>
-                                        </div>
-                                    ) : (
-                                        <div className={SPACING.stack.sm}>
-                                            {recommendedUsers.slice(0, 10).map((user) => (
-                                                <User key={user.id} user={user} />
-                                            ))}
-                                        </div>
-                                    )}
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
-                    </div>
+            {/* Page Header - Sticky */}
+            <div className="sticky top-0 z-10 backdrop-blur-md bg-black/80 border-b border-neutral-800">
+                <div className="px-4 py-3">
+                    <h1 className="text-xl font-bold">Home</h1>
                 </div>
-            </PageLayout>
-        </div>
+            </div>
+
+            {/* Create Post Prompt - Twitter Style */}
+            <div className="border-b border-neutral-800 px-4 py-3">
+                <div className="flex gap-3">
+                    <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={currentProfile?.profilePic} />
+                        <AvatarFallback className="bg-muted text-xs">
+                            {getUserInitials()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <button
+                        onClick={() => setIsCreatePostOpen(true)}
+                        className="flex-1 text-left text-neutral-500 text-[20px] py-2 hover:text-white transition-colors"
+                    >
+                        What's happening?
+                    </button>
+                </div>
+            </div>
+
+            {/* Posts Feed */}
+            <div>
+                {postsLoading ? (
+                    // Loading skeletons
+                    <div>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="border-b border-neutral-800 px-4 py-3">
+                                <div className="flex gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-neutral-800 animate-pulse" />
+                                    <div className="flex-1 space-y-3">
+                                        <div className="h-4 w-32 bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-full bg-neutral-800 rounded animate-pulse" />
+                                        <div className="h-4 w-5/6 bg-neutral-800 rounded animate-pulse" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : postsError ? (
+                    // Error state
+                    <div className="px-4 py-16 text-center">
+                        <div className="text-6xl mb-4">⚠️</div>
+                        <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
+                        <p className="text-neutral-500 mb-6">
+                            Failed to load posts. Please try refreshing the page.
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="px-6 py-2 bg-blue-500 hover:bg-blue-600 rounded-full font-bold transition-colors"
+                        >
+                            Refresh
+                        </button>
+                    </div>
+                ) : posts.length === 0 ? (
+                    // Empty state - First time user
+                    <div className="px-4 py-16 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/10 mb-6">
+                            <Sparkles className="h-8 w-8 text-blue-500" />
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">
+                            Welcome to Connect!
+                        </h2>
+                        <p className="text-neutral-500 mb-6 max-w-sm mx-auto">
+                            This is your Home timeline. Share your first thought with the community.
+                        </p>
+                        <button
+                            onClick={() => setIsCreatePostOpen(true)}
+                            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-full font-bold transition-colors inline-flex items-center gap-2"
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            Create your first post
+                        </button>
+                    </div>
+                ) : (
+                    // Posts list - Twitter style (no wrapper cards)
+                    posts.map((post) => (
+                        <PostCard
+                            key={post.id}
+                            post={post}
+                            showActions={true}
+                            showFollowButton={true}
+                        />
+                    ))
+                )}
+            </div>
+
+            {/* Load More Indicator (for future infinite scroll) */}
+            {!postsLoading && !postsError && posts.length > 0 && (
+                <div className="px-4 py-6 text-center text-neutral-500 text-sm border-b border-neutral-800">
+                    End of feed · {posts.length} posts loaded
+                </div>
+            )}
+        </>
     );
 }

@@ -4,9 +4,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_BASE_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // No default Content-Type - let axios set it based on data type
 });
 
 // Request interceptor - Add auth token to all requests
@@ -40,10 +38,10 @@ apiClient.interceptors.response.use(
 // Helper function for multipart/form-data requests (file uploads)
 export const createFormDataRequest = (data: Record<string, any>) => {
   const formData = new FormData();
-  
+
   Object.entries(data).forEach(([key, value]) => {
     if (value === null || value === undefined) return;
-    
+
     if (Array.isArray(value)) {
       // Handle arrays (e.g., multiple files, labels)
       if (value.length > 0 && value[0] instanceof File) {
@@ -61,6 +59,6 @@ export const createFormDataRequest = (data: Record<string, any>) => {
       formData.append(key, String(value));
     }
   });
-  
+
   return formData;
 };

@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import SimplePeer, { SignalData } from 'simple-peer';
-import { CallType, WebRTCSignal } from '@/types/types';
-import { signalQueue } from '@/lib/signalQueue';
-import { callEventBus, CallEventType } from '@/lib/eventBus';
+import { CallType } from '@/types/types';
+// import { signalQueue } from '@/lib/signalQueue';
+import { Socket } from 'socket.io-client';
+import { callEventBus } from '@/lib/eventBus';
 import { createCallLogger } from '@/utils/callLogger';
 
 const logger = createCallLogger({ file: 'hooks/useWebRTCManager.ts', hook: 'useWebRTCManager' });
@@ -11,6 +12,7 @@ interface WebRTCManagerOptions {
   isInitiator: boolean;
   callType: CallType;
   otherUserId: string;
+  socket: Socket | null;
   onLocalStream?: (stream: MediaStream) => void;
   onRemoteStream?: (stream: MediaStream) => void;
   onConnectionStateChange?: (state: 'connecting' | 'connected' | 'disconnected') => void;
@@ -31,7 +33,7 @@ export function useWebRTCManager() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const isInitializedRef = useRef(false);
-  const signalSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+  // const signalSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const retryCountRef = useRef(0);
 
   // Track options for reconnection
@@ -72,12 +74,6 @@ export function useWebRTCManager() {
     if (peerRef.current) {
       peerRef.current.destroy();
       peerRef.current = null;
-    }
-
-    // Unsubscribe from signals
-    if (signalSubscriptionRef.current) {
-      signalSubscriptionRef.current.unsubscribe();
-      signalSubscriptionRef.current = null;
     }
 
     // Reset state
@@ -145,30 +141,36 @@ export function useWebRTCManager() {
   }, []);
 
   // Setup signal handlers for WebRTC events
-  const setupSignalHandlers = useCallback((peer: SimplePeer.Instance, otherUserId: string, options: WebRTCManagerOptions) => {
+  const setupSignalHandlers = useCallback((peer: SimplePeer.Instance, otherUserId: string, options: WebRTCManagerOptions, socket: Socket | null) => {
     // Handle WebRTC signals (offer, answer, ICE candidates)
     peer.on('signal', (data: SignalData) => {
       console.log('[WebRTCManager] Peer signal generated:', data.type || 'candidate');
 
-      // Determine signal type
-      let signalType: CallEventType;
-      if (data.type === 'offer') {
-        signalType = 'webrtc:offer';
-      } else if (data.type === 'answer') {
-        signalType = 'webrtc:answer';
-      } else {
-        signalType = 'webrtc:candidate';
+      if (!socket) {
+        console.error('[WebRTCManager] Socket not available for signaling');
+        return;
       }
 
-      // Emit signal through event bus
-      callEventBus.emit(signalType, {
-        signal: data,
-        otherUserId,
-        isInitiator: options.isInitiator
-      });
+      // Emit directly to socket based on signal type
+      if (data.type === 'offer') {
+        socket.emit('webrtc-offer', {
+          receiverId: otherUserId,
+          offer: data
+        });
+      } else if (data.type === 'answer') {
+        socket.emit('webrtc-answer', {
+          callerId: otherUserId,  // Note: for answer, other user is the caller
+          answer: data
+        });
+      } else {
+        // ICE candidate
+        socket.emit('webrtc-ice-candidate', {
+          otherUserId: otherUserId,
+          candidate: data
+        });
+      }
     });
 
-    // Handle incoming remote stream
     peer.on('stream', (remoteStream: MediaStream) => {
       console.log('[WebRTCManager] Received remote stream:', remoteStream.id);
 
@@ -212,51 +214,51 @@ export function useWebRTCManager() {
   }, []);
 
   // Setup signal subscription from queue
-  const setupSignalSubscription = useCallback((otherUserId: string) => {
-      console.log('[WebRTCManager] Setting up signal subscription for:', otherUserId);
+  // const setupSignalSubscription = useCallback((otherUserId: string) => {
+  //   console.log('[WebRTCManager] Setting up signal subscription for:', otherUserId);
 
-    // Unsubscribe from any existing subscription
-    if (signalSubscriptionRef.current) {
-      signalSubscriptionRef.current.unsubscribe();
-    }
+  //   // Unsubscribe from any existing subscription
+  //   if (signalSubscriptionRef.current) {
+  //     signalSubscriptionRef.current.unsubscribe();
+  //   }
 
-    // Subscribe to signal queue for this user
-    const subscription = signalQueue.signals$.subscribe({
-      next: (signal: WebRTCSignal) => {
-        // Only process signals for this user
-        if (signal.senderId !== otherUserId) { //What is signal.senderId, from where it is coming from??
-          return;
-        }
+  //   // Subscribe to signal queue for this user
+  //   const subscription = signalQueue.signals$.subscribe({
+  //     next: (signal: WebRTCSignal) => {
+  //       // Only process signals for this user
+  //       if (signal.senderId !== otherUserId) { //What is signal.senderId, from where it is coming from??
+  //         return;
+  //       }
 
-        console.log(`[WebRTCManager] Processing queued signal: ${signal.type} from ${signal.senderId}`);
+  //       console.log(`[WebRTCManager] Processing queued signal: ${signal.type} from ${signal.senderId}`);
 
-        if (!peerRef.current) {
-          console.warn('[WebRTCManager] Peer not ready yet, storing signal again!');
-          // Store signal for later processing when peer is ready
-          signalQueue.enqueue(signal);
-          return;
-        }
+  //       if (!peerRef.current) {
+  //         console.warn('[WebRTCManager] Peer not ready yet, storing signal again!');
+  //         // Store signal for later processing when peer is ready
+  //         signalQueue.enqueue(signal);
+  //         return;
+  //       }
 
-        try {
-          peerRef.current.signal(signal.data);
-          console.log(`[WebRTCManager] Successfully processed ${signal.type}`);
-        } catch (error) {
-          console.error(`[WebRTCManager] Failed to process ${signal.type}:`, error);
-        }
-      },
-      error: (error) => {
-        console.error('[WebRTCManager] Signal subscription error:', error);
-      }
-    });
+  //       try {
+  //         peerRef.current.signal(signal.data);
+  //         console.log(`[WebRTCManager] Successfully processed ${signal.type}`);
+  //       } catch (error) {
+  //         console.error(`[WebRTCManager] Failed to process ${signal.type}:`, error);
+  //       }
+  //     },
+  //     error: (error) => {
+  //       console.error('[WebRTCManager] Signal subscription error:', error);
+  //     }
+  //   });
 
-    signalSubscriptionRef.current = subscription;
-  }, []);
+  //   signalSubscriptionRef.current = subscription;
+  // }, []);
 
   // Initialize WebRTC connection
   const initialize = useCallback(async (
     options: WebRTCManagerOptions
   ): Promise<void> => {
-    const { isInitiator, callType, otherUserId } = options;
+    const { isInitiator, callType, otherUserId, socket } = options;
 
     logger.info('→ initialize()', { isInitiator, callType, otherUserId });
 
@@ -268,7 +270,11 @@ export function useWebRTCManager() {
     }
 
     // Cleanup any existing connection
-    cleanup();
+    if (peerRef.current) {
+      logger.warn('Peer already exists, skipping initialization', { otherUserId });
+      console.log('[WebRTCManager] Peer already initialized, skipping');
+      return;
+    }
 
     isInitializedRef.current = true;
     currentOptionsRef.current = options;
@@ -280,9 +286,6 @@ export function useWebRTCManager() {
       // 1. Get local media stream
       const localStream = await getUserMedia(callType);
       options.onLocalStream?.(localStream); //this allows us to unlock media features to ui/components/hooks..
-
-      // 2. Setup signal subscription for this user
-      setupSignalSubscription(otherUserId);
 
       // 3. Create SimplePeer instance
       console.log('[WebRTCManager] Creating peer connection, initiator:', isInitiator);
@@ -323,7 +326,7 @@ export function useWebRTCManager() {
       peerRef.current = peer;
 
       // 4. Setup signal handlers
-      setupSignalHandlers(peer, otherUserId, options);
+      setupSignalHandlers(peer, otherUserId, options, socket);
 
       // 5. Update connection state
       setState(prev => ({ ...prev, connectionState: 'connecting' }));
@@ -338,27 +341,27 @@ export function useWebRTCManager() {
       cleanup();
       throw error;
     }
-  }, [getUserMedia, cleanup, setupSignalSubscription, setupSignalHandlers]);
+  }, [getUserMedia, cleanup, setupSignalHandlers]);
 
   // Process immediate signal (for critical signals like initial offer/answer)
-  const processImmediateSignal = useCallback((signal: WebRTCSignal) => {
-    console.log(`[WebRTCManager] Processing immediate signal: ${signal.type} from ${signal.senderId}`);
+  // const processImmediateSignal = useCallback((signal: WebRTCSignal) => {
+  //   console.log(`[WebRTCManager] Processing immediate signal: ${signal.type} from ${signal.senderId}`);
 
-    if (!peerRef.current) {
-      console.log('[WebRTCManager] Peer not ready, queuing signal');
-      signalQueue.enqueue(signal);
-      return;
-    }
+  //   if (!peerRef.current) {
+  //     console.log('[WebRTCManager] Peer not ready, queuing signal');
+  //     signalQueue.enqueue(signal);
+  //     return;
+  //   }
 
-    try {
-      peerRef.current.signal(signal.data);
-      console.log(`[WebRTCManager] Successfully processed immediate ${signal.type}`);
-    } catch (error) {
-      console.error(`[WebRTCManager] Failed to process immediate signal:`, error);
-      // Fallback to queue
-      signalQueue.enqueue(signal);
-    }
-  }, []);
+  //   try {
+  //     peerRef.current.signal(signal.data);
+  //     console.log(`[WebRTCManager] Successfully processed immediate ${signal.type}`);
+  //   } catch (error) {
+  //     console.error(`[WebRTCManager] Failed to process immediate signal:`, error);
+  //     // Fallback to queue
+  //     signalQueue.enqueue(signal);
+  //   }
+  // }, []);
 
   // Media control functions
   const toggleMute = useCallback(() => {
@@ -462,7 +465,8 @@ export function useWebRTCManager() {
     // Core methods
     initialize,
     cleanup,
-    processImmediateSignal,
+
+    getPeer: () => peerRef.current,
 
     // Media controls
     toggleMute,

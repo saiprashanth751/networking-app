@@ -15,7 +15,7 @@ import {
     ArrowLeft,
     Search,
 } from "lucide-react";
-import { Post } from '../components/Post';
+import { PostCard } from '../components/posts/PostCard';
 import { H2, Body, Small } from '@/components/ui/typography';
 import { useProfile } from '@/hooks/queries/profile';
 import { useUser } from '@/hooks/queries/user';
@@ -23,7 +23,7 @@ import { useUserPosts } from '@/hooks/queries/post';
 import { useFollowStatus, useFollowersByUserId, useFollowingByUserId } from '@/hooks/queries/follow';
 import { useToggleFollow } from '@/hooks/mutations/follow';
 import { useUserProjects } from '@/hooks/queries/project';
-import { ProjectList } from '../components/ProjectList';
+import { ProjectList } from '../components/projects/ProjectList';
 import { FollowList } from '../components/FollowList'
 
 const ProfilePage = () => {
@@ -274,7 +274,7 @@ const ProfilePage = () => {
                                     </Body>
                                 </div>
                             ) : (
-                                posts.map((post) => <Post key={post.id} post={post} showFollowButton={false} />)
+                                posts.map((post) => <PostCard key={post.id} post={post} />)
                             )}
                         </div>
                     )}

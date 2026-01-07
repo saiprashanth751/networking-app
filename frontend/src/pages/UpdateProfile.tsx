@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -17,39 +17,39 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCurrentProfile } from "@/hooks/queries/profile";
 import { useUpdateProfile } from "@/hooks/mutations/profile";
-import { 
-  User, 
-  GraduationCap, 
-  Link as LinkIcon,
-  Upload,
-  Loader2,
-  Save,
-  AlertCircle,
-  ArrowLeft,
+import {
+    User,
+    GraduationCap,
+    Link as LinkIcon,
+    Upload,
+    Loader2,
+    Save,
+    AlertCircle,
+    ArrowLeft,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const departments = [
-  "Computer Science and Engineering",
-  "Electronics and Communication Engineering",
-  "Mechanical Engineering",
-  "Chemical Engineering",
-  "Mechatronics Engineering",
-  "Civil Engineering",
+    "Computer Science and Engineering",
+    "Electronics and Communication Engineering",
+    "Mechanical Engineering",
+    "Chemical Engineering",
+    "Mechatronics Engineering",
+    "Civil Engineering",
 ];
 
 const minors = [
-  "Full Stack Web Development",
-  "Data Science",
-  "Machine Learning",
-  "Artificial Intelligence",
-  "Software Methodology",
-  "Cyber Security",
+    "Full Stack Web Development",
+    "Data Science",
+    "Machine Learning",
+    "Artificial Intelligence",
+    "Software Methodology",
+    "Cyber Security",
 ];
 
 export default function UpdateProfile() {
     const navigate = useNavigate();
-    
+
     // Form state
     const [bio, setBio] = useState("");
     const [graduationYear, setGraduationYear] = useState("");
@@ -64,13 +64,13 @@ export default function UpdateProfile() {
     const [previewUrl, setPreviewUrl] = useState<string>("");
 
     // Query and mutation
-    const { 
-      data: profileData, 
-      isLoading, 
-      isError,
-      error: profileError 
+    const {
+        data: profileData,
+        isLoading,
+        isError,
+        error: profileError
     } = useCurrentProfile();
-    
+
     const updateProfileMutation = useUpdateProfile();
 
     // Populate form with existing data
@@ -102,7 +102,7 @@ export default function UpdateProfile() {
                 alert("Please upload an image file");
                 return;
             }
-            
+
             setProfilePic(file);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -114,10 +114,10 @@ export default function UpdateProfile() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Build update payload
         const updates: any = {};
-        
+
         // Only include changed fields
         if (bio.trim() !== (profileData?.profile?.bio || "")) updates.bio = bio.trim();
         if (graduationYear !== (profileData?.profile?.graduationYear || "")) updates.graduationYear = graduationYear;
@@ -146,20 +146,20 @@ export default function UpdateProfile() {
     };
 
     // Form validation - only require academic fields
-    const isFormValid =  String(graduationYear).trim() && department && minor;
+    const isFormValid = String(graduationYear).trim() && department && minor;
     const hasChanges = () => {
         if (!profileData?.profile) return true;
         const profile = profileData.profile;
         return bio.trim() !== (profile.bio || "") ||
-               graduationYear !== (profile.graduationYear || "") ||
-               department !== (profile.department || "") ||
-               minor !== (profile.minor || "") ||
-               linkedin !== (profile.linkedin || "") ||
-               github !== (profile.github || "") ||
-               leetcode !== (profile.leetcode || "") ||
-               codeforces !== (profile.codeforces || "") ||
-               geekforgeeks !== (profile.geekforgeeks || "") ||
-               profilePic !== null;
+            graduationYear !== (profile.graduationYear || "") ||
+            department !== (profile.department || "") ||
+            minor !== (profile.minor || "") ||
+            linkedin !== (profile.linkedin || "") ||
+            github !== (profile.github || "") ||
+            leetcode !== (profile.leetcode || "") ||
+            codeforces !== (profile.codeforces || "") ||
+            geekforgeeks !== (profile.geekforgeeks || "") ||
+            profilePic !== null;
     };
 
     // Loading state
@@ -268,18 +268,18 @@ export default function UpdateProfile() {
                                         Upload a professional photo (Max 5MB, JPG/PNG)
                                     </p>
                                 </div>
-                                
+
                                 <div className="flex flex-col md:flex-row items-center gap-6">
                                     <Avatar className="h-32 w-32 border-4 border-border">
-                                        <AvatarImage 
-                                            src={previewUrl || profileData?.profile?.profilePic} 
+                                        <AvatarImage
+                                            src={previewUrl || profileData?.profile?.profilePic}
                                             alt="Profile preview"
                                         />
                                         <AvatarFallback className="bg-muted">
                                             <Upload className="h-8 w-8 text-muted-foreground" />
                                         </AvatarFallback>
                                     </Avatar>
-                                    
+
                                     <div className="flex-1 space-y-2">
                                         <Input
                                             id="profilePic"
@@ -289,7 +289,7 @@ export default function UpdateProfile() {
                                             className="max-w-sm"
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            {profilePic 
+                                            {profilePic
                                                 ? `Selected: ${profilePic.name}`
                                                 : "No file selected"
                                             }
@@ -306,7 +306,7 @@ export default function UpdateProfile() {
                                     <User className="h-5 w-5" />
                                     Basic Information
                                 </h3>
-                                
+
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="bio">
@@ -348,14 +348,14 @@ export default function UpdateProfile() {
                                     <GraduationCap className="h-5 w-5" />
                                     Academic Details
                                 </h3>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="department" className="required">
                                             Department
                                         </Label>
-                                        <Select 
-                                            value={department} 
+                                        <Select
+                                            value={department}
                                             onValueChange={setDepartment}
                                             required
                                         >
@@ -376,8 +376,8 @@ export default function UpdateProfile() {
                                         <Label htmlFor="minor" className="required">
                                             Engineering Minor
                                         </Label>
-                                        <Select 
-                                            value={minor} 
+                                        <Select
+                                            value={minor}
                                             onValueChange={setMinor}
                                             required
                                         >
@@ -404,7 +404,7 @@ export default function UpdateProfile() {
                                     <LinkIcon className="h-5 w-5" />
                                     Social & Professional Links
                                 </h3>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="linkedin">LinkedIn Profile</Label>

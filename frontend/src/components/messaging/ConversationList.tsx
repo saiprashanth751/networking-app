@@ -18,7 +18,7 @@ interface ConversationListProps {
 const logger = createCallLogger({ file: 'components/messaging/ConversationList.tsx', component: 'ConversationList' });
 
 export function ConversationList({ onSelectUser, selectedUserId }: ConversationListProps) {
-  logger.info("Rendering ConversationList with selectedUserId", {selectedUserId});
+  logger.info("Rendering ConversationList with selectedUserId", { selectedUserId });
   const [searchQuery, setSearchQuery] = useState('');
   const { data: conversationsData, isLoading: conversationsLoading } = useConversations();
   const { data: searchData, isLoading: searchLoading } = useSearchUsers(searchQuery);
@@ -40,7 +40,7 @@ export function ConversationList({ onSelectUser, selectedUserId }: ConversationL
   };
 
   return (
-    <div className="h-full flex flex-col bg-black">
+    <div className="h-full flex flex-col bg-background">
       {/* Search Bar */}
       <div className="p-4 border-b border-neutral-800">
         <div className="relative">
@@ -153,7 +153,7 @@ export function ConversationList({ onSelectUser, selectedUserId }: ConversationL
                       <div
                         className={cn(
                           'text-[13px] truncate flex-1',
-                          conv.unreadCount > 0 ? 'text-white font-medium' : 'text-neutral-500'
+                          conv.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'
                         )}
                       >
                         {conv.lastMessage.content || 'No messages yet'}

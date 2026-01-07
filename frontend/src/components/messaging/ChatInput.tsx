@@ -86,7 +86,7 @@ export function ChatInput({ onSend, onTyping }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-neutral-800 bg-black p-4">
+    <div className="border-t border-border bg-background p-4">
       {selectedFile && (
         <div className="mb-3 flex items-center gap-3 p-3 bg-neutral-900 rounded-lg">
           {filePreview ? (

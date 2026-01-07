@@ -3,7 +3,7 @@ import { useMachine } from '@xstate/react';
 import { Socket } from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { useWebRTCManager } from './useWebRTCManager';
-import { CallParticipant, CallType, IncomingCallEvent, WebRTCSignal } from '@/types/types';
+import { CallParticipant, CallType, IncomingCallEvent } from '@/types/types';
 import { createCallMachine } from '@/state/callMachine';
 import { callEventBus } from '@/lib/eventBus';
 import { createCallLogger } from '@/utils/callLogger';
@@ -30,9 +30,6 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
   const processedCallIdsRef = useRef<Set<string>>(new Set());
   const ringingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ FIX: Track if socket handlers are already registered
-  const handlersRegisteredRef = useRef(false);
-
   // Keep current state in a ref for use in callbacks
   const stateRef = useRef(state);
   useEffect(() => {
@@ -45,10 +42,20 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
   const webRTCManager = useWebRTCManager();
   logger.info("I called and assigned response to webRTCManager")
 
+  // ✅ Phase 3: Refs for stable callback versions to prevent socket effect re-runs
+  const sendRef = useRef(send);
+  const webRTCManagerRef = useRef(webRTCManager);
+
   // Update socket ref
   useEffect(() => {
     socketRef.current = socket;
   }, [socket]);
+
+  // ✅ Phase 3: Update callback refs when they change
+  useEffect(() => {
+    sendRef.current = send;
+    webRTCManagerRef.current = webRTCManager;
+  }, [send, webRTCManager]);
 
   // Get current call context. Get the callContext from callMachine.'
   const callContext = state.context;
@@ -67,10 +74,10 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
 
     // ✅ FIX: Send event with properties at top level (not nested in payload)
     logger.info("Sending using send({type: 'CALL_INITIATE', remoteUser,  callType})")
-    send({ 
-      type: 'CALL_INITIATE', 
-      remoteUser, 
-      callType  
+    send({
+      type: 'CALL_INITIATE',
+      remoteUser,
+      callType
     });
 
     // Emit socket event
@@ -236,23 +243,24 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     const otherUserId = callDetails?.participants.remote.id || '';
     const callType = callDetails?.type || 'audio';
     const isInitiator = callDetails?.direction === 'outgoing';
-
-    if (state.value === 'connecting' && otherUserId && callType) {
+    if (state.matches('connecting') && otherUserId && callType) {
       console.log('[Orchestrator] Initializing WebRTC for connection');
 
       webRTCManager.initialize({
         isInitiator,
         callType,
         otherUserId,
-        onLocalStream: (stream) => { //where the stream is accessed, how it is being passsed?
+        socket: socketRef.current,
+        onLocalStream: (stream) => {
           console.log(`[Orchestrator] Local stream ready ${stream}`);
+          send({ type: 'LOCAL_STREAM_READY', stream });
         },
-        onRemoteStream: (stream) => { //where the stream is accessed, how it is being passsed?
+        onRemoteStream: (stream) => {
           console.log(`[Orchestrator] Remote stream ready ${stream}`);
+          send({ type: 'REMOTE_STREAM_READY', stream });
         },
         onConnectionStateChange: (connectionState) => {
           console.log('[Orchestrator] WebRTC connection state:', connectionState);
-
           if (connectionState === 'connected') {
             send({ type: 'WEBRTC_CONNECTED' });
             toast.success('Call connected!');
@@ -265,34 +273,20 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
           send({ type: 'WEBRTC_FAILED', error });
           toast.error(`Connection error: ${error}`);
         }
-      }).catch(error => {
-        console.error('[Orchestrator] WebRTC initialization failed:', error);
-        send({ type: 'WEBRTC_FAILED', error: error.message });
       });
     }
   }, [state.value, state.context.callDetails, webRTCManager, send]);
 
-  // Process WebRTC signals from socket
-  const processWebRTCSignal = useCallback((signal: WebRTCSignal) => {
-    console.log('[Orchestrator] Processing WebRTC signal:', signal.type);
-    webRTCManager.processImmediateSignal(signal);
-  }, [webRTCManager]);
-
   // ============================================================================
-  // SOCKET EVENT HANDLERS - ✅ FIX: Register only once
+  // SOCKET EVENT HANDLERS - ✅ Phase 3: Register only once using refs
   // ============================================================================
 
   useEffect(() => {
     if (!socket) return;
 
-    // ✅ FIX: Prevent duplicate registration
-    if (handlersRegisteredRef.current) {
-      console.log('[Orchestrator] Socket handlers already registered, skipping');
-      return;
-    }
-
+    // ✅ Fix #2: No manual registration guard needed
+    // React manages lifecycle via [socket] dependency
     console.log('[Orchestrator] Setting up socket listeners');
-    handlersRegisteredRef.current = true;
 
     // Incoming call event
     const handleIncomingCall = (data: IncomingCallEvent) => {
@@ -313,7 +307,8 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
 
       // ✅ FIX: Send event with properties at top level
       logger.info("Sending machine state send({type: CALL_RECEIVED and other data})")
-      send({
+      // ✅ Phase 3: Use ref to avoid re-registering handlers
+      sendRef.current({
         type: 'CALL_RECEIVED',
         callId: data.callId,
         callerId: data.callerId,
@@ -357,7 +352,7 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
         return;
       }
 
-      send({ type: 'CALL_ACCEPT' });
+      sendRef.current({ type: 'CALL_ACCEPT' });
       callEventBus.emit('sound:stopRinging', null);
 
       if (ringingTimeoutRef.current) {
@@ -369,75 +364,96 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     // Call rejected
     const handleCallRejected = ({ callId }: { callId: string }) => {
       logger.info('SOCKET RECEIVE: callRejected', { callId });
-      send({ type: 'CALL_REJECT' });
+      sendRef.current({ type: 'CALL_REJECT' });
       callEventBus.emit('sound:stopRinging', null);
       toast.info('Call declined');
-      webRTCManager.cleanup();
+      webRTCManagerRef.current.cleanup();
       currentCallIdRef.current = '';
     };
 
     // Call ended
     const handleCallEnded = ({ callId }: { callId: string }) => {
       logger.info('SOCKET RECEIVE: callEnded', { callId });
-      send({ type: 'CALL_END' });
+      sendRef.current({ type: 'CALL_END' });
       toast.info('Call ended by other party');
-      webRTCManager.cleanup();
+      webRTCManagerRef.current.cleanup();
       currentCallIdRef.current = '';
     };
 
     // Call cancelled/timeout
     const handleCallCancelled = ({ callId }: { callId: string }) => {
       logger.info('SOCKET RECEIVE: callCancelled', { callId });
-      
+
       // ✅ FIX: Only send timeout if in ringing state
       if (stateRef.current.value === 'incoming.ringing' || stateRef.current.value === 'outgoing.ringing') {
-        send({ type: 'TIMEOUT' });
+        sendRef.current({ type: 'TIMEOUT' });
         toast.info('Call cancelled');
       }
 
       callEventBus.emit('sound:stopRinging', null);
-      webRTCManager.cleanup();
+      webRTCManagerRef.current.cleanup();
       currentCallIdRef.current = '';
     };
 
     // Call unavailable
     const handleCallUnavailable = ({ reason }: { reason: string }) => {
       logger.info('SOCKET RECEIVE: callUnavailable', { reason });
-      send({ type: 'CALL_END' });
+      sendRef.current({ type: 'CALL_END' });
       toast.error(reason);
-      webRTCManager.cleanup();
+      webRTCManagerRef.current.cleanup();
       currentCallIdRef.current = '';
     };
 
     // WebRTC signals
     const handleWebRTCOffer = (data: { offer: any; senderId: string }) => {
       logger.info('SOCKET RECEIVE: webrtc-offer', { senderId: data.senderId });
-      processWebRTCSignal({
-        type: 'offer',
-        data: data.offer,
-        timestamp: Date.now(),
-        senderId: data.senderId
-      });
+
+      const peer = webRTCManagerRef.current.getPeer();
+      if (!peer) {
+        console.warn('[Orchestrator] Peer not ready for offer');
+        return;
+      }
+
+      try {
+        peer.signal(data.offer);
+        console.log('[Orchestrator] Processed offer successfully');
+      } catch (error) {
+        console.error('[Orchestrator] Failed to process offer:', error);
+      }
     };
 
     const handleWebRTCAnswer = (data: { answer: any; senderId: string }) => {
       logger.info('SOCKET RECEIVE: webrtc-answer', { senderId: data.senderId });
-      processWebRTCSignal({
-        type: 'answer',
-        data: data.answer,
-        timestamp: Date.now(),
-        senderId: data.senderId
-      });
+
+      const peer = webRTCManagerRef.current.getPeer();
+      if (!peer) {
+        console.warn('[Orchestrator] Peer not ready for answer');
+        return;
+      }
+
+      try {
+        peer.signal(data.answer);
+        console.log('[Orchestrator] Processed answer successfully');
+      } catch (error) {
+        console.error('[Orchestrator] Failed to process answer:', error);
+      }
     };
 
     const handleWebRTCIceCandidate = (data: { candidate: any; senderId: string }) => {
       logger.info('SOCKET RECEIVE: webrtc-ice-candidate', { senderId: data.senderId });
-      processWebRTCSignal({
-        type: 'candidate',
-        data: data.candidate,
-        timestamp: Date.now(),
-        senderId: data.senderId
-      });
+
+      const peer = webRTCManagerRef.current.getPeer();
+      if (!peer) {
+        console.warn('[Orchestrator] Peer not ready for ICE candidate');
+        return;
+      }
+
+      try {
+        peer.signal(data.candidate);
+        console.log('[Orchestrator] Processed ICE candidate successfully');
+      } catch (error) {
+        console.error('[Orchestrator] Failed to process ICE candidate:', error);
+      }
     };
 
     // Register listeners
@@ -455,7 +471,6 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     // Cleanup function
     return () => {
       console.log('[Orchestrator] Cleaning up socket listeners');
-      handlersRegisteredRef.current = false;
 
       socket.off('incomingCall', handleIncomingCall);
       socket.off('callRinging', handleCallRinging);
@@ -474,7 +489,7 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
         ringingTimeoutRef.current = null;
       }
     };
-  }, [socket, send, processWebRTCSignal, webRTCManager, handleTimeout]);
+  }, [socket]); // ✅ Phase 3: Only depend on socket - handlers use refs for callbacks
 
   // ============================================================================
   // MEDIA CONTROLS
@@ -512,7 +527,10 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
 
     // Current call info
     activeCall: callContext.callDetails,
-    incomingCall: state.value === 'incoming.ringing' ? callContext.callDetails : null,
+    incomingCall: state.matches({ incoming: 'ringing' })
+      ? callContext.callDetails
+      : null,
+
     isRinging: callContext.isRinging,
     isConnected: callContext.isConnected,
 
@@ -537,7 +555,7 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     startScreenShare,
 
     // Utility
-    isInCall: state.value !== 'idle',
-    hasIncomingCall: state.value === 'incoming.ringing'
+    isInCall: state.matches('connecting') || state.matches('active'),
+    hasIncomingCall: state.matches({ incoming: 'ringing' }),
   };
 }

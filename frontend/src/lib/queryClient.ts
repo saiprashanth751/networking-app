@@ -132,5 +132,46 @@ export const queryKeys = {
     search: (query: string) => ['conversations', 'search', query] as const,
     detail: (userId: string) => ['conversations', 'detail', userId] as const,
   },
-  
+
+  // Categories
+  categories: {
+    all: ['categories'] as const,
+    list: () => [...queryKeys.categories.all, 'list'] as const,
+    detail: (slug: string) => [...queryKeys.categories.all, 'detail', slug] as const,
+    posts: (slug: string, filters?: { page?: number; limit?: number }) =>
+      [...queryKeys.categories.all, 'posts', slug, filters] as const,
+  },
+
+  // Tags
+  tags: {
+    all: ['tags'] as const,
+    search: (query: string) => [...queryKeys.tags.all, 'search', query] as const,
+    trending: () => [...queryKeys.tags.all, 'trending'] as const,
+    posts: (slug: string, filters?: { page?: number; limit?: number }) =>
+      [...queryKeys.tags.all, 'posts', slug, filters] as const,
+  },
+
+  // Comments
+  comments: {
+    all: ['comments'] as const,
+    byPost: (postId: string, filters?: { page?: number; limit?: number; sort?: string }) =>
+      [...queryKeys.comments.all, 'byPost', postId, filters] as const,
+    replies: (commentId: string, filters?: { page?: number; limit?: number }) =>
+      [...queryKeys.comments.all, 'replies', commentId, filters] as const,
+  },
+
+  // Bookmarks
+  bookmarks: {
+    all: ['bookmarks'] as const,
+    list: (filters?: { page?: number; limit?: number; collectionId?: string }) =>
+      [...queryKeys.bookmarks.all, 'list', filters] as const,
+  },
+
+  // Drafts
+  drafts: {
+    all: ['drafts'] as const,
+    list: () => [...queryKeys.drafts.all, 'list'] as const,
+    detail: (draftId: string) => [...queryKeys.drafts.all, 'detail', draftId] as const,
+  },
+
 } as const;

@@ -22,7 +22,7 @@ interface MainLayoutProps {
  */
 export function MainLayout({ children, showRightSidebar = true }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Left Sidebar - Navigation */}
       <LeftSidebar />
 

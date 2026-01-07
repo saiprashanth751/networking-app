@@ -37,7 +37,7 @@ import {
 import { useProject } from '@/hooks/queries/project';
 import { useCurrentUser } from '@/hooks/queries/user';
 import { useDeleteProject, useToggleFeaturedProject } from '@/hooks/mutations/project';
-import { ProjectFormDialog } from '@/components/ProjectFormDialog';
+import { ProjectFormDialog } from '@/components/projects/ProjectFormDialog';
 import { H2, Body } from '@/components/ui/typography';
 
 export default function ProjectDetail() {
@@ -204,8 +204,8 @@ export default function ProjectDetail() {
                                         key={index}
                                         onClick={() => setSelectedImageIndex(index)}
                                         className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${selectedImageIndex === index
-                                                ? 'border-blue-500'
-                                                : 'border-transparent opacity-60 hover:opacity-100'
+                                            ? 'border-blue-500'
+                                            : 'border-transparent opacity-60 hover:opacity-100'
                                             }`}
                                     >
                                         <img
@@ -240,10 +240,10 @@ export default function ProjectDetail() {
                                 <Badge
                                     variant="secondary"
                                     className={`${project.status === 'completed'
-                                            ? 'bg-green-500/10 text-green-500'
-                                            : project.status === 'in-progress'
-                                                ? 'bg-blue-500/10 text-blue-500'
-                                                : 'bg-neutral-500/10 text-neutral-500'
+                                        ? 'bg-green-500/10 text-green-500'
+                                        : project.status === 'in-progress'
+                                            ? 'bg-blue-500/10 text-blue-500'
+                                            : 'bg-neutral-500/10 text-neutral-500'
                                         }`}
                                 >
                                     {project.status}

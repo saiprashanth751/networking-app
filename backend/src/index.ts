@@ -7,6 +7,11 @@ import messageRouter from "./routes/message";
 import projectRouter from "./routes/project"
 import conversationRouter from "./routes/conversation";
 import callHistoryRouter from "./routes/callHistory";
+import categoryRouter from "./routes/category";
+import tagRouter from "./routes/tag";
+import draftRouter from "./routes/draft";
+import engagementRouter from "./routes/engagement";
+import mediaRouter from "./routes/media";
 import prisma from "../prisma/prisma_client";
 import path from "path";
 import { errorMiddleware } from "./middleware/errorMiddleware";
@@ -27,7 +32,7 @@ app.use(
       process.env.ORIGIN_URL || 'http://localhost:5173',
       'http://10.203.232.89:5173'
     ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
@@ -50,6 +55,11 @@ app.use("/api/v1/project", projectRouter);
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/conversation", conversationRouter);
 app.use("/api/v1/callhistory", callHistoryRouter);
+app.use("/api/v1/category", categoryRouter);
+app.use("/api/v1/tag", tagRouter);
+app.use("/api/v1/draft", draftRouter);
+app.use("/api/v1/engagement", engagementRouter);
+app.use("/api/v1/media", mediaRouter);
 
 // Create HTTP server
 const server = http.createServer(app);
