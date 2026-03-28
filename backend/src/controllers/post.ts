@@ -281,54 +281,118 @@ export const createPost = asyncHandler(async (req: AuthRequest, res: Response) =
 });
 
 // ============================================================================
-// GET ALL POSTS (FEED)
+// GET ALL POSTS (FEED) - Enhanced with Cursor Pagination & Advanced Filters
 // ============================================================================
 
 export const getAllPosts = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { page = 1, limit = 10, categorySlug, tagSlug, sort = 'recent' } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const {
+        // Pagination
+        cursor,        // Post ID for cursor-based pagination
+        limit = 10,    // Default: 10, Max: 50
+        page,          // Legacy support (backward compatibility)
+
+        // Filtering
+        categorySlug,     // Single category (legacy, deprecated)
+        categorySlugs,    // Multiple categories (comma-separated)
+        tagSlug,          // Single tag (legacy, deprecated)
+        tagSlugs,         // Multiple tags (comma-separated)
+        followingOnly,    // boolean: only posts from followed users
+        type,             // 'all', 'posts', 'projects', 'jobs'
+
+        // Sorting
+        sort = 'recent'   // 'recent', 'popular', 'trending'
+    } = req.query;
+
+    const userId = req.id;
+    const limitNum = Math.min(Number(limit), 50); // Cap at 50
 
     // Build where clause
     const where: any = { status: 'PUBLISHED' };
 
-    // Filter by category
-    if (categorySlug) {
-        const category = await prisma.category.findUnique({
-            where: { slug: categorySlug as string },
+    // Filter by categories (support both single and multiple)
+    const categorySlugsArray = categorySlugs
+        ? (categorySlugs as string).split(',').map(s => s.trim())
+        : categorySlug ? [categorySlug as string] : [];
+
+    if (categorySlugsArray.length > 0) {
+        const categories = await prisma.category.findMany({
+            where: { slug: { in: categorySlugsArray } },
+            select: { id: true },
         });
-        if (category) {
+
+        if (categories.length > 0) {
             where.categories = {
-                some: { categoryId: category.id },
+                some: { categoryId: { in: categories.map(c => c.id) } },
             };
         }
     }
 
-    // Filter by tag
-    if (tagSlug) {
-        const tag = await prisma.tag.findUnique({
-            where: { slug: tagSlug as string },
+    // Filter by tags (support both single and multiple)
+    const tagSlugsArray = tagSlugs
+        ? (tagSlugs as string).split(',').map(s => s.trim())
+        : tagSlug ? [tagSlug as string] : [];
+
+    if (tagSlugsArray.length > 0) {
+        const tags = await prisma.tag.findMany({
+            where: { slug: { in: tagSlugsArray } },
+            select: { id: true },
         });
-        if (tag) {
+
+        if (tags.length > 0) {
             where.tags = {
-                some: { tagId: tag.id },
+                some: { tagId: { in: tags.map(t => t.id) } },
             };
         }
+    }
+
+    // Filter by following (only posts from followed users)
+    if (followingOnly === 'true' && userId) {
+        const following = await prisma.follow.findMany({
+            where: { followerId: userId },
+            select: { followingId: true },
+        });
+
+        const followingIds = following.map(f => f.followingId);
+        if (followingIds.length > 0) {
+            where.userId = { in: followingIds };
+        } else {
+            // No following, return empty result
+            return res.status(200).json({
+                message: 'Posts retrieved successfully',
+                posts: [],
+                nextCursor: undefined,
+                hasMore: false,
+            });
+        }
+    }
+
+    // Filter by type (content type)
+    // TODO: Implement when category types are fully defined
+    // For now, this is a placeholder for future feature
+
+    // Cursor-based pagination
+    if (cursor) {
+        where.id = { lt: cursor as string }; // Posts before this cursor
     }
 
     // Sort options
     let orderBy: any = { publishedAt: 'desc' };
+
     if (sort === 'popular') {
         orderBy = { likesCount: 'desc' };
     } else if (sort === 'trending') {
-        // Trending = recent + engagement
-        orderBy = [{ likesCount: 'desc' }, { publishedAt: 'desc' }];
+        // Trending: Custom score-based ranking
+        // Score = likesCount*2 + commentsCount*3 + sharesCount*5
+        // NOTE: Prisma doesn't support computed columns in orderBy
+        // So we'll fetch posts and sort in-memory for trending
+        // For better performance, consider using raw SQL or database views
     }
 
-    const posts = await prisma.post.findMany({
+    // Fetch posts
+    let posts = await prisma.post.findMany({
         where,
-        skip: offset,
-        take: Number(limit),
-        orderBy,
+        take: limitNum + 1, // Fetch one extra to determine hasMore
+        orderBy: sort === 'trending' ? { publishedAt: 'desc' } : orderBy,
         include: {
             user: {
                 select: {
@@ -368,26 +432,60 @@ export const getAllPosts = asyncHandler(async (req: AuthRequest, res: Response) 
         },
     });
 
-    const totalPosts = await prisma.post.count({ where });
+    // Apply trending sort in-memory if needed
+    if (sort === 'trending') {
+        posts = posts.sort((a, b) => {
+            const scoreA = (a.likesCount * 2) + (a.commentsCount * 3) + (a.sharesCount * 5);
+            const scoreB = (b.likesCount * 2) + (b.commentsCount * 3) + (b.sharesCount * 5);
+
+            if (scoreB !== scoreA) {
+                return scoreB - scoreA; // Higher score first
+            }
+
+            // Tie-breaker: more recent first
+            return new Date(b.publishedAt!).getTime() - new Date(a.publishedAt!).getTime();
+        });
+    }
+
+    // Determine if there are more posts
+    const hasMore = posts.length > limitNum;
+    const postsToReturn = hasMore ? posts.slice(0, limitNum) : posts;
+
+    // Next cursor is the ID of the last post
+    const nextCursor = hasMore ? postsToReturn[postsToReturn.length - 1]?.id : undefined;
 
     // Transform posts to include isLiked and isBookmarked for current user
-    const transformedPosts = posts.map(post => ({
+    const transformedPosts = postsToReturn.map((post: any) => ({
         ...post,
-        isLiked: post.likes?.some((like: any) => like.userId === req.id) || false,
-        isBookmarked: post.bookmarks?.some((bookmark: any) => bookmark.userId === req.id) || false,
+        isLiked: post.likes?.some((like: any) => like.userId === userId) || false,
+        isBookmarked: post.bookmarks?.some((bookmark: any) => bookmark.userId === userId) || false,
         likes: undefined, // Remove from response
         bookmarks: undefined, // Remove from response
     }));
 
+    // Legacy pagination support (when page param is used)
+    if (page) {
+        const offset = (Number(page) - 1) * limitNum;
+        const totalPosts = await prisma.post.count({ where });
+
+        return res.status(200).json({
+            message: 'Posts retrieved successfully',
+            posts: transformedPosts,
+            pagination: {
+                total: totalPosts,
+                page: Number(page),
+                limit: limitNum,
+                totalPages: Math.ceil(totalPosts / limitNum),
+            },
+        });
+    }
+
+    // Cursor-based response
     return res.status(200).json({
         message: 'Posts retrieved successfully',
         posts: transformedPosts,
-        pagination: {
-            total: totalPosts,
-            page: Number(page),
-            limit: Number(limit),
-            totalPages: Math.ceil(totalPosts / Number(limit)),
-        },
+        nextCursor,
+        hasMore,
     });
 });
 
@@ -422,6 +520,12 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
                 },
             },
             media: { orderBy: { order: 'asc' } },
+            likes: {
+                select: { userId: true },
+            },
+            bookmarks: {
+                select: { userId: true },
+            },
             _count: {
                 select: {
                     likes: true,
@@ -443,9 +547,18 @@ export const getPostById = asyncHandler(async (req: Request, res: Response) => {
         data: { viewsCount: { increment: 1 } },
     });
 
+    // Transform to include isLiked and isBookmarked
+    const transformedPost = {
+        ...post,
+        isLiked: (req as any).id ? (post.likes?.some((like: any) => like.userId === (req as any).id) || false) : false,
+        isBookmarked: (req as any).id ? (post.bookmarks?.some((bookmark: any) => bookmark.userId === (req as any).id) || false) : false,
+        likes: undefined,
+        bookmarks: undefined,
+    };
+
     return res.status(200).json({
         message: 'Post retrieved successfully',
-        post,
+        post: transformedPost,
     });
 });
 

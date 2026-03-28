@@ -9,7 +9,7 @@ export const useConversations = () => {
     queryKey: queryKeys.conversations.list,
     queryFn: conversationService.getConversations,
     staleTime: 30 * 1000, // Fresh for 30 seconds
-    refetchInterval: 10 * 1000, // Auto-refetch every 10 seconds
+    // ✅ NO POLLING - MessageEventCoordinator handles real-time updates via sockets
   });
 };
 
@@ -19,7 +19,7 @@ export const useUnreadCount = () => {
     queryKey: queryKeys.conversations.unreadCount,
     queryFn: conversationService.getUnreadCount,
     staleTime: 30 * 1000,
-    refetchInterval: 10 * 1000,
+    // ✅ NO POLLING - MessageEventCoordinator handles real-time updates via sockets
   });
 };
 

@@ -1,6 +1,6 @@
 import { userService } from '@/api/user';
 import { queryKeys } from '@/lib/queryClient';
-import { User } from '@/types/types';
+import { User, UserWithProfile } from '@/types/types';
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 
 export const useCurrentUser = (options?: Omit<UseQueryOptions<{ user: User }, Error>, 'queryKey' | 'queryFn'>) => {
@@ -24,7 +24,7 @@ export const useUser = (userId: string, options?: Omit<UseQueryOptions<{ user: U
 
 export const useSearchUsers = (
   searchQuery: string,
-  options?: Omit<UseQueryOptions<{ users: User[] }, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<{ users: UserWithProfile[] }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: queryKeys.user.search(searchQuery),
@@ -35,14 +35,14 @@ export const useSearchUsers = (
   });
 };
 
-export const useUsersByMinor = (
-  minor: string,
-  options?: Omit<UseQueryOptions<{ users: User[] }, Error>, 'queryKey' | 'queryFn'>
+export const useUsersByDepartment = (
+  department: string,
+  options?: Omit<UseQueryOptions<{ users: UserWithProfile[] }, Error>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
-    queryKey: queryKeys.user.bulk(minor),
-    queryFn: () => userService.getUsersByMinor(minor),
-    enabled: !!minor,
+    queryKey: queryKeys.user.bulk(department),
+    queryFn: () => userService.getUsersByDepartment(department),
+    enabled: !!department,
     ...options,
   });
 };

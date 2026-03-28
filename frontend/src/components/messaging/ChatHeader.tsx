@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Socket } from 'socket.io-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Phone, Video, MoreVertical, History } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useCallInitiation } from '@/components/calling/CallProvider';
 import { createCallLogger } from '@/utils/callLogger';
+import { CallHistorySheet } from './CallHistorySheet';
 
 const logger = createCallLogger({ file: 'components/messaging/ChatHeader.tsx', component: 'ChatHeader' });
 
@@ -183,6 +184,12 @@ export function ChatHeader({ user, socket, onBack }: ChatHeaderProps) {
           >
             <Video className="h-5 w-5" />
           </Button>
+
+          {/* Call History Sheet */}
+          <CallHistorySheet
+            userId={user.id}
+            userName={`${user.firstName} ${user.lastName || ''}`.trim()}
+          />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

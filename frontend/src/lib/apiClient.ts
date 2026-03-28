@@ -35,7 +35,6 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Helper function for multipart/form-data requests (file uploads)
 export const createFormDataRequest = (data: Record<string, any>) => {
   const formData = new FormData();
 
@@ -44,16 +43,28 @@ export const createFormDataRequest = (data: Record<string, any>) => {
 
     if (Array.isArray(value)) {
       // Handle arrays (e.g., multiple files, labels)
-      if (value.length > 0 && value[0] instanceof File) {
-        // Array of files
-        value.forEach((file) => formData.append(key, file));
+      if (value.length > 0 && value[0] instanceof Blob) {
+        // Array of Blob/File objects - append each individually
+        value.forEach((blob, index) => {
+          // Convert Blob to File with proper name if needed
+          const file = blob instanceof File
+            ? blob
+            : new File([blob], `image-${index}.png`, { type: blob.type || 'image/png' });
+          formData.append(key, file);
+        });
       } else {
         // Array of primitives - stringify
         formData.append(key, JSON.stringify(value));
       }
-    } else if (value instanceof File) {
-      // Single file
-      formData.append(key, value);
+    } else if (value instanceof Blob) {
+      // Single Blob - convert to File with proper name if needed
+      const file = value instanceof File
+        ? value
+        : new File([value], 'image.png', { type: value.type || 'image/png' });
+      formData.append(key, file);
+    } else if (value instanceof Date) {
+      // Date objects - convert to ISO string
+      formData.append(key, value.toISOString());
     } else {
       // Primitive values
       formData.append(key, String(value));

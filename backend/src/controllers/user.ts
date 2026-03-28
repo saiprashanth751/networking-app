@@ -54,51 +54,51 @@ export const userSignup = asyncHandler(async (req: Request, res: Response) => {
     }
 });
 
-export const userSignin = asyncHandler(async (req:Request, res:Response) => {
-    const {success} = signinBody.safeParse(req.body);
-    if(!success){
+export const userSignin = asyncHandler(async (req: Request, res: Response) => {
+    const { success } = signinBody.safeParse(req.body);
+    if (!success) {
         throw new CustomError("Invalid input", 403)
     }
 
-    const {email, password} = req.body
+    const { email, password } = req.body
     const user = await prisma.user.findUnique({
         where: {
             email
         }
     })
 
-    if(!user){
+    if (!user) {
         throw new CustomError("User does not exist", 400)
     }
 
-    if(!user.verified){
+    if (!user.verified) {
         return res.status(400).json({
             message: "Please verify your email before logging in."
         })
     }
 
-    const passwordVerification = await bcrypt.compare(password,user.password);
+    const passwordVerification = await bcrypt.compare(password, user.password);
 
-    if(!passwordVerification){
+    if (!passwordVerification) {
         throw new CustomError("Incorrect Password", 400);
     }
     if (!process.env.JWT_SECRET) {
         throw new CustomError("JWT_SECRET is not defined", 500);
     }
-    const token = jwt.sign({id: user.id}, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
     return res.status(200).json({
         message: "Sign in successfull",
         token
     })
-    
+
 })
 
-interface AuthRequest extends Request{
+interface AuthRequest extends Request {
     id?: string
 }
 
-export const getUser = asyncHandler(async (req:AuthRequest, res:Response) => {
-   
+export const getUser = asyncHandler(async (req: AuthRequest, res: Response) => {
+
     const userId = req.id
     const user = await prisma.user.findUnique({
         where: {
@@ -109,10 +109,10 @@ export const getUser = asyncHandler(async (req:AuthRequest, res:Response) => {
     return res.status(200).json({
         user
     })
-     
+
 })
 
-export const getUserProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
+export const getUserProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = req.query.id as string
     const user = await prisma.user.findUnique({
         where: { id },
@@ -125,24 +125,24 @@ export const getUserProfile = asyncHandler(async (req:AuthRequest, res:Response)
             isOnline: true,
             lastSeen: true,
             createdAt: true,
-            profile: true 
+            profile: true
         }
     })
 
     return res.status(200).json({ user })
 })
 
-export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {
-   const userId = req.id
-    const minor = req.query.minor as string
+export const getUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.id
+    const department = req.query.department as string
 
-  
+
     const users = await prisma.user.findMany({
         where: {
-            id:{not: userId},
+            id: { not: userId },
             profile: {
-                minor,
-        },
+                department,
+            },
         },
         select: {
             id: true,
@@ -162,13 +162,13 @@ export const getUsers = asyncHandler(async (req:AuthRequest, res:Response) => {
     return res.status(200).json({
         users
     })
-     
+
 })
 
 export const createProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.id;
 
-   
+
     const existingProfile = await prisma.profile.findUnique({
         where: { userId }
     });
@@ -177,25 +177,25 @@ export const createProfile = asyncHandler(async (req: AuthRequest, res: Response
     }
 
 
-    const { 
-        bio, 
-        department, 
-        graduationYear, 
-        minor, 
-        linkedin, 
-        github, 
-        leetcode, 
-        codeforces, 
-        geekforgeeks 
+    const {
+        bio,
+        department,
+        graduationYear,
+        minor,
+        linkedin,
+        github,
+        leetcode,
+        codeforces,
+        geekforgeeks
     } = req.body;
 
-   
+
     const profilePic = req.file ? (req.file as any).cloudinaryUrl : null;
 
     const validation = profileCreation.safeParse({
         bio,
         department,
-        graduationYear, 
+        graduationYear,
         minor,
         linkedin,
         github,
@@ -214,7 +214,7 @@ export const createProfile = asyncHandler(async (req: AuthRequest, res: Response
     const profile = await prisma.profile.create({
         data: {
             bio,
-            profilePic, 
+            profilePic,
             department,
             graduationYear: parsedGraduationYear ?? 0,
             minor,
@@ -234,8 +234,8 @@ export const createProfile = asyncHandler(async (req: AuthRequest, res: Response
 });
 
 
-export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => {
-   
+export const getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+
     const userId = req.id
 
     const profile = await prisma.profile.findUnique({
@@ -247,63 +247,79 @@ export const getProfile = asyncHandler(async (req:AuthRequest, res:Response) => 
     return res.status(200).json({
         profile
     })
-     
+
 })
 
 export const getUserByName = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name } = req.query;
     const userId = req.id;
-  
+
     if (!name || typeof name !== "string" || name.trim().length < 1) {
-      throw new CustomError("Name query parameter must be at least 1 characters long", 400);
+        throw new CustomError("Name query parameter must be at least 1 characters long", 400);
     }
-  
+
     try {
-      const users = await prisma.user.findMany({
-        where: {
-          id: { not: userId },
-          OR: [
-            {
-              firstName: {
-                contains: name,
-                mode: "insensitive",
-              },
+        const users = await prisma.user.findMany({
+            where: {
+                id: { not: userId },
+                OR: [
+                    {
+                        firstName: {
+                            contains: name,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        lastName: {
+                            contains: name,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        firstName: {
+                            startsWith: name,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        lastName: {
+                            startsWith: name,
+                            mode: "insensitive",
+                        },
+                    },
+                ],
             },
-            {
-              lastName: {
-                contains: name,
-                mode: "insensitive",
-              },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                isOnline: true,
+                lastSeen: true,
+                profile: {
+                    select: {
+                        bio: true,
+                        graduationYear: true,
+                        department: true,
+                        profilePic: true,
+                    }
+                }
             },
-            {
-              firstName: {
-                startsWith: name,
-                mode: "insensitive",
-              },
+            orderBy: {
+                firstName: "asc",
             },
-            {
-              lastName: {
-                startsWith: name,
-                mode: "insensitive",
-              },
-            },
-          ],
-        },
-        orderBy: {
-          firstName: "asc",
-        },
-      });
-  
-      res.status(200).json({ users });
+        });
+
+        res.status(200).json({ users });
     } catch (error) {
-      console.error("Error searching users:", error);
-      res.status(500).json({ error: "Failed to search users" });
+        console.error("Error searching users:", error);
+        res.status(500).json({ error: "Failed to search users" });
     }
-  });
+});
 
 
-export const getNative = asyncHandler(async (req:AuthRequest, res:Response) => {
-   
+export const getNative = asyncHandler(async (req: AuthRequest, res: Response) => {
+
     const id = req.query.id as string
     const profile = await prisma.profile.findUnique({
         where: {
@@ -314,20 +330,20 @@ export const getNative = asyncHandler(async (req:AuthRequest, res:Response) => {
     return res.status(200).json({
         profile
     })
-     
+
 })
 
 
 export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.id;
 
- 
+
     const { success } = profileUpdation.safeParse(req.body);
     if (!success) {
         throw new CustomError("Invalid input data", 400);
     }
 
-    
+
     const { bio, linkedin, github, leetcode, codeforces, geekforgeeks } = req.body;
 
 
@@ -356,16 +372,16 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
     });
 });
 
-export const getOnlineStatus = asyncHandler( (async (req:AuthRequest, res:Response) => {
-    const  id  = req.params.id;
+export const getOnlineStatus = asyncHandler((async (req: AuthRequest, res: Response) => {
+    const id = req.params.id;
     const user = await prisma.user.findUnique({
         where: { id },
         select: { isOnline: true }
     });
 
-    if(!user){
+    if (!user) {
         throw new CustomError("user not found", 400);
-    
+
     }
     return res.json({ isOnline: user.isOnline });
 }

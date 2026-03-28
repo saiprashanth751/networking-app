@@ -48,5 +48,39 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173
-  }
+  },
+  // 🔥 BUILD OPTIMIZATIONS
+  build: {
+    rollupOptions: {
+      output: {
+        // Manual chunking for better caching
+        manualChunks: {
+          // Core React libraries
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // React Query
+          'query-vendor': ['@tanstack/react-query'],
+          // Socket.io
+          'socket-vendor': ['socket.io-client'],
+          // UI libraries
+          'ui-vendor': ['lucide-react', 'date-fns', 'react-toastify'],
+          // Virtualization
+          'virtuoso-vendor': ['react-virtuoso'],
+          // WebRTC (lazy loaded, but separate chunk when needed)
+          'webrtc-vendor': ['simple-peer', 'xstate', '@xstate/react'],
+        },
+      },
+    },
+    // Minification and tree-shaking
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true,
+      },
+    },
+    // Chunk size warnings
+    chunkSizeWarningLimit: 500, // Warn for chunks > 500KB
+    // Source maps for debugging (disable in production for smaller size)
+    sourcemap: false,
+  },
 })

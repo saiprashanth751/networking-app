@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import { searchTags, getTrendingTags, getPostsByTag } from '../controllers/tag';
+import { getAllTags, searchTags, getTrendingTags, getPostsByTag } from '../controllers/tag';
 
 const router = Router();
+
+// Get all tags (for filter UI, etc.)
+router.get('/', getAllTags);
 
 // Search tags (autocomplete)
 router.get('/search', searchTags);

@@ -10,7 +10,7 @@ export const profileService = {
 
   // Get profile by user ID
   getProfileByUserId: async (userId: string): Promise<{ profile: Profile }> => {
-    const response = await apiClient.get(`/user/nativeProfile/?id=${userId}`);
+    const response = await apiClient.get(`/user/${userId}/profile`);
     return response.data;
   },
 

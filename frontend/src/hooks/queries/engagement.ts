@@ -1,6 +1,6 @@
 import { engagementService } from '@/api/post';
 import { queryKeys } from '@/lib/queryClient';
-import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, UseQueryOptions, UseInfiniteQueryOptions } from '@tanstack/react-query';
 
 // ============================================================================
 // COMMENTS
@@ -15,6 +15,31 @@ export const usePostComments = (
         queryKey: queryKeys.comments.byPost(postId, params),
         queryFn: () => engagementService.getPostComments(postId, params),
         enabled: !!postId,
+        ...options,
+    });
+};
+
+// Infinite scrolling comments hook
+export const useInfiniteComments = (
+    postId: string,
+    options?: Omit<UseInfiniteQueryOptions<any, Error>, 'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'>
+) => {
+    return useInfiniteQuery({
+        queryKey: queryKeys.comments.byPost(postId),
+        queryFn: async ({ pageParam = 1 }) => {
+            const page = typeof pageParam === 'number' ? pageParam : 1;
+            return engagementService.getPostComments(postId, { page, limit: 20 });
+        },
+        initialPageParam: 1 as number,
+        getNextPageParam: (lastPage: any) => {
+            if (lastPage.pagination) {
+                const { page, totalPages } = lastPage.pagination;
+                return page < totalPages ? page + 1 : undefined;
+            }
+            return undefined;
+        },
+        enabled: !!postId,
+        staleTime: 30 * 1000, // Comments fresh for 30 seconds
         ...options,
     });
 };

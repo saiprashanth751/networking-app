@@ -7,6 +7,9 @@ import { CallParticipant, CallType, IncomingCallEvent } from '@/types/types';
 import { createCallMachine } from '@/state/callMachine';
 import { callEventBus } from '@/lib/eventBus';
 import { createCallLogger } from '@/utils/callLogger';
+import { callCoordinator } from '@/lib/callCoordinator';  // ✅ Multi-tab coordination
+import { callAnalytics } from '@/lib/callAnalytics';  // ✅ Phase B: Analytics
+import { errorTracker } from '@/lib/errorTracker';  // ✅ Phase B: Error Tracking
 
 const logger = createCallLogger({ file: 'hooks/useCallOrchestrator.ts', hook: 'useCallOrchestrator' });
 
@@ -93,17 +96,19 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     callEventBus.emit('sound:startRinging', null);
     logger.info("Emitted event bus event sound:startRinging");
 
-    // ✅ FIX: Clear any existing timeout before setting new one
+    // ✅ FIX: Clear any existing timeout (cleanup only, backend is authority)
     if (ringingTimeoutRef.current) {
       clearTimeout(ringingTimeoutRef.current);
+      ringingTimeoutRef.current = null;
     }
 
-    // Set frontend timeout as fallback
-    ringingTimeoutRef.current = setTimeout(() => {
-      logger.warn('Frontend timeout triggered - no answer');
-      console.log('[Orchestrator] Frontend timeout - no answer');
-      handleTimeout();
-    }, 32000);
+    // ✅ Analytics: Track call initiated
+    callAnalytics.track({
+      type: 'call_initiated',
+      callId: '', // Will be set when backend responds
+      userId: remoteUser.id,
+      callType
+    });
 
   }, [send]);
 
@@ -129,6 +134,12 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     socketRef.current?.emit('callAccept', {
       callId: currentCallIdRef.current,
       callerId: otherUserId  //notice name, change if making contextual disturbances
+    });
+
+    // ✅ Broadcast to other tabs
+    callCoordinator.broadcast({
+      type: 'CALL_ACCEPTED',
+      callId: currentCallIdRef.current
     });
 
     // Clear ringing timeout
@@ -163,6 +174,21 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
       callerId: otherUserId
     });
 
+    // ✅ Broadcast to other tabs
+    callCoordinator.broadcast({
+      type: 'CALL_REJECTED',
+      callId: currentCallIdRef.current
+    });
+
+    // ✅ Analytics: Track rejection
+    callAnalytics.track({
+      type: 'call_ended',
+      callId: currentCallIdRef.current,
+      userId: stateRef.current.context.callDetails?.participants.remote.id || '',
+      callType: stateRef.current.context.callDetails?.type || 'audio',
+      metadata: { outcome: 'rejected' }
+    });
+
     // Clear ringing timeout
     if (ringingTimeoutRef.current) {
       clearTimeout(ringingTimeoutRef.current);
@@ -193,13 +219,31 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
         otherUserId,
         duration
       });
+
+      // ✅ Broadcast to other tabs
+      callCoordinator.broadcast({
+        type: 'CALL_ENDED',
+        callId: currentCallIdRef.current
+      });
     }
 
     // Cleanup WebRTC
     webRTCManager.cleanup();
 
+    // ✅ FIX: Clean up call ID to prevent memory leak
+    cleanupCallId(currentCallIdRef.current);
+
     // Reset refs
     currentCallIdRef.current = '';
+
+    // ✅ Analytics: Track successful call end
+    callAnalytics.track({
+      type: 'call_ended',
+      callId: currentCallIdRef.current,
+      userId: stateRef.current.context.callDetails?.participants.remote.id || '',
+      callType: stateRef.current.context.callDetails?.type || 'audio',
+      metadata: { outcome: 'success', duration }
+    });
 
     toast.info('Call ended');
 
@@ -227,11 +271,23 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     // Cleanup
     callEventBus.emit('sound:stopRinging', null);
     webRTCManager.cleanup();
+
+    // ✅ FIX: Clean up call ID to prevent memory leak
+    cleanupCallId(currentCallIdRef.current);
+
     currentCallIdRef.current = '';
 
     toast.info('Call timed out');
 
   }, [send, webRTCManager]);
+
+  // ✅ FIX: Cleanup call ID from processed set to prevent memory leak
+  const cleanupCallId = useCallback((callId: string) => {
+    if (callId && processedCallIdsRef.current.has(callId)) {
+      processedCallIdsRef.current.delete(callId);
+      logger.info('Cleaned up call ID from processed set', { callId, remainingCount: processedCallIdsRef.current.size });
+    }
+  }, []);
 
   // ============================================================================
   // WEBRTC COORDINATION
@@ -323,16 +379,11 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
       callEventBus.emit('sound:startRinging', null);
       logger.info("Emitted event, sound:startRinging");
 
-      // ✅ FIX: Clear any existing timeout
+      // \u2705 FIX: Clear any existing timeout (cleanup only, backend is authority)
       if (ringingTimeoutRef.current) {
         clearTimeout(ringingTimeoutRef.current);
+        ringingTimeoutRef.current = null;
       }
-
-      // Set timeout for incoming call
-      ringingTimeoutRef.current = setTimeout(() => {
-        console.log('[Orchestrator] Incoming call timeout');
-        handleTimeout();
-      }, 32000);
     };
 
     // Call ringing (caller receives this)
@@ -365,9 +416,23 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     const handleCallRejected = ({ callId }: { callId: string }) => {
       logger.info('SOCKET RECEIVE: callRejected', { callId });
       sendRef.current({ type: 'CALL_REJECT' });
+
+      // ✅ Analytics: Track rejection by remote party
+      callAnalytics.track({
+        type: 'call_ended',
+        callId,
+        userId: stateRef.current.context.callDetails?.participants.remote.id || '',
+        callType: stateRef.current.context.callDetails?.type || 'audio',
+        metadata: { outcome: 'rejected' }
+      });
+
       callEventBus.emit('sound:stopRinging', null);
       toast.info('Call declined');
       webRTCManagerRef.current.cleanup();
+
+      // ✅ FIX: Clean up call ID to prevent memory leak
+      cleanupCallId(currentCallIdRef.current);
+
       currentCallIdRef.current = '';
     };
 
@@ -377,6 +442,10 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
       sendRef.current({ type: 'CALL_END' });
       toast.info('Call ended by other party');
       webRTCManagerRef.current.cleanup();
+
+      // ✅ FIX: Clean up call ID to prevent memory leak
+      cleanupCallId(currentCallIdRef.current);
+
       currentCallIdRef.current = '';
     };
 
@@ -392,6 +461,10 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
 
       callEventBus.emit('sound:stopRinging', null);
       webRTCManagerRef.current.cleanup();
+
+      // ✅ FIX: Clean up call ID to prevent memory leak
+      cleanupCallId(currentCallIdRef.current);
+
       currentCallIdRef.current = '';
     };
 
@@ -399,8 +472,22 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
     const handleCallUnavailable = ({ reason }: { reason: string }) => {
       logger.info('SOCKET RECEIVE: callUnavailable', { reason });
       sendRef.current({ type: 'CALL_END' });
+
+      // ✅ Analytics: Track call failure
+      callAnalytics.track({
+        type: 'call_failed',
+        callId: currentCallIdRef.current,
+        userId: stateRef.current.context.callDetails?.participants.remote.id || '',
+        callType: stateRef.current.context.callDetails?.type || 'audio',
+        metadata: { reason }
+      });
+
       toast.error(reason);
       webRTCManagerRef.current.cleanup();
+
+      // ✅ FIX: Clean up call ID to prevent memory leak
+      cleanupCallId(currentCallIdRef.current);
+
       currentCallIdRef.current = '';
     };
 
@@ -490,6 +577,55 @@ export function useCallOrchestrator({ socket }: UseCallOrchestratorProps) {
       }
     };
   }, [socket]); // ✅ Phase 3: Only depend on socket - handlers use refs for callbacks
+
+  // ============================================================================
+  // CROSS-TAB COORDINATION - ✅ NEW
+  // ============================================================================
+
+  useEffect(() => {
+    // Subscribe to coordination events from other tabs
+    const unsubscribe = callCoordinator.subscribe((event) => {
+      logger.info('Cross-tab event received', { type: event.type, callId: 'callId' in event ? event.callId : 'N/A' });
+      console.log('[Orchestrator] Cross-tab coordination event:', event);
+
+      // Check if this event is for the current call
+      if (event.type !== 'LEADER_CLAIM' && 'callId' in event && event.callId === currentCallIdRef.current) {
+        switch (event.type) {
+          case 'CALL_ACCEPTED':
+            // Another tab accepted the call - dismiss our modal
+            console.log('[Orchestrator] Another tab accepted call, dismissing');
+            sendRef.current({ type: 'CALL_END' });
+            callEventBus.emit('sound:stopRinging', null);
+            toast.info('Call answered in another tab');
+            break;
+
+          case 'CALL_REJECTED':
+            // Another tab rejected the call - dismiss our modal
+            console.log('[Orchestrator] Another tab rejected call, dismissing');
+            sendRef.current({ type: 'CALL_END' });
+            callEventBus.emit('sound:stopRinging', null);
+            break;
+
+          case 'CALL_ENDED':
+            // Another tab ended the call - end ours too
+            console.log('[Orchestrator] Another tab ended call, ending');
+            sendRef.current({ type: 'CALL_END' });
+            webRTCManagerRef.current.cleanup();
+            break;
+        }
+
+        // Clear the call ID from our tracking
+        cleanupCallId(event.callId);
+        currentCallIdRef.current = '';
+      }
+    });
+
+    // Cleanup subscription
+    return () => {
+      console.log('[Orchestrator] Unsubscribing from call coordinator');
+      unsubscribe();
+    };
+  }, []); // Empty deps - uses refs for all dynamic values
 
   // ============================================================================
   // MEDIA CONTROLS

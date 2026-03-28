@@ -25,6 +25,9 @@ model User {
   projects  Project[]
   createdAt DateTime  @default(now())
 
+  // Push notification tokens (user can have multiple devices)
+  fcmTokens String[]
+
   messageSent     Message[] @relation("MessageSent")
   messageReceived Message[] @relation("MessageReceived")
   followers       Follow[]  @relation(name: "followers")
@@ -42,6 +45,14 @@ model User {
   bookmarkCollections BookmarkCollection[]
   postShares          PostShare[]
   postDrafts          PostDraft[]
+  searchHistory       SearchHistory[]
+  postReports         PostReport[]
+  filterPresets       FilterPreset[]
+  
+  // Notification system relations
+  notifications         Notification[]
+  notificationsAsActor  Notification[] @relation("NotificationActor")
+  notificationPreference NotificationPreference?
 }
 
 model Profile {
@@ -108,6 +119,25 @@ model Tag {
   @@index([slug])
 }
 
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  MISINFORMATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
 enum PostStatus {
   DRAFT
   PUBLISHED
@@ -141,6 +171,7 @@ model Post {
   comments  Comment[]
   bookmarks Bookmark[]
   shares    PostShare[]
+  reports   PostReport[]
 
   // Publishing
   status      PostStatus @default(DRAFT)
@@ -387,6 +418,7 @@ model Message {
   receiver User @relation("MessageReceived", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@index([senderId, receiverId, timestamp])
+  @@index([receiverId, senderId, timestamp]) // For reverse queries
   @@index([receiverId, read])
   @@index([timestamp])
 }
@@ -463,4 +495,134 @@ model Project {
 
   @@index([userId])
   @@index([featured, userId])
+}
+
+model SearchHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  query     String
+  type      String // "all", "users", "posts", "projects", "tags"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// ============================================================================
+// CONTENT MODERATION
+// ============================================================================
+
+model PostReport {
+  id     String @id @default(uuid())
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  reporterId String
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  reason      ReportReason
+  description String?
+
+  status     ReportStatus @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, reporterId])
+  @@index([status, createdAt])
+  @@index([postId])
+  @@index([reporterId])
+}
+
+// ============================================================================
+// USER PREFERENCES
+// ============================================================================
+
+model FilterPreset {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  // Saved filter configuration (JSON)
+  filters Json // { categorySlugs: [], tagSlugs: [], followingOnly: boolean, type: string, sort: string }
+
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isDefault])
+  @@index([userId, createdAt])
+}
+
+// ============================================================================
+// NOTIFICATION SYSTEM
+// ============================================================================
+
+enum NotificationType {
+  NEW_FOLLOWER
+  POST_LIKE
+  POST_COMMENT
+  COMMENT_REPLY
+  POST_SHARE
+  MENTION
+  MESSAGE
+  CALL_MISSED
+  PROJECT_COLLABORATION
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type      NotificationType
+  title     String
+  message   String
+  
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull, name: "NotificationActor")
+  
+  entityId  String?
+  entityType String?
+  
+  read      Boolean  @default(false)
+  seen      Boolean  @default(false)
+  
+  data      Json?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+}
+
+model NotificationPreference {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Per-type notification toggles
+  newFollower     Boolean @default(true)
+  postLike        Boolean @default(true)
+  postComment     Boolean @default(true)
+  commentReply    Boolean @default(true)
+  postShare       Boolean @default(false)
+  mention         Boolean @default(true)
+  message         Boolean @default(true)
+  callMissed      Boolean @default(true)
+  
+  // Delivery channel preferences
+  emailEnabled    Boolean @default(false)
+  soundEnabled    Boolean @default(true)
+  desktopEnabled  Boolean @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

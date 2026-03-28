@@ -95,20 +95,54 @@ export const getUserCallHistory = async (req: any, res: Response) => {
           { callerId: userId, receiverId: currentUserId }
         ]
       },
+      include: {
+        caller: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profile: {
+              select: { profilePic: true }
+            }
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profile: {
+              select: { profilePic: true }
+            }
+          }
+        }
+      },
       orderBy: {
         startedAt: "desc"
       },
       take: 20
     });
 
-    const formattedCalls = calls.map(call => ({
-      id: call.id,
-      type: call.type,
-      status: call.status,
-      duration: call.duration,
-      startedAt: call.startedAt,
-      isIncoming: call.receiverId === currentUserId
-    }));
+    // Format response - same as getCallHistory
+    const formattedCalls = calls.map(call => {
+      const isIncoming = call.receiverId === currentUserId;
+      const otherUser = isIncoming ? call.caller : call.receiver;
+
+      return {
+        id: call.id,
+        type: call.type,
+        status: call.status,
+        duration: call.duration,
+        startedAt: call.startedAt,
+        endedAt: call.endedAt,
+        isIncoming,
+        otherUser: {
+          id: otherUser.id,
+          name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim(),
+          avatar: otherUser.profile?.profilePic || null
+        }
+      };
+    });
 
     res.json({
       success: true,

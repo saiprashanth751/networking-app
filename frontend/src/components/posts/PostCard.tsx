@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { MoreHorizontal, Loader2, ExternalLink, Pencil, Bookmark, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Loader2, Pencil, Trash2, Flag, ExternalLink } from 'lucide-react';
 import { Post } from '@/types/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,10 @@ import { PostContent } from './PostContent';
 import { CommentSection } from './CommentSection';
 import { useState } from 'react';
 import { EditPostModal } from './EditPostModal';
+import { ReportPostDialog } from './ReportPostDialog';
 import { PostActions } from './PostActions';
+import { PostMediaCarousel } from './PostMediaCarousel';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,14 +28,18 @@ interface PostCardProps {
     showActions?: boolean;
     showFollowButton?: boolean;
     onCommentClick?: () => void;
+    hideComments?: boolean; // Hide comment section (for post detail page)
 }
 
 export function PostCard({
     post,
     showActions = true,
     showFollowButton = false,
-    onCommentClick
+    onCommentClick,
+    hideComments = false
 }: PostCardProps) {
+    const navigate = useNavigate();
+
     // Get current logged-in user
     const { data: currentUserData } = useCurrentUser();
     const loggedInUserId = currentUserData?.user?.id;
@@ -79,9 +86,11 @@ export function PostCard({
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // STATE - Comment section and edit modal
+    // STATE - Comment section, edit modal, report dialog
     const [showComments, setShowComments] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+    const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
 
     const handleCommentClick = () => {
         setShowComments(!showComments);
@@ -97,8 +106,8 @@ export function PostCard({
     };
 
     return (
-        <article className="px-4 py-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors border-b border-neutral-200 dark:border-neutral-800">
-            <div className="flex gap-3">
+        <article className="mx-2 my-2 px-5 py-4 rounded-xl hover:bg-neutral-900/30 transition-all duration-150 border border-neutral-800/50">
+            <div className="flex gap-2.5">
                 {/* Avatar */}
                 <Link to={profileLink} className="shrink-0">
                     <Avatar className="h-10 w-10 hover:opacity-80 transition-opacity">
@@ -106,7 +115,7 @@ export function PostCard({
                             src={profilePic}
                             alt={`${post.user.firstName} ${post.user.lastName}`}
                         />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
                             {getUserInitials()}
                         </AvatarFallback>
                     </Avatar>
@@ -115,19 +124,19 @@ export function PostCard({
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
                             <Link
                                 to={profileLink}
-                                className="hover:underline font-bold text-[15px] truncate"
+                                className="hover:underline font-semibold text-[15px] truncate"
                             >
                                 {post.user.firstName} {post.user.lastName}
                             </Link>
-                            <span className="text-muted-foreground text-[15px] truncate">
+                            <span className="text-muted-foreground text-sm truncate">
                                 @{post.user.firstName?.toLowerCase()}
                             </span>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="text-muted-foreground text-[13px]">
+                            <span className="text-muted-foreground text-sm">·</span>
+                            <span className="text-muted-foreground text-sm">
                                 {formatDate(post.publishedAt || post.createdAt)}
                             </span>
                         </div>
@@ -155,7 +164,7 @@ export function PostCard({
                             )}
 
                             {/* More Options */}
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <button
                                         className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
@@ -167,23 +176,24 @@ export function PostCard({
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     {isOwnPost && (
-                                        <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
-                                            <Pencil className="h-4 w-4 mr-2" />
-                                            Edit post
-                                        </DropdownMenuItem>
+                                        <>
+                                            <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+                                                <Pencil className="h-4 w-4 mr-2" />
+                                                Edit post
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-red-600">
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </>
                                     )}
-                                    <DropdownMenuItem>
-                                        <Bookmark className="h-4 w-4 mr-2" />
-                                        Save
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                        Share
-                                    </DropdownMenuItem>
-                                    {isOwnPost && (
-                                        <DropdownMenuItem className="text-red-600">
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Delete
+                                    {!isOwnPost && (
+                                        <DropdownMenuItem
+                                            className="text-red-600"
+                                            onClick={() => setIsReportDialogOpen(true)}
+                                        >
+                                            <Flag className="h-4 w-4 mr-2" />
+                                            Report post
                                         </DropdownMenuItem>
                                     )}
                                 </DropdownMenuContent>
@@ -193,26 +203,34 @@ export function PostCard({
 
                     {/* Title */}
                     {post.title && (
-                        <h3 className="font-bold text-lg mb-1 leading-tight">
+                        <h3
+                            className="font-bold text-lg mb-2 leading-tight cursor-pointer hover:underline"
+                            onClick={() => navigate(`/post/${post.id}`)}
+                        >
                             {post.title}
                         </h3>
                     )}
 
-                    {/* Content */}
-                    <PostContent content={post.content} className="mb-3" />
+                    {/* Content - Clickable to go to post detail */}
+                    <div
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/post/${post.id}`)}
+                    >
+                        <PostContent content={post.content} className="mb-4" />
+                    </div>
 
                     {/* Categories */}
                     {post.categories && post.categories.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-4">
                             {post.categories.map(({ category }) => (
                                 <Badge
                                     key={category.id}
                                     variant="secondary"
-                                    className="font-medium text-xs cursor-pointer transition-all hover:scale-105"
+                                    className="font-medium text-xs cursor-pointer transition-all duration-150 hover:scale-105 rounded-full"
                                     style={{
-                                        backgroundColor: `${category.color}20`,
+                                        backgroundColor: `${category.color}15`,
                                         color: category.color,
-                                        borderColor: `${category.color}40`,
+                                        borderColor: `${category.color}30`,
                                     }}
                                 >
                                     <span className="mr-1">{category.icon}</span>
@@ -224,7 +242,7 @@ export function PostCard({
 
                     {/* Tags */}
                     {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-4">
                             {post.tags.map(({ tag }) => (
                                 <Link
                                     key={tag.id}
@@ -258,7 +276,7 @@ export function PostCard({
                         </div>
                     )}
 
-                    {/* Media Gallery - IMPROVED */}
+                    {/* Media Gallery - OPTIMIZED */}
                     {post.media && post.media.length > 0 && (
                         <div className={cn(
                             'grid gap-1 mb-3 rounded-xl overflow-hidden border border-border',
@@ -271,19 +289,25 @@ export function PostCard({
                                 <div
                                     key={item.id}
                                     className={cn(
-                                        'relative bg-muted group/image',
+                                        'relative bg-muted group/image cursor-pointer',
                                         post.media.length === 1 ? 'aspect-video' : 'aspect-square'
                                     )}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCarouselIndex(index);
+                                    }}
                                 >
-                                    <img
+                                    <OptimizedImage
                                         src={item.url}
                                         alt={`Post image ${index + 1} of ${post.media.length}`}
-                                        className="w-full h-full object-cover"
+                                        width={post.media.length === 1 ? 800 : 400}
+                                        className="w-full h-full"
+                                        objectFit="cover"
                                         onError={(e) => handleImageError(e, index)}
                                     />
                                     {/* Show +N overlay for 4+ images */}
                                     {index === 3 && post.media.length > 4 && (
-                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
                                             <span className="text-white text-xl font-bold">
                                                 +{post.media.length - 4}
                                             </span>
@@ -302,10 +326,12 @@ export function PostCard({
                             commentsCount={post.commentsCount}
                             sharesCount={post.sharesCount}
                             bookmarksCount={post.bookmarksCount}
+                            isLiked={post.isLiked}
+                            isBookmarked={post.isBookmarked}
                             onCommentClick={handleCommentClick}
                         />
                     )}
-                    {showComments && (
+                    {showComments && !hideComments && (
                         <div className="mt-4 pt-4 border-t border-border">
                             <CommentSection postId={post.id} postOwnerId={post.userId} />
                         </div>
@@ -319,6 +345,23 @@ export function PostCard({
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
             />
+
+            {/* Report Post Dialog */}
+            <ReportPostDialog
+                postId={post.id}
+                isOpen={isReportDialogOpen}
+                onClose={() => setIsReportDialogOpen(false)}
+            />
+
+            {/* Media Carousel */}
+            {carouselIndex !== null && (
+                <PostMediaCarousel
+                    media={post.media}
+                    initialIndex={carouselIndex}
+                    isOpen={carouselIndex !== null}
+                    onClose={() => setCarouselIndex(null)}
+                />
+            )}
         </article>
     );
 }

@@ -62,7 +62,42 @@ export const postService = {
 
   // Get single post by ID
   getPostById: async (postId: string): Promise<{ post: Post }> => {
-    const response = await apiClient.get(`/post/single/${postId}`);
+    const response = await apiClient.get(`/post/${postId}`);
+    return response.data;
+  },
+
+  // ============================================================================
+  // INFINITE SCROLL FEED
+  // ============================================================================
+
+  getInfinitePosts: async (params: {
+    cursor?: string | null;
+    limit?: number;
+    categorySlugs?: string[];
+    tagSlugs?: string[];
+    followingOnly?: boolean;
+    type?: 'all' | 'posts' | 'projects' | 'jobs';
+    sort?: 'recent' | 'popular' | 'trending';
+  }): Promise<{
+    message: string;
+    posts: Post[];
+    nextCursor?: string;
+    hasMore: boolean;
+  }> => {
+    const queryParams: any = {
+      ...params,
+      categorySlugs: params.categorySlugs?.join(','),
+      tagSlugs: params.tagSlugs?.join(','),
+    };
+
+    // Remove undefined/null values
+    Object.keys(queryParams).forEach(key => {
+      if (queryParams[key] === undefined || queryParams[key] === null || queryParams[key] === '') {
+        delete queryParams[key];
+      }
+    });
+
+    const response = await apiClient.get('/post', { params: queryParams });
     return response.data;
   },
 };
@@ -93,7 +128,17 @@ export const categoryService = {
 // ============================================================================
 
 export const tagService = {
-  searchTags: async (query: string, limit = 10) => {
+  // Get all tags
+  getAllTags: async (params?: { limit?: number; minUsageCount?: number }): Promise<{
+    tags: any[];
+    count: number;
+  }> => {
+    const response = await apiClient.get('/tag', { params });
+    return response.data;
+  },
+
+  // Search tags
+  searchTags: async (query: string, limit = 10): Promise<any> => {
     const response = await apiClient.get('/tag/search', { params: { q: query, limit } });
     return response.data;
   },

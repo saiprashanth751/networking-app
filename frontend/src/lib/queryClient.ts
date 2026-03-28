@@ -88,8 +88,13 @@ export const queryKeys = {
   // Posts related queries
   posts: {
     all: ['posts'] as const,
-    list: (filters?: { label?: string }) =>
-      [...queryKeys.posts.all, 'list', filters] as const,
+    list: (filters?: {
+      categorySlugs?: string[];
+      tagSlugs?: string[];
+      followingOnly?: boolean;
+      type?: string;
+      sort?: string;
+    }) => [...queryKeys.posts.all, 'list', filters] as const,
     detail: (postId: string) => [...queryKeys.posts.all, 'detail', postId] as const,
     byUser: (userId: string) => [...queryKeys.posts.all, 'byUser', userId] as const,
     currentUser: () => [...queryKeys.posts.all, 'currentUser'] as const,
@@ -145,6 +150,7 @@ export const queryKeys = {
   // Tags
   tags: {
     all: ['tags'] as const,
+    list: () => [...queryKeys.tags.all, 'list'] as const,
     search: (query: string) => [...queryKeys.tags.all, 'search', query] as const,
     trending: () => [...queryKeys.tags.all, 'trending'] as const,
     posts: (slug: string, filters?: { page?: number; limit?: number }) =>
@@ -172,6 +178,18 @@ export const queryKeys = {
     all: ['drafts'] as const,
     list: () => [...queryKeys.drafts.all, 'list'] as const,
     detail: (draftId: string) => [...queryKeys.drafts.all, 'detail', draftId] as const,
+  },
+
+  // Filter Presets
+  filterPresets: {
+    all: ['filterPresets'] as const,
+    list: () => [...queryKeys.filterPresets.all, 'list'] as const,
+  },
+
+  // Reports
+  reports: {
+    all: ['reports'] as const,
+    user: () => [...queryKeys.reports.all, 'user'] as const,
   },
 
 } as const;

@@ -14,11 +14,12 @@ import {
     MessageSquare,
     Users,
     ArrowLeft,
-    Search,
+    Github,
 } from "lucide-react";
 import { PostCard } from '@/components/posts/PostCard';
 import { FollowList } from '@/components/FollowList';
 import MessageBox from '@/pages/MessageBox';
+import { MutualConnections } from '@/components/profile/MutualConnections';
 import { H2, Body, Small } from '@/components/ui/typography';
 import { useCurrentProfile } from '@/hooks/queries/profile';
 import { useCurrentUser } from '@/hooks/queries/user';
@@ -102,152 +103,144 @@ const UserProfilePage = () => {
 
     return (
         <>
-            {/* Sticky Header - X Style */}
-            <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-sm border-b border-neutral-800">
-                <div className="flex items-center gap-8 px-4 h-[53px]">
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-md border-b border-neutral-800/30">
+                <div className="flex items-center gap-4 px-6 h-14">
                     <button
                         onClick={() => navigate('/dashboard')}
-                        className="hover:bg-neutral-900 rounded-full p-2 transition-colors"
+                        className="hover:bg-neutral-800 rounded-full p-2 transition-all duration-150"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </button>
-                    <div className="flex flex-col">
-                        <h1 className="font-bold text-xl">{user?.firstName} {user?.lastName}</h1>
-                        <span className="text-neutral-500 text-[13px]">{posts.length} posts</span>
+                    <div>
+                        <h1 className="font-bold text-lg">{user?.firstName} {user?.lastName}</h1>
+                        <span className="text-muted-foreground text-xs">{posts.length} posts</span>
                     </div>
-                    <button className="ml-auto hover:bg-neutral-900 rounded-full p-2 transition-colors">
-                        <Search className="h-5 w-5" />
-                    </button>
                 </div>
             </div>
 
-            {/* Profile Header */}
-            <div>
-                {/* Banner */}
-                <div className="h-[200px] bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10" />
+            {/* Banner */}
+            <div className="h-[200px] bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-pink-600/10" />
 
-                {/* Profile Info Section */}
-                <div className="px-4 pb-4">
-                    {/* Profile Picture & Edit Button */}
-                    <div className="flex justify-between items-end -mt-16 mb-3">
-                        <Avatar className="h-[133px] w-[133px] border-4 border-black shadow-xl">
-                            <AvatarImage
-                                src={profile?.profilePic}
-                                className="object-cover"
-                            />
-                            <AvatarFallback className="text-4xl font-bold bg-muted">
-                                {getUserInitials()}
-                            </AvatarFallback>
-                        </Avatar>
+            {/* Profile Content - Centered */}
+            <div className="max-w-[800px] mx-auto px-4">
+                {/* Avatar */}
+                <div className="-mt-16 mb-4 flex flex-col items-start">
+                    <Avatar className="h-[140px] w-[140px] border-4 border-background ring-2 ring-neutral-800/50 shadow-xl mb-4">
+                        <AvatarImage src={profile?.profilePic} className="object-cover" />
+                        <AvatarFallback className="text-4xl font-bold bg-neutral-800">
+                            {getUserInitials()}
+                        </AvatarFallback>
+                    </Avatar>
 
-                        <Button
-                            onClick={() => navigate('/updateprofile')}
-                            variant="outline"
-                            className="mb-3 rounded-full border-neutral-600 bg-transparent hover:bg-neutral-900 text-white font-bold px-4 h-9"
-                        >
-                            Edit profile
-                        </Button>
+                    {/* Name immediately under avatar */}
+                    <div>
+                        <h2 className="font-bold text-2xl mb-1">{user?.firstName} {user?.lastName}</h2>
+                        <span className="text-muted-foreground text-sm">@{user?.firstName?.toLowerCase() || 'user'}</span>
                     </div>
+                </div>
 
-                    {/* Name and Info */}
-                    <div className="mb-1">
-                        <div className="flex items-center gap-1 mb-0.5">
-                            <h2 className="font-bold text-xl">{user?.firstName} {user?.lastName}</h2>
-                        </div>
-                        <span className="text-neutral-500 text-[15px]">
-                            @{user?.firstName?.toLowerCase() || 'user'}
-                        </span>
-                    </div>
-
+                {/* Profile Info Card */}
+                <div className="mb-6 rounded-xl border border-neutral-800/50 p-6 bg-neutral-900/20">
+                    {/* Bio */}
                     {profile?.bio && (
-                        <div className="mb-3">
-                            <p className="text-[15px] leading-5">{profile.bio}</p>
-                        </div>
+                        <p className="text-sm leading-relaxed text-foreground/90 mb-4 pb-4 border-b border-neutral-800/50">{profile.bio}</p>
                     )}
 
                     {/* Info Pills */}
-                    <div className="flex flex-wrap items-center gap-3 mb-3 text-neutral-500 text-[15px]">
+                    <div className="flex flex-wrap items-center gap-4 mb-4 text-muted-foreground text-sm">
                         {profile?.department && (
-                            <div className="flex items-center gap-1">
-                                <Briefcase className="h-[18px] w-[18px]" />
+                            <div className="flex items-center gap-1.5">
+                                <Briefcase className="h-4 w-4" />
                                 <span>{profile.department}</span>
                             </div>
                         )}
                         {profile?.graduationYear && (
-                            <div className="flex items-center gap-1">
-                                <GraduationCap className="h-[18px] w-[18px]" />
+                            <div className="flex items-center gap-1.5">
+                                <GraduationCap className="h-4 w-4" />
                                 <span>Class of {profile.graduationYear}</span>
                             </div>
                         )}
-                        {profile?.linkedin && (
-                            <a
-                                href={profile.linkedin}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-blue-500 hover:underline"
-                            >
-                                <LinkIcon className="h-[18px] w-[18px]" />
-                                <span>LinkedIn</span>
-                            </a>
-                        )}
-                        {profile?.github && (
-                            <a
-                                href={`https://github.com/${profile.github}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-blue-500 hover:underline"
-                            >
-                                <LinkIcon className="h-[18px] w-[18px]" />
-                                <span>GitHub</span>
-                            </a>
-                        )}
                     </div>
 
-                    {/* Following/Followers */}
-                    <div className="flex items-center gap-5 text-[14px]">
+                    {/* Social Links */}
+                    {(profile?.linkedin || profile?.github) && (
+                        <div className="flex flex-wrap gap-3 mb-4">
+                            {profile?.linkedin && (
+                                <a
+                                    href={profile.linkedin}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-blue-500 hover:text-blue-400 text-sm transition-colors duration-150"
+                                >
+                                    <LinkIcon className="h-4 w-4" />
+                                    <span>LinkedIn</span>
+                                </a>
+                            )}
+                            {profile?.github && (
+                                <a
+                                    href={`https://github.com/${profile.github}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-blue-500 hover:text-blue-400 text-sm transition-colors duration-150"
+                                >
+                                    <Github className="h-4 w-4" />
+                                    <span>GitHub</span>
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Stats Grid */}
+                    <div className="flex items-center gap-6 pt-4 border-t border-neutral-800/50">
                         <FollowList
                             title="Following"
                             users={following}
                             count={followingData?.count || 0}
-                            onMessageClick={setSelectedUserId}
+                            showUnfollowButton={true}
                         />
                         <FollowList
                             title="Followers"
                             users={followers}
                             count={followersData?.count || 0}
-                            onMessageClick={setSelectedUserId}
+                            showRemoveButton={true}
                         />
+                        <div className="text-sm">
+                            <span className="font-bold text-foreground">{posts.length}</span>
+                            <span className="text-muted-foreground ml-1">Posts</span>
+                        </div>
+                        <div className="text-sm">
+                            <span className="font-bold text-foreground">{projects.length}</span>
+                            <span className="text-muted-foreground ml-1">Projects</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Tabs */}
-                {/* Find the Tabs section and update */}
-                <div className="border-b border-neutral-800">
-                    <div className="flex">
-                        <TabItem
-                            label="Posts"
-                            active={activeTab === "posts"}
-                            onClick={() => setActiveTab("posts")}
-                        />
-                        <TabItem
-                            label="Projects"
-                            active={activeTab === "projects"}
-                            onClick={() => setActiveTab("projects")}
-                        />
-                        <TabItem
-                            label="Stats"
-                            active={activeTab === "stats"}
-                            onClick={() => setActiveTab("stats")}
-                        />
-                    </div>
+                {/* Pill Tabs */}
+                <div className="flex gap-2 mb-6 p-1 bg-neutral-900/50 rounded-full border border-neutral-800/50">
+                    <TabPill
+                        label="Posts"
+                        active={activeTab === "posts"}
+                        onClick={() => setActiveTab("posts")}
+                    />
+                    <TabPill
+                        label="Projects"
+                        active={activeTab === "projects"}
+                        onClick={() => setActiveTab("projects")}
+                    />
+                    <TabPill
+                        label="Stats"
+                        active={activeTab === "stats"}
+                        onClick={() => setActiveTab("stats")}
+                    />
                 </div>
 
                 {/* Tab Content */}
                 <div>
                     {activeTab === "posts" && (
-                        <div className="divide-y divide-neutral-800">
+                        <div>
                             {posts.length === 0 ? (
-                                <div className="px-4 py-16 text-center space-y-4">
+                                <div className="px-4 py-16 text-center space-y-4 rounded-xl border border-neutral-800/50 bg-neutral-900/20">
                                     <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
                                     <H2>No Posts Yet</H2>
                                     <Body className="text-muted-foreground">
@@ -281,7 +274,7 @@ const UserProfilePage = () => {
                     {activeTab === "stats" && (
                         <>
                             {!profile?.leetcode && !profile?.github && !profile?.codeforces && !profile?.geekforgeeks ? (
-                                <div className="px-4 py-16 text-center space-y-4">
+                                <div className="px-4 py-16 text-center space-y-4 rounded-xl border border-neutral-800/50 bg-neutral-900/20">
                                     <Users className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
                                     <H2>No Platform Stats</H2>
                                     <Body className="text-muted-foreground">
@@ -292,9 +285,9 @@ const UserProfilePage = () => {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {profile?.leetcode && leetCodeStats && (
-                                        <Card>
+                                        <Card className="border-neutral-800/50">
                                             <CardHeader>
                                                 <CardTitle className="text-base flex items-center gap-2">
                                                     <span className="text-orange-500">LeetCode</span>
@@ -311,7 +304,7 @@ const UserProfilePage = () => {
                                         </Card>
                                     )}
                                     {profile?.geekforgeeks && (
-                                        <Card>
+                                        <Card className="border-neutral-800/50">
                                             <CardHeader>
                                                 <CardTitle className="text-base flex items-center gap-2">
                                                     <span className="text-green-500">GeeksforGeeks</span>
@@ -328,7 +321,7 @@ const UserProfilePage = () => {
                                         </Card>
                                     )}
                                     {profile?.codeforces && (
-                                        <Card>
+                                        <Card className="border-neutral-800/50">
                                             <CardHeader>
                                                 <CardTitle className="text-base flex items-center gap-2">
                                                     <span className="text-blue-500">Codeforces</span>
@@ -345,7 +338,7 @@ const UserProfilePage = () => {
                                         </Card>
                                     )}
                                     {profile?.github && (
-                                        <Card className="md:col-span-2">
+                                        <Card className="md:col-span-2 border-neutral-800/50">
                                             <CardHeader>
                                                 <CardTitle className="text-base flex items-center gap-2">
                                                     GitHub
@@ -393,20 +386,20 @@ const UserProfilePage = () => {
     );
 };
 
-// Tab Item Component
-function TabItem({ label, active = false, onClick }: { label: string; active?: boolean; onClick: () => void }) {
+// Pill Tab Component
+function TabPill({ label, active = false, onClick }: { label: string; active?: boolean; onClick: () => void }) {
     return (
         <button
             onClick={onClick}
             className={`
-                flex-1 px-4 py-4 hover:bg-neutral-900/50 transition-colors relative
-                ${active ? 'font-bold' : 'text-neutral-500'}
+                flex-1 px-6 py-2 rounded-full font-medium text-sm transition-all duration-150
+                ${active
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-neutral-800'
+                }
             `}
         >
             {label}
-            {active && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 rounded-full" />
-            )}
         </button>
     );
 }

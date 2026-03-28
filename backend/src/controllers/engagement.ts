@@ -2,6 +2,8 @@ import { Response, Request } from 'express';
 import prisma from '../../prisma/prisma_client';
 import { asyncHandler } from '../middleware/asyncHandler';
 import CustomError from '../utils/customError';
+import { notificationService } from '../services/notificationService';
+import { emitNotification } from '../utils/socket';
 
 interface AuthRequest extends Request {
     id?: string;
@@ -63,6 +65,30 @@ export const toggleLike = asyncHandler(async (req: AuthRequest, res: Response) =
             data: { likesCount: { increment: 1 } },
         });
 
+        // Create notification for post author (don't notify if liking own post)
+        if (post.userId !== userId) {
+            const liker = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { firstName: true, lastName: true }
+            });
+
+            if (liker) {
+                const notification = await notificationService.create({
+                    userId: post.userId,
+                    type: 'POST_LIKE',
+                    title: 'New Like',
+                    message: `${liker.firstName} ${liker.lastName || ''} liked your post`,
+                    actorId: userId,
+                    entityId: postId,
+                    entityType: 'post'
+                });
+
+                if (notification) {
+                    emitNotification(post.userId, notification);
+                }
+            }
+        }
+
         return res.status(201).json({
             message: 'Post liked',
             liked: true,
@@ -117,22 +143,38 @@ export const addComment = asyncHandler(async (req: AuthRequest, res: Response) =
     const { content, parentId } = req.body;
     const userId = req.id!;
 
-    if (!content || !content.trim()) {
+    // Validate content
+    if (!content || content.trim().length === 0) {
         throw new CustomError('Comment content is required', 400);
     }
 
     // Check if post exists
-    const post = await prisma.post.findUnique({ where: { id: postId } });
+    const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { id: true, userId: true }
+    });
     if (!post) {
         throw new CustomError('Post not found', 404);
+    }
+
+    // If replying to a comment, check if parent comment exists
+    let parentComment = null;
+    if (parentId) {
+        parentComment = await prisma.comment.findUnique({
+            where: { id: parentId },
+            select: { id: true, userId: true }
+        });
+        if (!parentComment) {
+            throw new CustomError('Parent comment not found', 404);
+        }
     }
 
     // Create comment
     const comment = await prisma.comment.create({
         data: {
+            content: content.trim(),
             postId,
             userId,
-            content: content.trim(),
             parentId: parentId || null,
         },
         include: {
@@ -141,11 +183,18 @@ export const addComment = asyncHandler(async (req: AuthRequest, res: Response) =
                     id: true,
                     firstName: true,
                     lastName: true,
-                    profile: { select: { profilePic: true } },
-                },
+                    profile: {
+                        select: { profilePic: true }
+                    }
+                }
             },
-            _count: { select: { likes: true, replies: true } },
-        },
+            _count: {
+                select: {
+                    likes: true,
+                    replies: true
+                }
+            }
+        }
     });
 
     // Increment post comment count
@@ -153,6 +202,49 @@ export const addComment = asyncHandler(async (req: AuthRequest, res: Response) =
         where: { id: postId },
         data: { commentsCount: { increment: 1 } },
     });
+
+    // Get commenter details
+    const commenter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true }
+    });
+
+    if (commenter) {
+        // If it's a reply, notify the parent comment author
+        if (parentComment && parentComment.userId !== userId) {
+            const notification = await notificationService.create({
+                userId: parentComment.userId,
+                type: 'COMMENT_REPLY',
+                title: 'New Reply',
+                message: `${commenter.firstName} ${commenter.lastName || ''} replied to your comment`,
+                actorId: userId,
+                entityId: comment.id,
+                entityType: 'comment',
+                data: { postId } // Add postId for navigation
+            });
+
+            if (notification) {
+                emitNotification(parentComment.userId, notification);
+            }
+        }
+        // If it's a top-level comment, notify the post author
+        else if (post.userId !== userId) {
+            const notification = await notificationService.create({
+                userId: post.userId,
+                type: 'POST_COMMENT',
+                title: 'New Comment',
+                message: `${commenter.firstName} ${commenter.lastName || ''} commented on your post`,
+                actorId: userId,
+                entityId: comment.id,
+                entityType: 'comment',
+                data: { postId } // Add postId for navigation
+            });
+
+            if (notification) {
+                emitNotification(post.userId, notification);
+            }
+        }
+    }
 
     return res.status(201).json({
         message: 'Comment added successfully',
@@ -461,11 +553,23 @@ export const getUserBookmarks = asyncHandler(async (req: AuthRequest, res: Respo
                         },
                     },
                     media: { orderBy: { order: 'asc' } },
+                    tags: {
+                        include: {
+                            tag: { select: { id: true, name: true, slug: true } },
+                        },
+                    },
+                    likes: {
+                        select: { userId: true }
+                    },
+                    bookmarks: {
+                        select: { userId: true }
+                    },
                     _count: {
                         select: {
                             likes: true,
                             comments: true,
                             bookmarks: true,
+                            shares: true,
                         },
                     },
                 },
@@ -475,9 +579,21 @@ export const getUserBookmarks = asyncHandler(async (req: AuthRequest, res: Respo
 
     const total = await prisma.bookmark.count({ where });
 
+    // Transform posts to include isLiked and isBookmarked flags
+    const bookmarksWithFlags = bookmarks.map(bookmark => ({
+        ...bookmark,
+        post: {
+            ...bookmark.post,
+            isLiked: bookmark.post.likes?.some((like: any) => like.userId === userId) || false,
+            isBookmarked: bookmark.post.bookmarks?.some((bm: any) => bm.userId === userId) || false,
+            likes: undefined,
+            bookmarks: undefined,
+        }
+    }));
+
     return res.status(200).json({
         message: 'Bookmarks retrieved successfully',
-        bookmarks,
+        bookmarks: bookmarksWithFlags,
         pagination: {
             total,
             page: Number(page),
@@ -491,31 +607,63 @@ export const getUserBookmarks = asyncHandler(async (req: AuthRequest, res: Respo
 // SHARES
 // ============================================================================
 
-// Record share
+// Record post share
 export const recordShare = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { postId } = req.params;
     const { platform } = req.body;
     const userId = req.id!;
 
-    const post = await prisma.post.findUnique({ where: { id: postId } });
+    // Verify post exists and get author
+    const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { id: true, userId: true }
+    });
+
     if (!post) {
         throw new CustomError('Post not found', 404);
     }
 
+    // Record the share
     await prisma.postShare.create({
         data: {
             postId,
             userId,
-            platform: platform || null,
+            platform: platform || 'link',
         },
     });
 
+    // Increment share counter
     await prisma.post.update({
         where: { id: postId },
         data: { sharesCount: { increment: 1 } },
     });
 
+    // Create notification for post author (don't notify if sharing own post)
+    if (post.userId !== userId) {
+        const sharer = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { firstName: true, lastName: true }
+        });
+
+        if (sharer) {
+            const notification = await notificationService.create({
+                userId: post.userId,
+                type: 'POST_SHARE',
+                title: 'Post Shared',
+                message: `${sharer.firstName} ${sharer.lastName || ''} shared your post`,
+                actorId: userId,
+                entityId: postId,
+                entityType: 'post'
+            });
+
+            if (notification) {
+                emitNotification(post.userId, notification);
+            }
+        }
+    }
+
+
     return res.status(201).json({
-        message: 'Share recorded',
+        message: 'Share recorded successfully',
     });
 });

@@ -30,6 +30,6 @@ app.get("/user/:userId", optionalAuthMiddleware, getPostsByUserId);
 app.get("/", optionalAuthMiddleware, getAllPosts);
 
 // GET /api/v1/post/:id - Get single post (MUST BE LAST!)
-app.get("/:id", getPostById);
+app.get("/:id", authMiddleware, getPostById);
 
 export default app;

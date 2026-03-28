@@ -1,5 +1,5 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef, KeyboardEvent } from 'react';
 import {
     $getSelection,
     $isRangeSelection,
@@ -30,6 +30,7 @@ export function EditorToolbar() {
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [isCode, setIsCode] = useState(false);
+    const toolbarRef = useRef<HTMLDivElement>(null);
 
     const updateToolbar = useCallback(() => {
         const selection = $getSelection();
@@ -85,8 +86,35 @@ export function EditorToolbar() {
         editor.dispatchCommand(REDO_COMMAND, undefined);
     };
 
+    // Keyboard navigation for toolbar
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            const buttons = toolbarRef.current?.querySelectorAll('button');
+            if (!buttons) return;
+
+            const currentIndex = Array.from(buttons).indexOf(document.activeElement as HTMLButtonElement);
+            let nextIndex = currentIndex;
+
+            if (e.key === 'ArrowRight') {
+                nextIndex = currentIndex + 1 >= buttons.length ? 0 : currentIndex + 1;
+            } else {
+                nextIndex = currentIndex - 1 < 0 ? buttons.length - 1 : currentIndex - 1;
+            }
+
+            (buttons[nextIndex] as HTMLButtonElement).focus();
+        }
+    };
+
     return (
-        <div className="flex items-center gap-1 p-2 border-b border-neutral-800 bg-neutral-900">
+        <div
+            ref={toolbarRef}
+            className="flex items-center gap-1 p-2 border-b border-neutral-800 bg-neutral-900"
+            role="toolbar"
+            aria-label="Text formatting toolbar"
+            aria-controls="editor"
+            onKeyDown={handleKeyDown}
+        >
             <Button
                 variant="ghost"
                 size="sm"
@@ -102,7 +130,7 @@ export function EditorToolbar() {
                 size="sm"
                 onClick={redo}
                 className="h-8 w-8 p-0 text-foreground"
-                title="Redo (Ctrl+Y)"
+                title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
                 aria-label="Redo"
             >
                 <Redo2 className="h-4 w-4" />

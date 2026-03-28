@@ -55,14 +55,32 @@ export function HashtagPlugin() {
 
         // Transform text nodes containing hashtags
         const removeTransform = editor.registerNodeTransform(TextNode, (textNode: TextNode) => {
+            // Don't transform if already a hashtag node
             if ($isHashtagNode(textNode)) {
                 return;
             }
 
             const text = textNode.getTextContent();
+
+            // Performance optimization: Only process if text contains #
+            if (!text.includes('#')) {
+                return;
+            }
+
             const match = text.match(HASHTAG_REGEX);
 
+            // Performance optimization: Only transform complete hashtags
+            // (followed by space or end of text to avoid lag while typing)
             if (match) {
+                const lastChar = text[text.length - 1];
+                const isComplete = lastChar === ' ' || lastChar === '\n' ||
+                    text.endsWith('#') === false;
+
+                // If text ends with # and no space, user is still typing
+                if (text.endsWith('#') && lastChar !== ' ') {
+                    return;
+                }
+
                 // Split text into parts and create hashtag nodes
                 const parts: Array<TextNode | HashtagNode> = [];
                 let lastIndex = 0;

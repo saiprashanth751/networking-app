@@ -38,6 +38,8 @@ export const useFollowUser = (
       // Invalidate follow-related queries
       queryClient.invalidateQueries({ queryKey: queryKeys.follow.followers() });
       queryClient.invalidateQueries({ queryKey: queryKeys.follow.following() });
+      // Invalidate recommendations (followed users should be removed)
+      queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
     onSettled: (_, __, userId) => {
       // Always refetch after error or success
@@ -75,6 +77,8 @@ export const useUnfollowUser = (
     onSuccess: (_, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.follow.followers() });
       queryClient.invalidateQueries({ queryKey: queryKeys.follow.following() });
+      // Invalidate recommendations (unfollowed users may appear again)
+      queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
     onSettled: (_, __, userId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.follow.status(userId) });
